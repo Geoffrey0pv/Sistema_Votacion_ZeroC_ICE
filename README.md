@@ -1,1 +1,1 @@
-# Sistema_Votaci-n_ZeroC_ICE
+# Sistema_Votacion_ZeroC_ICE
