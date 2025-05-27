@@ -24,7 +24,7 @@ subprojects {
     //
     slice {
         java {
-            files = [file("../Printer.ice")]
+            files = [file("../System.ice")]
         }
     }
  
@@ -41,6 +41,7 @@ subprojects {
     dependencies {
         implementation 'com.zeroc:ice:3.7.9'
         implementation 'com.zeroc:icestorm:3.7.9'
+        implementation 'com.zeroc:icegrid:3.7.10'
     }
  
     //
@@ -49,7 +50,7 @@ subprojects {
     jar {
         manifest {
             attributes(
-                "Main-Class": project.name.capitalize(),
+                "Main-Class": 'regional.Regional',
                 "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
             )
         }

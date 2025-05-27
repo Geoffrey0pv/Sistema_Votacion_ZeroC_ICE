@@ -1,12 +1,12 @@
 
 <icegrid>
 
-  <application name="Simple">
+  <application name="SistemaVotacion">
 
     <node name="node1">
-      <server id="SimpleServer" exe="java" activation="on-demand">
+      <server id="RegionalServer" exe="java" activation="on-demand">
         <option>-jar</option>
-        <option> ../server/build/libs/server.jar</option>
+        <option> ../Regional/build/libs/Regional.jar</option>
         <adapter name="Hello" endpoints="tcp -h localhost">
           <object identity="hello" type="::Demo::Hello" property="Identity"/>
         </adapter>
