@@ -50,7 +50,7 @@ subprojects {
     jar {
         manifest {
             attributes(
-                "Main-Class": 'regional.Regional',
+                "Main-Class": project.name.capitalize(),
                 "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
             )
         }

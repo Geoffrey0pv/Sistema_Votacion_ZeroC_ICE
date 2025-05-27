@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Main-Class: Regional
+Class-Path: file:/C:/Users/geoff/.gradle/caches/modules-2/files-2.1/com.
+ zeroc/icestorm/3.7.9/990848a53a6f23e89ca8b0edb66dc719bc1a9a56/icestorm-
+ 3.7.9.jar file:/C:/Users/geoff/.gradle/caches/modules-2/files-2.1/com.z
+ eroc/icegrid/3.7.10/aecdad1a6f164a9f4dbfecc424f6aa3ef0d4be63/icegrid-3.
+ 7.10.jar file:/C:/Users/geoff/.gradle/caches/modules-2/files-2.1/com.ze
+ roc/glacier2/3.7.10/38536567bb156439810f3b758d5a3840fe4395ad/glacier2-3
+ .7.10.jar file:/C:/Users/geoff/.gradle/caches/modules-2/files-2.1/com.z
+ eroc/ice/3.7.10/ca45473c5e197ace9510c4718fe2dfa4d3fdba29/ice-3.7.10.jar
+
