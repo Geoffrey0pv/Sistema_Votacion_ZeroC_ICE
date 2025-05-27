@@ -12,5 +12,5 @@ plugins {
 }
 
 rootProject.name = 'Sistema_Votacion'
-include('Regional')
-include('Mesa')
+include('ServidorRegional')
+include('MesaVotacion')

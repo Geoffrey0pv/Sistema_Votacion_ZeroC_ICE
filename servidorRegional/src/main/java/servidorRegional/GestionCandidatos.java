@@ -1,4 +1,4 @@
-package regional;
+package servidorRegional;
 
 public class GestionCandidatos {
     

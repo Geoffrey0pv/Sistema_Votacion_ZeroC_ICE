@@ -1,4 +1,4 @@
-package mesa;
+package mesaVotacion;
 
 import Demo.*;
 import com.zeroc.Ice.*;

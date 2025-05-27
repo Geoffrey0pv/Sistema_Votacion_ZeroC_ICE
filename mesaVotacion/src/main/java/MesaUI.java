@@ -1,5 +1,3 @@
-package mesa;
-
 public class MesaUI {
     
     public static void main(String[] args) {

@@ -1,4 +1,4 @@
-package regional;
+package servidorRegional;
 
 import Demo.*;
 import com.zeroc.Ice.Current;
@@ -17,16 +17,11 @@ public class ReceptorVotos implements IRegistrarVoto
         Ack ack;
 
         if (nuevo) {
-            System.out.printf(" Voto registrado",
-                              v.idVoto, v.idMesa, v.idCandidato);
-
+            System.out.printf(" Voto registrado", v.idVoto, v.idMesa, v.idCandidato);
             ack = new Ack(v.idVoto, true, "Voto registrado correctamente");
         } else {
-            System.out.printf("Voto duplicado",
-                              v.idVoto, v.idMesa);
-
-            ack = new Ack(v.idVoto, false,
-                          "Voto duplicado: ya se había contado anteriormente");
+            System.out.printf("Voto duplicado", v.idVoto, v.idMesa);
+            ack = new Ack(v.idVoto, false, "Voto duplicado: ya se había contado anteriormente");
         }
 
         /* Devolver confirmación */
@@ -36,7 +31,6 @@ public class ReceptorVotos implements IRegistrarVoto
             System.err.println("No se pudo devolver ACK a la mesa: " + ex);
         }
     }
-
     /* ——— aún no usamos enviarCandidatos; déjalo vacío de momento ——— */
     @Override
     public void enviarCandidatos(Candidato[] candidatos, IConfirmacionCandidatosPrx cb, Current __) {}
