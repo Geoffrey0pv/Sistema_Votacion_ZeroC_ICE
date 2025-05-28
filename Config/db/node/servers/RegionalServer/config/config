@@ -1,0 +1,12 @@
+# Configuration file (05/28/25 18:34:34.265)
+
+# Server configuration
+Ice.Admin.ServerId=RegionalServer
+Ice.Admin.Endpoints=tcp -h localhost
+Ice.ProgramName=RegionalServer
+# Object adapter RegionalAdapter
+RegionalAdapter.Endpoints=tcp -h localhost
+RegionalAdapter.AdapterId=RegionalServer.RegionalAdapter
+# Server descriptor properties
+Identity=regionalAdapter
+Ice.Default.Locator=DemoIceGrid/Locator:default -h localhost -p 4061

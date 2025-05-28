@@ -1,0 +1,26 @@
+<!-- Copyright (c) ZeroC, Inc. All rights reserved. -->
+
+<icegrid>
+
+  <application name="SistemaVotacion">
+
+    <server-template id="RegionalServer">
+      <parameter name="index"/>
+      <server id="SimpleServer-${index}" exe="java" activation="on-demand">
+        <option>-jar</option>
+        <option>../servidorRegional/build/libs/ServidorRegional.jar</option>
+        <adapter name="RegionalAdapter" endpoints="tcp -h localhost">
+          <object identity="regionalAdapter-${index}" type="::Demo::IRegistrarVoto" property="Identity"/>
+        </adapter>
+      </server>
+    </server-template>
+
+    <node name="node1">
+      <server-instance template="RegionalServer" index="1"/>
+      <server-instance template="RegionalServer" index="2"/>
+      <server-instance template="RegionalServer" index="3"/>
+    </node>
+
+  </application>
+
+</icegrid>

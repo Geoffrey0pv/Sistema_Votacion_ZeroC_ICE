@@ -10,6 +10,11 @@ public class ReceptorVotos implements IRegistrarVoto
 {
     private final Set<Long> recibidos = ConcurrentHashMap.newKeySet();
 
+    public ReceptorVotos(String nombre)
+    {
+        System.out.printf("Servidor Regional '%s' iniciado\n", nombre);
+    }
+
     @Override
     public void enviarVoto(Voto v, IConfirmacionVotoPrx callback, Current __)
     {

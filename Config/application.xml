@@ -6,18 +6,10 @@
       <server id="RegionalServer" exe="java" activation="on-demand">
         <option>-jar</option>
         <option>../servidorRegional/build/libs/ServidorRegional.jar</option>
-
-        <adapter name="RegionalAdapter" endpoints="tcp -h localhost -p 10000">
-          <object identity="VoteCollector" type="::Demo::IRegistrarVoto"/>
+        <adapter name="RegionalAdapter" endpoints="tcp -h localhost">
+          <object identity="regionalAdapter" type="::Demo::IRegistrarVoto" property="Identity" />
         </adapter>
-
-        <property name="IceMX.Metrics.Debug.GroupBy" value="id"/>
-        <property name="IceMX.Metrics.Debug.Disabled" value="1"/>
-        <property name="IceMX.Metrics.ByParent.GroupBy" value="parent"/>
-        <property name="IceMX.Metrics.ByParent.Disabled" value="1"/>
       </server>
     </node>
-
   </application>
-
 </icegrid>

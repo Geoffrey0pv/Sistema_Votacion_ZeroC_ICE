@@ -1,36 +1,36 @@
 import Demo.IRegistrarVotoPrx;
-import servidorRegional.ReceptorVotos;
-
+import servidorRegional.*;
 import com.zeroc.Ice.*;
+import java.lang.Exception;
 
-public class ServidorRegional
-{
+public class ServidorRegional {
     public static void main(String[] args)
     {
-        // 1. Arranca el Communicator leyendo regional.cfg quí debe estar Ice.Default.Locator cuando uses IceGrid
-        try (Communicator ic = Util.initialize(args, "regional.cfg")) {
+        int status = 0;
+        java.util.List<String> extraArgs = new java.util.ArrayList<String>();
 
-            /* 2. Obtiene el ObjectAdapter
-                  • Si el proceso lo arranca icegridnode, el adapter está en application.xml;
-                  • Si corres a pelo, lo creamos con endpoints fijos. */
-            ObjectAdapter adapter;
+        try(com.zeroc.Ice.Communicator communicator = com.zeroc.Ice.Util.initialize(args, extraArgs))
+        {
+            communicator.getProperties().setProperty("Ice.Default.Package", "com.zeroc.demos.IceGrid.simple");
+       
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> communicator.destroy()));
 
-            try {
-                // modo IceGrid ─ el endpoint lo marca application.xml
-                adapter = ic.createObjectAdapter("RegionalAdapter");
-            } catch (InitializationException ex) {
-                // modo local ─ endpoint explícito
-                adapter = ic.createObjectAdapterWithEndpoints("RegionalAdapter", "tcp -h 0.0.0.0 -p 10000");
+            if(!extraArgs.isEmpty())
+            {
+                System.err.println("too many arguments");
+                status = 1;
             }
-
-            // 3. Registra el servant y publica el proxy indirecto VoteCollector
-            ReceptorVotos servant = new ReceptorVotos();
-            IRegistrarVotoPrx prx = IRegistrarVotoPrx.uncheckedCast(adapter.add(servant, Util.stringToIdentity("VoteCollector")));
-
-            System.out.println("RegionalServer listo en " + prx);   // log de utilidad
-
-            adapter.activate();
-            ic.waitForShutdown();
+            else
+            {
+                com.zeroc.Ice.ObjectAdapter adapter = communicator.createObjectAdapter("RegionalAdapter");
+                com.zeroc.Ice.Properties properties = communicator.getProperties();
+                com.zeroc.Ice.Identity id = com.zeroc.Ice.Util.stringToIdentity(properties.getProperty("Identity"));
+                adapter.add(new ReceptorVotos(properties.getProperty("Ice.ProgramName")), id);
+                adapter.activate();
+                communicator.waitForShutdown();
+            }
         }
+
+        System.exit(status);
     }
 }
