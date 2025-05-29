@@ -35,16 +35,32 @@ y ejecutamos los siguiente comandos para general el build con el archivo .jar de
 > para esto deberá verificar que el adaptador definido en el código de cada nodo, sea identico al definido en el .xml
 > además verifique que su ruta hacia el archivo de compilación empaquetado .jar sea correcto
 
-
 ```bash
 icebox --Ice.Config=icebox.config
 ```
 
-
-*5. Ubicados en el directorio raiz ejecutamos los siguientes comandos cada una en una terminal diferente, esto es para correr en el local los diferentes nodos de su sistema.*
+*4.1 Para levantar el nodo del broker-proxy que provee ZEROC ICE a través del servicio de icegrid, debemos pararnos en el directorio .config y ejecutar en una nueva terminal*
 
 ```bash
-java -jar servidorRegional/build/libs/ServidorRegional.jar  
+icegridnode --Ice.Config=node.config 
+```
+
+*4.2 Ahora abrimos una nueva terminal y entramos con:*
+
+```bash
+icegridadmin
+```
+
+> ⚠️ **Nota:** Cada servidor debe registrarse en el application.xml y debe cargarse
+> usando el siguiente comando dentro de la terminal que activo el icegridadmin
+
+```bash
+Application add application.xml
+```
+
+*5. Ubicados en el directorio raiz ejecutamos el siguiente comando en una terminal diferente, esto es para correr en el local los diferentes clientes del sistema.*
+
+```bash
 java -jar mesaVotacion/build/libs/MesaVotacion.jar  
 ```
 
