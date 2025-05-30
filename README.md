@@ -12,7 +12,7 @@ gradle clean build // para limpiar archivos de buildeo anteriores
 *2. En caso de error en el paso anterior por incompatibilidad de versiones superiores con el gradle, ejecutamos el siguiente comando para envolverlo en la versión anterior compatible*
 
 ```bash
-./gradlew wrapper --gradle--version 6.6
+./gradlew wrapper --gradle-version 6.6
 ```
 
 *3. Buildeamos especificamente el subsitema que querramos ejecutar, el cuál debe estar incluido primeramente en el settings.gradle de esta forma por el nombre del directorio del proyecto*
@@ -36,7 +36,7 @@ y ejecutamos los siguiente comandos para general el build con el archivo .jar de
 > además verifique que su ruta hacia el archivo de compilación empaquetado .jar sea correcto
 
 ```bash
-icebox --Ice.Config=icebox.config
+icegridregistry.exe --Ice.Config=grid.config 
 ```
 
 *4.1 Para levantar el nodo del broker-proxy que provee ZEROC ICE a través del servicio de icegrid, debemos pararnos en el directorio .config y ejecutar en una nueva terminal*
