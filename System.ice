@@ -22,8 +22,6 @@ module Demo
         long   idCandidato;
         string nombre;
     };
-
-    
     sequence<Candidato> SeqCandidatos;   
     
     interface IConfirmacionVoto
@@ -41,5 +39,9 @@ module Demo
         void enviarVoto(Voto v, IConfirmacionVoto* callback);
 
          void enviarCandidatos(SeqCandidatos  candidatos, IConfirmacionCandidatos* callback);
+    };
+    interface ICargarCandidatos
+    {
+        void cargarCandidatos(IConfirmacionCandidatos* callback);
     };
 };

@@ -1,4 +1,4 @@
-package mesaVotacion;
+package GestorVotos;
 
 public class GestorVotos {
     
