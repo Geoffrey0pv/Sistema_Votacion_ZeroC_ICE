@@ -5,6 +5,9 @@
 *1. Sobre el directorio raiz ejecutar primero este comando para builder todo el proyecto tipo gradle:*
 
 ```bash
+
+Para los que no usan el wrapper
+
 gradle build // para la primera vez que se ejecuta
 gradle clean build // para limpiar archivos de buildeo anteriores
 ```
@@ -34,6 +37,10 @@ y ejecutamos los siguiente comandos para general el build con el archivo .jar de
 
 ```bash
 ./gradlew :mesaVotacion:build
+
+// para los que no usan el wrapper usar
+
+gradle :mesaVotacion:build
 ```
 
 *4. Para levantar el servidor del broker-proxy que provee ZEROC ICE a través del servicio de icegrid, debemos pararnos en el directorio "config" y ejecutar*
