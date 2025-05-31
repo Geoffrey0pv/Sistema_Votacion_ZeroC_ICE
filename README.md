@@ -49,8 +49,13 @@ gradle :mesaVotacion:build
 > para esto deberá verificar que el adaptador definido en el código de cada nodo, sea identico al definido en el .xml
 > además verifique que su ruta hacia el archivo de compilación empaquetado .jar sea correcto
 
+
 ```bash
-icegridregistry.exe --Ice.Config=grid.config 
+EN WINDOWS
+icegridregistry.exe --Ice.Config=grid.config
+
+EN LINUX
+icegridregistry --Ice.Config=grid.config
 ```
 
 *4.1 Para levantar el nodo del broker-proxy que provee ZEROC ICE a través del servicio de icegrid, debemos pararnos en el directorio .config y ejecutar en una nueva terminal diferente al registry*
