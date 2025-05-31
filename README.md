@@ -80,3 +80,5 @@ java -jar mesaVotacion/build/libs/MesaVotacion.jar
 
 *6. Desplegar en computadores dentro de una red privada (VPN) de una organización.*
 
+
+
