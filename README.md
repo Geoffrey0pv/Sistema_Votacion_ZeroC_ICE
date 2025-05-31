@@ -40,7 +40,7 @@ y ejecutamos los siguiente comandos para general el build con el archivo .jar de
 
 // para los que no usan el wrapper usar
 
-gradle :mesaVotacion:build
+./gradle :mesaVotacion:build
 ```
 
 *4. Para levantar el servidor del broker-proxy que provee ZEROC ICE a través del servicio de icegrid, debemos pararnos en el directorio "config" y ejecutar*
