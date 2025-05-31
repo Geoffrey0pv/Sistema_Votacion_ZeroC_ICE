@@ -1,23 +1,24 @@
 package GestorVotos;
 
-import Demo.Ack;
-import Demo.IConfirmacionVoto;
+import Demo.*;
 import com.zeroc.Ice.Current;
 
 public class ConfirmacionVotoI implements IConfirmacionVoto {
 
     @Override
-    public void recibirAck(Ack ack, Current current) {
-        System.out.println("\n=== CONFIRMACIÓN DE VOTO RECIBIDA ===");
-        System.out.println("ID Voto: " + ack.idVoto);
-        System.out.println("Registrado: " + (ack.registrado ? "SÍ" : "NO"));
-        System.out.println("Mensaje: " + ack.mensaje);
-        System.out.println("=====================================\n");
+    public void recibirAck(Ack a, Current current) {
+        System.out.println("=== CONFIRMACIÓN RECIBIDA ===");
 
-        if (ack.registrado) {
-            System.out.println("¡Tu voto ha sido registrado exitosamente!");
+        if (a.registrado) {
+            System.out.println(" ÉXITO: Voto ID " + a.idVoto + " procesado correctamente");
+            System.out.println(" Mensaje: " + a.mensaje);
         } else {
-            System.out.println("Error al registrar el voto: " + ack.mensaje);
+            System.out.println(" ERROR: Problema con voto ID " + a.idVoto);
+            System.out.println(" Mensaje: " + a.mensaje);
         }
+
+        System.out.println("============================");
+        System.out.print("==> "); // Mostrar prompt nuevamente
+        System.out.flush();
     }
 }

@@ -27,7 +27,7 @@ public class MesaVotacion {
         // Crear adaptador para callbacks
         ObjectAdapter adapter = null;
         try {
-            adapter = communicator.createObjectAdapter("MesaAdapter");
+            adapter = communicator.createObjectAdapter("MesaCallbackAdapter");
             adapter.activate();
         } catch (Exception e) {
             System.err.println("Error creando adaptador: " + e.getMessage());
@@ -158,7 +158,7 @@ public class MesaVotacion {
             // Crear voto de prueba
             VotoImp votoImpl = VotoImp.crearVotoPrueba();
 
-            System.out.println("📋 Voto de prueba generado:");
+            System.out.println(" Voto de prueba generado:");
             System.out.println(votoImpl.toString());
 
             // Crear el callback
@@ -186,7 +186,7 @@ public class MesaVotacion {
                 return IConfirmacionVotoPrx.uncheckedCast(obj);
             } else {
                 // Callback nulo para modo síncrono
-                System.out.println("⚠️  Usando modo síncrono (sin callback)");
+                System.out.println("  Usando modo síncrono (sin callback)");
                 return null;
             }
         } catch (Exception e) {

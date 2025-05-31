@@ -1,5 +1,5 @@
 <state>
-  <timestamp value='1748475761281' />
+  <timestamp value='1748718699688' />
   <sourceSet name='default'>
     <source name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\System.ice'>
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\Voto.java' />
@@ -8,6 +8,7 @@
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\IConfirmacionVoto.java' />
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\IConfirmacionCandidatos.java' />
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\IRegistrarVoto.java' />
+      <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\ICargarCandidatos.java' />
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\SeqCandidatosHelper.java' />
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\IConfirmacionVotoPrx.java' />
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\_IConfirmacionVotoPrxI.java' />
@@ -15,6 +16,8 @@
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\_IConfirmacionCandidatosPrxI.java' />
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\IRegistrarVotoPrx.java' />
       <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\_IRegistrarVotoPrxI.java' />
+      <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\ICargarCandidatosPrx.java' />
+      <file name='C:\Users\geoff\Desktop\Sistema_Votacion_ZeroC_ICE\ServidorRegional\build\generated-src\Demo\_ICargarCandidatosPrxI.java' />
     </source>
     <arg value='C:\Program Files\ZeroC\Ice-3.7.10\\bin\slice2java.exe' />
     <arg value='-IC:\Program Files\ZeroC\Ice-3.7.10\\slice' />
