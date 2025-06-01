@@ -53,6 +53,9 @@ subprojects {
                 "Main-Class": project.name.capitalize(),
                 "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
             )
+        } from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
         }
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
 }
