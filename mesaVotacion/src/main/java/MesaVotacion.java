@@ -35,7 +35,7 @@ public class MesaVotacion {
         }
 
         // Conectar al servidor regional
-        IRegistrarVotoPrx registrarVoto = null;
+        IRegistrarVotoPrx registrarVoto = obtenerServidorRegional(communicator);
         com.zeroc.IceGrid.QueryPrx query = null;
 
         try {
@@ -43,22 +43,6 @@ public class MesaVotacion {
                     communicator.stringToProxy("DemoIceGrid/Query"));
         } catch (Exception e) {
             System.err.println("No se pudo conectar a IceGrid Query: " + e.getMessage());
-        }
-
-        try {
-            registrarVoto = IRegistrarVotoPrx.checkedCast(
-                    communicator.stringToProxy("regionalAdapter"));
-        } catch(com.zeroc.Ice.NotRegisteredException ex) {
-            if (query != null) {
-                try {
-                    registrarVoto = IRegistrarVotoPrx.checkedCast(
-                            query.findObjectByType("::Demo::IRegistrarVoto"));
-                } catch (Exception e) {
-                    System.err.println("Error buscando objeto por tipo: " + e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error conectando a regionalAdapter: " + e.getMessage());
         }
 
         if(registrarVoto == null) {
@@ -85,10 +69,10 @@ public class MesaVotacion {
 
                 switch (line.trim().toLowerCase()) {
                     case "t":
-                        enviarVoto(registrarVoto, adapter, communicator);
+                        registrarVoto = enviarVoto(registrarVoto, adapter, communicator, query);
                         break;
                     case "p":
-                        enviarVotoPrueba(registrarVoto, adapter, communicator);
+                        registrarVoto = enviarVotoPrueba(registrarVoto, adapter, communicator, query);
                         break;
                     case "x":
                         System.out.println("Saliendo...");
@@ -103,19 +87,6 @@ public class MesaVotacion {
                 }
             } catch(java.io.IOException ex) {
                 ex.printStackTrace();
-            } catch(com.zeroc.Ice.LocalException ex) {
-                System.err.println("Error de comunicación ICE: " + ex.getMessage());
-                ex.printStackTrace();
-
-                // Intentar reconectar
-                try {
-                    if (query != null) {
-                        registrarVoto = IRegistrarVotoPrx.checkedCast(
-                                query.findObjectByType("::Demo::IRegistrarVoto"));
-                    }
-                } catch (Exception e) {
-                    System.err.println("Error intentando reconectar: " + e.getMessage());
-                }
             }
         } while(!line.equals("x"));
 
@@ -126,15 +97,68 @@ public class MesaVotacion {
         return 0;
     }
 
-    private static void enviarVoto(IRegistrarVotoPrx registrarVoto, ObjectAdapter adapter,
-                                   com.zeroc.Ice.Communicator communicator) {
+    // Método para obtener servidor regional con retry
+    private static IRegistrarVotoPrx obtenerServidorRegional(com.zeroc.Ice.Communicator communicator) {
+        IRegistrarVotoPrx registrarVoto = null;
+        com.zeroc.IceGrid.QueryPrx query = null;
+
+        try {
+            query = com.zeroc.IceGrid.QueryPrx.checkedCast(
+                    communicator.stringToProxy("DemoIceGrid/Query"));
+        } catch (Exception e) {
+            System.err.println("No se pudo conectar a IceGrid Query: " + e.getMessage());
+        }
+
+        try {
+            registrarVoto = IRegistrarVotoPrx.checkedCast(
+                    communicator.stringToProxy("regionalAdapter"));
+        } catch(com.zeroc.Ice.NotRegisteredException ex) {
+            if (query != null) {
+                try {
+                    registrarVoto = IRegistrarVotoPrx.checkedCast(
+                            query.findObjectByType("::Demo::IRegistrarVoto"));
+                } catch (Exception e) {
+                    System.err.println("Error buscando objeto por tipo: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error conectando a regionalAdapter: " + e.getMessage());
+        }
+
+        return registrarVoto;
+    }
+
+    // Método helper para reconexión
+    private static IRegistrarVotoPrx reconectarServidor(com.zeroc.Ice.Communicator communicator, 
+                                                        com.zeroc.IceGrid.QueryPrx query) {
+        System.out.println(" Servidor no disponible, buscando otro servidor...");
+        
+        try {
+            if (query != null) {
+                IRegistrarVotoPrx nuevoServidor = IRegistrarVotoPrx.checkedCast(
+                        query.findObjectByType("::Demo::IRegistrarVoto"));
+                if (nuevoServidor != null) {
+                    System.out.println(" Conectado a nuevo servidor regional");
+                    return nuevoServidor;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println(" Error intentando reconectar: " + e.getMessage());
+        }
+        
+        return null;
+    }
+
+    private static IRegistrarVotoPrx enviarVoto(IRegistrarVotoPrx registrarVoto, ObjectAdapter adapter,
+                                               com.zeroc.Ice.Communicator communicator, 
+                                               com.zeroc.IceGrid.QueryPrx query) {
         try {
             // Crear voto interactivo
             VotoImp votoImpl = VotoImp.crearVotoInteractivo();
 
             if (!votoImpl.esValido()) {
                 System.err.println(" El voto no es válido. Verifique los datos ingresados.");
-                return;
+                return registrarVoto;
             }
 
             // Crear el callback
@@ -146,14 +170,29 @@ public class MesaVotacion {
 
             System.out.println(" Voto enviado. Esperando confirmación...");
 
+        } catch (com.zeroc.Ice.NoEndpointException e) {
+            System.err.println(" Error: " + e.getMessage());
+            IRegistrarVotoPrx nuevoServidor = reconectarServidor(communicator, query);
+            if (nuevoServidor != null) {
+                return enviarVoto(nuevoServidor, adapter, communicator, query); // Retry
+            }
+        } catch (com.zeroc.Ice.LocalException ex) {
+            System.err.println(" Error de comunicación ICE: " + ex.getMessage());
+            IRegistrarVotoPrx nuevoServidor = reconectarServidor(communicator, query);
+            if (nuevoServidor != null) {
+                return nuevoServidor;
+            }
         } catch (Exception e) {
             System.err.println(" Error enviando voto: " + e.getMessage());
             e.printStackTrace();
         }
+        
+        return registrarVoto;
     }
 
-    private static void enviarVotoPrueba(IRegistrarVotoPrx registrarVoto, ObjectAdapter adapter,
-                                         com.zeroc.Ice.Communicator communicator) {
+    private static IRegistrarVotoPrx enviarVotoPrueba(IRegistrarVotoPrx registrarVoto, ObjectAdapter adapter,
+                                                     com.zeroc.Ice.Communicator communicator,
+                                                     com.zeroc.IceGrid.QueryPrx query) {
         try {
             // Crear voto de prueba
             VotoImp votoImpl = VotoImp.crearVotoPrueba();
@@ -170,10 +209,24 @@ public class MesaVotacion {
 
             System.out.println(" Voto de prueba enviado. Esperando confirmación...");
 
+        } catch (com.zeroc.Ice.NoEndpointException e) {
+            System.err.println(" Error: " + e.getMessage());
+            IRegistrarVotoPrx nuevoServidor = reconectarServidor(communicator, query);
+            if (nuevoServidor != null) {
+                return enviarVotoPrueba(nuevoServidor, adapter, communicator, query); // Retry
+            }
+        } catch (com.zeroc.Ice.LocalException ex) {
+            System.err.println(" Error de comunicación ICE: " + ex.getMessage());
+            IRegistrarVotoPrx nuevoServidor = reconectarServidor(communicator, query);
+            if (nuevoServidor != null) {
+                return nuevoServidor;  
+            }
         } catch (Exception e) {
             System.err.println(" Error enviando voto de prueba: " + e.getMessage());
             e.printStackTrace();
         }
+        
+        return registrarVoto;
     }
 
     private static IConfirmacionVotoPrx crearCallback(ObjectAdapter adapter,
