@@ -9,8 +9,8 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/MesaVotacion" />
-            <option value="$PROJECT_DIR$/ServidorRegional" />
+            <option value="$PROJECT_DIR$/mesaVotacion" />
+            <option value="$PROJECT_DIR$/servidorRegional" />
           </set>
         </option>
       </GradleProjectSettings>

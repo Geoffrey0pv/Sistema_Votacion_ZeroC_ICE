@@ -21,6 +21,7 @@ module Demo
     {
         long   idCandidato;
         string nombre;
+        string partido;
     };
     sequence<Candidato> SeqCandidatos;   
     
