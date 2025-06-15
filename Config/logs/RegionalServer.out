@@ -1,0 +1,4 @@
+Servidor Regional iniciado correctamente
+- ReceptorVotos disponible en: receptorVotos y IRegistrarVoto
+- GestionCandidatos disponible en: gestionCandidatos y ICargarCandidatos
+✅ Conectado al Registry de IceGrid
