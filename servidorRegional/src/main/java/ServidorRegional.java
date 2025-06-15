@@ -13,8 +13,6 @@ public class ServidorRegional {
         try(com.zeroc.Ice.Communicator communicator = com.zeroc.Ice.Util.initialize(args, extraArgs)) {
             communicator.getProperties().setProperty("Ice.Default.Package", "com.zeroc.demos.IceGrid.simple");
             
-            communicator.getProperties().setProperty("Ice.Default.Locator", "DemoIceGrid/Locator:default -h localhost -p 4061");
-
             Runtime.getRuntime().addShutdownHook(new Thread(() -> communicator.destroy()));
 
             if(!extraArgs.isEmpty()) {
@@ -33,16 +31,10 @@ public class ServidorRegional {
                 com.zeroc.Ice.Identity idGestion = com.zeroc.Ice.Util.stringToIdentity("gestionCandidatos");
                 adapter.add(gestionCandidatos, idGestion);
 
-                com.zeroc.Ice.Identity idReceptorTipo = com.zeroc.Ice.Util.stringToIdentity("IRegistrarVoto");
-                adapter.add(receptorVotos, idReceptorTipo);
-
-                com.zeroc.Ice.Identity idGestionTipo = com.zeroc.Ice.Util.stringToIdentity("ICargarCandidatos");
-                adapter.add(gestionCandidatos, idGestionTipo);
-
                 adapter.activate();
                 System.out.println("Servidor Regional iniciado correctamente");
-                System.out.println("- ReceptorVotos disponible en: " + idReceptor.name + " y " + idReceptorTipo.name);
-                System.out.println("- GestionCandidatos disponible en: " + idGestion.name + " y " + idGestionTipo.name);
+                System.out.println("- ReceptorVotos disponible en: " + idReceptor.name);
+                System.out.println("- GestionCandidatos disponible en: " + idGestion.name);
                 
                 try {
                     com.zeroc.IceGrid.RegistryPrx registry = com.zeroc.IceGrid.RegistryPrx.checkedCast(

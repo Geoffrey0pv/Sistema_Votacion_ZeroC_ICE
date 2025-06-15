@@ -339,7 +339,6 @@ public class GestorMesa implements IRecibirCandidatos {
         IRegistrarVotoPrx registrarVoto = null;
         
         try {
-            // Primero intentar conectar directamente usando IceGrid con la identidad específica
             System.out.println("🔗 Conectando al servidor regional (receptorVotos)...");
             
             // Conectar usando IceGrid Query para encontrar el objeto por identidad
@@ -348,12 +347,13 @@ public class GestorMesa implements IRecibirCandidatos {
             
             if (query != null) {
                 try {
-                    // Buscar el objeto por identidad específica
+                    System.out.println("✅ Conectado al IceGrid Query, buscando servidor por tipo...");
+                    // Buscar el objeto por tipo
                     com.zeroc.Ice.ObjectPrx obj = query.findObjectByType("::Demo::IRegistrarVoto");
                     if (obj != null) {
                         registrarVoto = IRegistrarVotoPrx.checkedCast(obj);
                         if (registrarVoto != null) {
-                            System.out.println("✅ Conectado al servidor regional via IceGrid Query");
+                            System.out.println("✅ Conectado al servidor regional via IceGrid Query (por tipo)");
                             return registrarVoto;
                         }
                     }
@@ -363,6 +363,7 @@ public class GestorMesa implements IRecibirCandidatos {
                 
                 // Si no funciona por tipo, intentar por identidad directa
                 try {
+                    System.out.println("🔄 Intentando conexión por identidad...");
                     com.zeroc.Ice.ObjectPrx objById = query.findObjectById(
                             com.zeroc.Ice.Util.stringToIdentity("receptorVotos"));
                     if (objById != null) {
@@ -375,22 +376,31 @@ public class GestorMesa implements IRecibirCandidatos {
                 } catch (Exception e) {
                     System.err.println("⚠️  Error buscando por identidad: " + e.getMessage());
                 }
+            } else {
+                System.err.println("❌ No se pudo conectar al IceGrid Query");
             }
             
             // Método alternativo: conectar directamente al adaptador
             try {
                 System.out.println("🔄 Intentando conexión directa al adaptador...");
-                String proxyString = "receptorVotos@RegionalAdapter";
+                String proxyString = "receptorVotos:tcp -h localhost -p 10000";
+                
+                System.out.println("   Usando proxy: " + proxyString);
                 com.zeroc.Ice.ObjectPrx directObj = communicator.stringToProxy(proxyString);
                 if (directObj != null) {
                     registrarVoto = IRegistrarVotoPrx.checkedCast(directObj);
                     if (registrarVoto != null) {
                         System.out.println("✅ Conectado directamente al adaptador regional");
                         return registrarVoto;
+                    } else {
+                        System.err.println("❌ Error: El proxy no es del tipo esperado");
                     }
+                } else {
+                    System.err.println("❌ Error: No se pudo crear el proxy");
                 }
             } catch (Exception e) {
                 System.err.println("⚠️  Error en conexión directa: " + e.getMessage());
+                e.printStackTrace();
             }
             
         } catch (Exception e) {
@@ -467,36 +477,6 @@ public class GestorMesa implements IRecibirCandidatos {
         
         System.err.println("❌ No se pudo establecer conexión con el servicio de gestión de candidatos");
         return null;
-    }
-
-    private ICargarCandidatosPrx obtenerGestionCandidatos(com.zeroc.Ice.Communicator communicator) {
-        ICargarCandidatosPrx cargarCandidatos = null;
-        com.zeroc.IceGrid.QueryPrx query = null;
-
-        try {
-            query = com.zeroc.IceGrid.QueryPrx.checkedCast(
-                    communicator.stringToProxy("DemoIceGrid/Query"));
-        } catch (Exception e) {
-            System.err.println("No se pudo conectar a IceGrid Query: " + e.getMessage());
-        }
-
-        try {
-            cargarCandidatos = ICargarCandidatosPrx.checkedCast(
-                    communicator.stringToProxy("regionalAdapter"));
-        } catch(com.zeroc.Ice.NotRegisteredException ex) {
-            if (query != null) {
-                try {
-                    cargarCandidatos = ICargarCandidatosPrx.checkedCast(
-                            query.findObjectByType("::Demo::ICargarCandidatos"));
-                } catch (Exception e) {
-                    System.err.println("Error buscando objeto por tipo: " + e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error conectando a regionalAdapter: " + e.getMessage());
-        }
-
-        return cargarCandidatos;
     }
 
     private IConfirmacionVotoPrx crearCallback() {

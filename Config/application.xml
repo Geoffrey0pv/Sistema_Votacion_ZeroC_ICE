@@ -7,7 +7,10 @@
       <server id="RegionalServer" exe="java" activation="on-demand">
         <option>-jar</option>
         <option>../servidorRegional/build/libs/servidorRegional.jar</option>
-        <adapter name="RegionalAdapter" endpoints="tcp -h localhost -p 8080" />
+        <adapter name="RegionalAdapter" endpoints="tcp -h localhost -p 10000">
+          <object identity="receptorVotos" type="::Demo::IRegistrarVoto"/>
+          <object identity="gestionCandidatos" type="::Demo::ICargarCandidatos"/>
+        </adapter>
       </server>
     </node>
 

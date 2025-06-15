@@ -16,10 +16,10 @@ import java.util.Properties;
 import javax.swing.SwingUtilities;
 
 public class ServidorNacional {
-
-    private static Communicator communicator;
-    private static ObjectAdapter adapter;
-    private static AdministradorCandidatos administradorCandidatos;
+    private static BrokerNacional brokerNacional;
+    private static HelloWorldImpl helloWorld;
+    private static ConsultaMesaImpl consultaMesa;
+    private static ConsultaCiudadanosImpl consultaCiudadanos;
     private static ProcesadorLoteVotosImpl procesadorLoteVotos;
     private static Communicator communicator;
     private static ObjectAdapter adapter;
