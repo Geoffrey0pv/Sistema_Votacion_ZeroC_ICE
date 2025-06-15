@@ -1,0 +1,159 @@
+package Config;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
+/**
+ * Gestor de configuración para la Base de Datos de Votos
+ * Maneja la conexión a la segunda base de datos dedicada a votos y candidatos
+ */
+public class VotosConfigManager implements IConfig {
+    private static VotosConfigManager instance;
+    private Properties properties;
+    private static final String CONFIG_FILE = "/cfg";
+    
+    private VotosConfigManager() {
+        loadConfiguration();
+    }
+    
+    public static synchronized VotosConfigManager getInstance() {
+        if (instance == null) {
+            instance = new VotosConfigManager();
+        }
+        return instance;
+    }
+    
+    private void loadConfiguration() {
+        properties = new Properties();
+        
+        try (InputStream input = getClass().getResourceAsStream(CONFIG_FILE)) {
+            if (input == null) {
+                System.err.println("❌ No se pudo encontrar el archivo de configuración: " + CONFIG_FILE);
+                System.err.println("   Usando valores por defecto para DB de votos");
+                loadDefaultProperties();
+                return;
+            }
+            
+            properties.load(input);
+            System.out.println("✅ Configuración de votos cargada desde: " + CONFIG_FILE);
+            
+        } catch (IOException e) {
+            System.err.println("❌ Error cargando configuración de votos: " + e.getMessage());
+            System.err.println("   Usando valores por defecto");
+            loadDefaultProperties();
+        }
+    }
+    
+    private void loadDefaultProperties() {
+        // Valores por defecto para base de datos de votos
+        properties.setProperty("db.host", "10.147.10.101");
+        properties.setProperty("db.port", "5432");
+        properties.setProperty("db.name", "votos_elecciones_grajj");
+        properties.setProperty("db.user", "votaciones_grajj");
+        properties.setProperty("db.password", "votaciones_grajj");
+        
+        // Pool de conexiones por defecto para votos
+        properties.setProperty("db.pool.minSize", "5");
+        properties.setProperty("db.pool.maxSize", "50");
+        properties.setProperty("db.pool.timeout", "30000");
+        
+        // Reintentos por defecto
+        properties.setProperty("db.retry.maxAttempts", "3");
+        properties.setProperty("db.retry.delayMs", "2000");
+        properties.setProperty("db.retry.backoffMultiplier", "2.0");
+    }
+    
+    // ========== MÉTODOS DE ACCESO A CONFIGURACIÓN ==========
+    
+    public String getProperty(String key) {
+        return properties.getProperty(key);
+    }
+    
+    public String getProperty(String key, String defaultValue) {
+        return properties.getProperty(key, defaultValue);
+    }
+    
+    public int getIntProperty(String key, int defaultValue) {
+        try {
+            String value = properties.getProperty(key);
+            return value != null ? Integer.parseInt(value) : defaultValue;
+        } catch (NumberFormatException e) {
+            System.err.println("⚠️  Valor inválido para " + key + ": " + properties.getProperty(key));
+            return defaultValue;
+        }
+    }
+    
+    public double getDoubleProperty(String key, double defaultValue) {
+        try {
+            String value = properties.getProperty(key);
+            return value != null ? Double.parseDouble(value) : defaultValue;
+        } catch (NumberFormatException e) {
+            System.err.println("⚠️  Valor inválido para " + key + ": " + properties.getProperty(key));
+            return defaultValue;
+        }
+    }
+    
+    public boolean getBooleanProperty(String key, boolean defaultValue) {
+        String value = properties.getProperty(key);
+        return value != null ? Boolean.parseBoolean(value) : defaultValue;
+    }
+    
+    // ========== MÉTODOS ESPECÍFICOS PARA BASE DE DATOS DE VOTOS ==========
+    
+    public String getVotosDatabaseUrl() {
+        String host = getProperty("db.host", "10.147.10.101");
+        int port = getIntProperty("db.port", 5432);
+        String dbName = getProperty("db.name", "votos_elecciones_grajj");
+        return "jdbc:postgresql://" + host + ":" + port + "/" + dbName;
+    }
+    
+    public String getVotosDatabaseUser() {
+        return getProperty("db.user", "votaciones_grajj");
+    }
+    
+    public String getVotosDatabasePassword() {
+        return getProperty("db.password", "votaciones_grajj");
+    }
+    
+    public int getVotosPoolMinSize() {
+        return getIntProperty("db.pool.minSize", 5);
+    }
+    
+    public int getVotosPoolMaxSize() {
+        return getIntProperty("db.pool.maxSize", 50);
+    }
+    
+    public int getVotosPoolTimeout() {
+        return getIntProperty("db.pool.timeout", 30000);
+    }
+    
+    // ========== MÉTODOS ESPECÍFICOS PARA REINTENTOS ==========
+    
+    public int getVotosRetryMaxAttempts() {
+        return getIntProperty("db.retry.maxAttempts", 3);
+    }
+    
+    public int getVotosRetryDelayMs() {
+        return getIntProperty("db.retry.delayMs", 2000);
+    }
+    
+    public double getVotosRetryBackoffMultiplier() {
+        return getDoubleProperty("db.retry.backoffMultiplier", 2.0);
+    }
+    
+    // ========== MÉTODOS DE UTILIDAD ==========
+    
+    public void printConfiguration() {
+        System.out.println("📋 ===== CONFIGURACIÓN BASE DE DATOS DE VOTOS =====");
+        System.out.println("🗄️  Base de datos de votos:");
+        System.out.println("   URL: " + getVotosDatabaseUrl());
+        System.out.println("   Usuario: " + getVotosDatabaseUser());
+        System.out.println("   Pool: " + getVotosPoolMinSize() + "-" + getVotosPoolMaxSize() + " conexiones");
+        System.out.println("🔄 Reintentos:");
+        System.out.println("   Máximo: " + getVotosRetryMaxAttempts() + " intentos");
+        System.out.println("   Delay: " + getVotosRetryDelayMs() + "ms");
+        System.out.println("⏱️  Timeout Pool: " + getVotosPoolTimeout() + "ms");
+        System.out.println("=================================================");
+    }
+} 

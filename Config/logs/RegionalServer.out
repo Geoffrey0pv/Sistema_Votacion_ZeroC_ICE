@@ -1,0 +1,18 @@
+Servidor Regional iniciado correctamente
+- ReceptorVotos disponible en: receptorVotos y IRegistrarVoto
+- GestionCandidatos disponible en: gestionCandidatos y ICargarCandidatos
+âœ… Conectado al Registry de IceGrid
+Servidor Regional iniciado correctamente
+- ReceptorVotos disponible en: receptorVotos
+- GestionCandidatos disponible en: gestionCandidatos
+? Conectado al Registry de IceGrid
+Recibiendo voto en región RegionalServer - ID: 1749929028472 - Mesa: MESA_001 - Candidato: 4
+Voto 1749929028472 procesado exitosamente
+Recibiendo voto en región RegionalServer - ID: 1749929040102 - Mesa: MESA_001 - Candidato: 1
+Voto 1749929040102 procesado exitosamente
+Recibiendo voto en región RegionalServer - ID: 1749929042231 - Mesa: MESA_001 - Candidato: 4
+Voto 1749929042231 procesado exitosamente
+Recibiendo voto en región RegionalServer - ID: 1749929099960 - Mesa: MESA_001 - Candidato: 1
+Voto 1749929099960 procesado exitosamente
+Enviando candidatos a mesa específica: Mesa-MESA_001:tcp -h localhost -p 10001
+No hay candidatos para enviar

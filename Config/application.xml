@@ -2,14 +2,61 @@
 
   <application name="SistemaVotacion">
 
-    <node name="node1">
+    <!-- Nodo para Servidor Regional -->
+    <node name="nodeRegional">
       <server id="RegionalServer" exe="java" activation="on-demand">
         <option>-jar</option>
-        <option>../servidorRegional/build/libs/ServidorRegional.jar</option>
-        <adapter name="RegionalAdapter" endpoints="tcp -h localhost">
-          <object identity="regionalAdapter" type="::Demo::IRegistrarVoto" property="Identity" />
+        <option>../servidorRegional/build/libs/servidorRegional.jar</option>
+        <adapter name="RegionalAdapter" endpoints="tcp -h localhost -p 10000">
+          <object identity="receptorVotos" type="::Demo::IRegistrarVoto"/>
+          <object identity="gestionCandidatos" type="::Demo::ICargarCandidatos"/>
         </adapter>
       </server>
     </node>
+
+    <!-- Nodo para Servidor Nacional (Broker) -->
+    <node name="nodeNacional">
+      <server id="ServidorNacional" exe="java" activation="always">
+        <option>-cp</option>
+        <option>../servidorNacional/build/classes/java/main:../servidorNacional/build/generated-src:../servidorNacional/build/libs/*</option>
+        <option>ServidorNacional</option>
+        <adapter name="ServidorNacionalAdapter" endpoints="tcp -h localhost -p 9090"/>
+        <properties>
+          <property name="Ice.Default.Package" value="Demo"/>
+          
+          <!-- Configuración del ReliableMessageQueue -->
+          <property name="ReliableQueue.BaseDir" value="reliable_queue"/>
+          <property name="ReliableQueue.ProcessingInterval" value="5000"/>
+          <property name="ReliableQueue.BatchSize" value="50"/>
+          <property name="ReliableQueue.MaxRetries" value="3"/>
+          <property name="ReliableQueue.RetryDelay" value="10000"/>
+          <property name="ReliableQueue.ProcessingThreads" value="5"/>
+          <property name="ReliableQueue.SchedulerThreads" value="2"/>
+          <property name="ReliableQueue.PersistenceEnabled" value="1"/>
+          <property name="ReliableQueue.AutoCleanup" value="1"/>
+          <property name="ReliableQueue.CleanupInterval" value="3600000"/>
+          <property name="ReliableQueue.MaxProcessedFiles" value="1000"/>
+          <property name="ReliableQueue.LogLevel" value="INFO"/>
+          <property name="ReliableQueue.LogStatistics" value="1"/>
+          <property name="ReliableQueue.StatisticsInterval" value="30000"/>
+          
+          <!-- Configuración de base de datos para votos -->
+          <property name="VotosDB.ConnectionTimeout" value="5000"/>
+          <property name="VotosDB.MaxRetries" value="3"/>
+          <property name="VotosDB.RetryInterval" value="2000"/>
+        </properties>
+      </server>
+    </node>
+
+    <service-template id="BrokerService">
+      <service name="AdministradorCandidatos" entry="ServidorNacionalAdapter.AdministradorCandidatos" />
+      <service name="BrokerNacional" entry="ServidorNacionalAdapter.BrokerNacional" />
+      <service name="HelloWorld" entry="ServidorNacionalAdapter.HelloWorld" />
+      <service name="MonitorRecursos" entry="ServidorNacionalAdapter.MonitorRecursos" />
+      <service name="BalanceadorCarga" entry="ServidorNacionalAdapter.BalanceadorCarga" />
+      <service name="GestorReplicas" entry="ServidorNacionalAdapter.GestorReplicas" />
+      <service name="VotosService" entry="ServidorNacionalAdapter.VotosService" />
+    </service-template>
+
   </application>
 </icegrid>

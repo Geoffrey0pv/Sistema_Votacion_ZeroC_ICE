@@ -1,0 +1,14 @@
+# Configuration file (06/15/25 02:46:33.689)
+
+# Server configuration
+Ice.Admin.ServerId=ServidorNacional
+Ice.Admin.Endpoints=tcp -h localhost
+Ice.ProgramName=ServidorNacional
+# Object adapter ServidorNacionalAdapter
+ServidorNacionalAdapter.Endpoints=tcp -h localhost -p 9090
+ServidorNacionalAdapter.AdapterId=ServidorNacional.ServidorNacionalAdapter
+# Server descriptor properties
+Ice.Default.Package=Demo
+Ice.StdErr=logs/ServidorNacional.out
+Ice.StdOut=logs/ServidorNacional.out
+Ice.Default.Locator=DemoIceGrid/Locator:default -h localhost -p 4061
