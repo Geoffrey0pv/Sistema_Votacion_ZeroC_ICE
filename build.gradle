@@ -19,15 +19,6 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'application'
     apply plugin: 'com.zeroc.gradle.ice-builder.slice'
- 
-    //
-    // Both Client and Server projects share the Printer.ice Slice definitions
-    //
-    slice {
-        java {
-            files = [file("../System.ice")]
-        }
-    }
 
     tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
@@ -41,7 +32,7 @@ subprojects {
     }
  
     //
-    // Both Client and Server depend only on Ice JAR
+    // Dependencies configuration
     //
     dependencies {
         implementation 'com.zeroc:ice:3.7.9'
@@ -58,6 +49,11 @@ subprojects {
         implementation 'org.apache.xmlbeans:xmlbeans:5.1.1'
         implementation 'org.apache.commons:commons-collections4:4.4'
         implementation 'org.apache.commons:commons-compress:1.21'
+        
+        // Dependencia específica para webService
+        if (project.name == 'webService') {
+            implementation project(':servidorNacional')
+        }
     }
  
     //
@@ -65,10 +61,17 @@ subprojects {
     //
     jar {
         manifest {
-            attributes(
-                "Main-Class": project.name.capitalize(),
-                "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
-            )
+            if (project.name == 'webService') {
+                attributes(
+                    "Main-Class": "WebServiceMain",
+                    "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
+                )
+            } else {
+                attributes(
+                    "Main-Class": project.name.capitalize(),
+                    "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
+                )
+            }
         } from {
             configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
         }
@@ -86,6 +89,15 @@ subprojects {
     
     // Configuración específica para servidorNacional
     if (project.name == 'servidorNacional') {
+        //
+        // Generar clases ICE desde System.ice
+        //
+        slice {
+            java {
+                files = [file("../System.ice")]
+            }
+        }
+        
         application {
             mainClass = 'ServidorNacionalUI.ServidorNacionalUI'
         }
@@ -97,6 +109,37 @@ subprojects {
             systemProperty 'java.awt.headless', 'false'
             // Configurar encoding
             systemProperty 'file.encoding', 'UTF-8'
+        }
+    }
+    
+    // Configuración específica para webService
+    if (project.name == 'webService') {
+        // No generar clases ICE para evitar duplicados
+        slice {
+            java {
+                files = [] // No generar archivos ICE aquí
+            }
+        }
+        
+        application {
+            mainClass = 'WebServiceMain'
+        }
+        
+        run {
+            mainClass = 'WebServiceMain'
+            systemProperty 'file.encoding', 'UTF-8'
+        }
+    }
+    
+    // Configuración por defecto para otros proyectos
+    if (project.name != 'servidorNacional' && project.name != 'webService') {
+        //
+        // Generar clases ICE desde System.ice para otros proyectos
+        //
+        slice {
+            java {
+                files = [file("../System.ice")]
+            }
         }
     }
 }
