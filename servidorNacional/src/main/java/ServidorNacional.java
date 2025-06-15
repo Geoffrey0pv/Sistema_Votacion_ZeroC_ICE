@@ -3,6 +3,7 @@ import AdministradorCandidatos.AdministradorCandidatos;
 import Broker.BrokerNacional;
 import HelloWorld.HelloWorldImpl;
 import ConsultaMesa.ConsultaMesaImpl;
+import ConsultaCiudadanos.ConsultaCiudadanosImpl;
 import ServidorNacionalUI.ServidorNacionalUI;
 import Config.ConfigManager;
 import com.zeroc.Ice.*;
@@ -17,6 +18,7 @@ public class ServidorNacional {
     private static BrokerNacional brokerNacional;
     private static HelloWorldImpl helloWorld;
     private static ConsultaMesaImpl consultaMesa;
+    private static ConsultaCiudadanosImpl consultaCiudadanos;
     private static Communicator communicator;
     private static ObjectAdapter adapter;
     private static ConfigManager configManager;
@@ -51,6 +53,9 @@ public class ServidorNacional {
             // Crear e inicializar ConsultaMesa con configuración
             consultaMesa = new ConsultaMesaImpl();
             
+            // Crear e inicializar ConsultaCiudadanos con configuración
+            consultaCiudadanos = new ConsultaCiudadanosImpl();
+            
             // Registrar el Broker como IAdministradorCandidatos (compatibilidad hacia atrás)
             Identity candidatosId = Util.stringToIdentity("AdministradorCandidatos");
             adapter.add(brokerNacional, candidatosId);
@@ -66,6 +71,10 @@ public class ServidorNacional {
             // Registrar ConsultaMesa endpoint
             Identity consultaMesaId = Util.stringToIdentity("ConsultaMesa");
             adapter.add(consultaMesa, consultaMesaId);
+            
+            // Registrar ConsultaCiudadanos endpoint
+            Identity consultaCiudadanosId = Util.stringToIdentity("ConsultaCiudadanos");
+            adapter.add(consultaCiudadanos, consultaCiudadanosId);
             
             // Activar adaptador
             adapter.activate();
@@ -83,6 +92,7 @@ public class ServidorNacional {
             System.out.println("   • BrokerNacional (nueva funcionalidad)");
             System.out.println("   • HelloWorld (endpoint de prueba) 🌍");
             System.out.println("   • ConsultaMesa (consulta por documento) 🔍");
+            System.out.println("   • ConsultaCiudadanos (consulta por ciudadano) 🌍");
             System.out.println("==========================================");
             
             if (useUI) {
@@ -92,7 +102,7 @@ public class ServidorNacional {
                 // Lanzar la interfaz gráfica en el hilo de eventos de Swing
                 SwingUtilities.invokeLater(() -> {
                     try {
-                        ui = new ServidorNacionalUI(brokerNacional);
+                        ui = new ServidorNacionalUI();
                         ui.setVisible(true);
                         System.out.println("✅ Interfaz gráfica iniciada correctamente");
                     } catch (Exception e) {
@@ -160,6 +170,11 @@ public class ServidorNacional {
                 consultaMesa.shutdown();
             }
             
+            // Cerrar servicio de consulta de ciudadanos
+            if (consultaCiudadanos != null) {
+                consultaCiudadanos.shutdown();
+            }
+            
             // Desactivar adaptador
             if (adapter != null) {
                 adapter.deactivate();
@@ -190,6 +205,11 @@ public class ServidorNacional {
     // Método para obtener ConsultaMesa (útil para testing)
     public static ConsultaMesaImpl getConsultaMesa() {
         return consultaMesa;
+    }
+    
+    // Método para obtener ConsultaCiudadanos (útil para testing)
+    public static ConsultaCiudadanosImpl getConsultaCiudadanos() {
+        return consultaCiudadanos;
     }
     
     // Método para obtener el communicator (útil para testing)

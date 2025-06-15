@@ -5,21 +5,21 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Gestor de configuración para el Servidor Nacional
- * Carga y proporciona acceso a las propiedades de configuración
+ * Gestor de configuración para la Base de Datos de Votos
+ * Maneja la conexión a la segunda base de datos dedicada a votos y candidatos
  */
-public class ConfigManager {
-    private static ConfigManager instance;
+public class VotosConfigManager {
+    private static VotosConfigManager instance;
     private Properties properties;
     private static final String CONFIG_FILE = "/votos.cfg";
     
-    private ConfigManager() {
+    private VotosConfigManager() {
         loadConfiguration();
     }
     
-    public static synchronized ConfigManager getInstance() {
+    public static synchronized VotosConfigManager getInstance() {
         if (instance == null) {
-            instance = new ConfigManager();
+            instance = new VotosConfigManager();
         }
         return instance;
     }
@@ -30,30 +30,30 @@ public class ConfigManager {
         try (InputStream input = getClass().getResourceAsStream(CONFIG_FILE)) {
             if (input == null) {
                 System.err.println("❌ No se pudo encontrar el archivo de configuración: " + CONFIG_FILE);
-                System.err.println("   Usando valores por defecto");
+                System.err.println("   Usando valores por defecto para DB de votos");
                 loadDefaultProperties();
                 return;
             }
             
             properties.load(input);
-            System.out.println("✅ Configuración cargada desde: " + CONFIG_FILE);
+            System.out.println("✅ Configuración de votos cargada desde: " + CONFIG_FILE);
             
         } catch (IOException e) {
-            System.err.println("❌ Error cargando configuración: " + e.getMessage());
+            System.err.println("❌ Error cargando configuración de votos: " + e.getMessage());
             System.err.println("   Usando valores por defecto");
             loadDefaultProperties();
         }
     }
     
     private void loadDefaultProperties() {
-        // Valores por defecto para base de datos (usando la configuración de votos.cfg)
-        properties.setProperty("votos.db.host", "10.147.17.101");
+        // Valores por defecto para base de datos de votos
+        properties.setProperty("votos.db.host", "10.147.10.101");
         properties.setProperty("votos.db.port", "5432");
         properties.setProperty("votos.db.name", "votos_elecciones_grajj");
         properties.setProperty("votos.db.user", "votaciones_grajj");
         properties.setProperty("votos.db.password", "votaciones_grajj");
         
-        // Pool de conexiones por defecto
+        // Pool de conexiones por defecto para votos
         properties.setProperty("votos.db.pool.minSize", "5");
         properties.setProperty("votos.db.pool.maxSize", "50");
         properties.setProperty("votos.db.pool.timeout", "30000");
@@ -62,11 +62,6 @@ public class ConfigManager {
         properties.setProperty("votos.db.retry.maxAttempts", "3");
         properties.setProperty("votos.db.retry.delayMs", "2000");
         properties.setProperty("votos.db.retry.backoffMultiplier", "2.0");
-        
-        // ConsultaMesa por defecto
-        properties.setProperty("consultaMesa.queryTimeout", "15000");
-        properties.setProperty("consultaMesa.serviceInactiveMessage", 
-            "🚫 SERVICIO TEMPORALMENTE INACTIVO\\n   📞 Contacte a soporte técnico");
     }
     
     // ========== MÉTODOS DE ACCESO A CONFIGURACIÓN ==========
@@ -99,81 +94,61 @@ public class ConfigManager {
         }
     }
     
-    public boolean getBooleanProperty(String key, boolean defaultValue) {
-        String value = properties.getProperty(key);
-        return value != null ? Boolean.parseBoolean(value) : defaultValue;
-    }
+    // ========== MÉTODOS ESPECÍFICOS PARA BASE DE DATOS DE VOTOS ==========
     
-    // ========== MÉTODOS ESPECÍFICOS PARA BASE DE DATOS ==========
-    
-    public String getDatabaseUrl() {
-        String host = getProperty("votos.db.host", "10.147.17.101");
+    public String getVotosDatabaseUrl() {
+        String host = getProperty("votos.db.host", "10.147.10.101");
         int port = getIntProperty("votos.db.port", 5432);
         String dbName = getProperty("votos.db.name", "votos_elecciones_grajj");
         return "jdbc:postgresql://" + host + ":" + port + "/" + dbName;
     }
     
-    public String getDatabaseUser() {
+    public String getVotosDatabaseUser() {
         return getProperty("votos.db.user", "votaciones_grajj");
     }
     
-    public String getDatabasePassword() {
+    public String getVotosDatabasePassword() {
         return getProperty("votos.db.password", "votaciones_grajj");
     }
     
-    public int getPoolMinSize() {
+    public int getVotosPoolMinSize() {
         return getIntProperty("votos.db.pool.minSize", 5);
     }
     
-    public int getPoolMaxSize() {
+    public int getVotosPoolMaxSize() {
         return getIntProperty("votos.db.pool.maxSize", 50);
     }
     
-    public int getPoolTimeout() {
+    public int getVotosPoolTimeout() {
         return getIntProperty("votos.db.pool.timeout", 30000);
     }
     
     // ========== MÉTODOS ESPECÍFICOS PARA REINTENTOS ==========
     
-    public int getRetryMaxAttempts() {
+    public int getVotosRetryMaxAttempts() {
         return getIntProperty("votos.db.retry.maxAttempts", 3);
     }
     
-    public int getRetryDelayMs() {
+    public int getVotosRetryDelayMs() {
         return getIntProperty("votos.db.retry.delayMs", 2000);
     }
     
-    public double getRetryBackoffMultiplier() {
+    public double getVotosRetryBackoffMultiplier() {
         return getDoubleProperty("votos.db.retry.backoffMultiplier", 2.0);
-    }
-    
-    // ========== MÉTODOS ESPECÍFICOS PARA CONSULTA MESA ==========
-    
-    public int getQueryTimeout() {
-        return getIntProperty("consultaMesa.queryTimeout", 15000);
-    }
-    
-    public String getServiceInactiveMessage() {
-        String message = getProperty("consultaMesa.serviceInactiveMessage", 
-            "🚫 SERVICIO TEMPORALMENTE INACTIVO\\n   📞 Contacte a soporte técnico");
-        // Reemplazar \\n con saltos de línea reales
-        return message.replace("\\n", "\n");
     }
     
     // ========== MÉTODOS DE UTILIDAD ==========
     
     public void printConfiguration() {
-        System.out.println("📋 ===== CONFIGURACIÓN SERVIDOR NACIONAL =====");
-        System.out.println("🗄️  Base de datos:");
-        System.out.println("   URL: " + getDatabaseUrl());
-        System.out.println("   Usuario: " + getDatabaseUser());
-        System.out.println("   Pool: " + getPoolMinSize() + "-" + getPoolMaxSize() + " conexiones");
+        System.out.println("📋 ===== CONFIGURACIÓN BASE DE DATOS DE VOTOS =====");
+        System.out.println("🗄️  Base de datos de votos:");
+        System.out.println("   URL: " + getVotosDatabaseUrl());
+        System.out.println("   Usuario: " + getVotosDatabaseUser());
+        System.out.println("   Pool: " + getVotosPoolMinSize() + "-" + getVotosPoolMaxSize() + " conexiones");
         System.out.println("🔄 Reintentos:");
-        System.out.println("   Máximo: " + getRetryMaxAttempts() + " intentos");
-        System.out.println("   Delay: " + getRetryDelayMs() + "ms");
-        System.out.println("⏱️  Timeouts:");
-        System.out.println("   Query: " + getQueryTimeout() + "ms");
-        System.out.println("   Pool: " + getPoolTimeout() + "ms");
-        System.out.println("===============================================");
+        System.out.println("   Máximo: " + getVotosRetryMaxAttempts() + " intentos");
+        System.out.println("   Delay: " + getVotosRetryDelayMs() + "ms");
+        System.out.println("⏱️  Timeout Pool: " + getVotosPoolTimeout() + "ms");
+        System.out.println("=================================================");
     }
 } 

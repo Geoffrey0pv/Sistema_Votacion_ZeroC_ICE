@@ -157,4 +157,47 @@ module Demo
         MesaInfo consultarMesaPorDocumento(string documento);
         bool verificarConexionBD();
     };
+
+    // ========== INTERFAZ CONSULTA CIUDADANOS ==========
+    
+    struct CiudadanoInfo
+    {
+        long id;
+        string documento;
+        string nombre;
+        string apellido;
+        string mesa;
+        string puesto;
+        string municipio;
+        string departamento;
+    };
+
+    sequence<CiudadanoInfo> SeqCiudadanos;
+    sequence<string> SeqDepartamentos;
+
+    struct ResultadoPaginado
+    {
+        SeqCiudadanos ciudadanos;
+        long totalRegistros;
+        int paginaActual;
+        int totalPaginas;
+        bool hayMasPaginas;
+    };
+
+    interface IConsultaCiudadanos
+    {
+        // Método original (mantener compatibilidad) - con límite por defecto de 1000
+        SeqCiudadanos consultarCiudadanosPorDepartamentos(SeqDepartamentos departamentos);
+        
+        // Método optimizado con paginación
+        ResultadoPaginado consultarCiudadanosPaginado(SeqDepartamentos departamentos, int pagina, int tamanoPagina);
+        
+        // Método para obtener solo el conteo (rápido)
+        long contarCiudadanosPorDepartamentos(SeqDepartamentos departamentos);
+        
+        // Método con límite personalizable
+        SeqCiudadanos consultarCiudadanosConLimite(SeqDepartamentos departamentos, int limite);
+        
+        bool verificarConexionBD();
+    };
 };

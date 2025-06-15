@@ -17,6 +17,7 @@ subprojects {
     // Apply Java and Ice Builder plug-ins to all sub-projects
     //
     apply plugin: 'java'
+    apply plugin: 'application'
     apply plugin: 'com.zeroc.gradle.ice-builder.slice'
  
     //
@@ -49,6 +50,14 @@ subprojects {
         implementation 'com.google.code.gson:gson:2.10.1'
         implementation 'com.opencsv:opencsv:5.9'
         implementation 'org.postgresql:postgresql:42.7.1'
+        
+        // Apache POI para manejo de archivos Excel
+        implementation 'org.apache.poi:poi:5.2.4'
+        implementation 'org.apache.poi:poi-ooxml:5.2.4'
+        implementation 'org.apache.poi:poi-ooxml-schemas:4.1.2'
+        implementation 'org.apache.xmlbeans:xmlbeans:5.1.1'
+        implementation 'org.apache.commons:commons-collections4:4.4'
+        implementation 'org.apache.commons:commons-compress:1.21'
     }
  
     //
@@ -64,5 +73,30 @@ subprojects {
             configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
         }
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+    
+    //
+    // Task to print classpath for external scripts
+    //
+    task printClasspath {
+        doLast {
+            println configurations.runtimeClasspath.asPath
+        }
+    }
+}
+
+// Configuración específica para servidorNacional
+project(':servidorNacional') {
+    application {
+        mainClass = 'ServidorNacionalUI.ServidorNacionalUI'
+    }
+    
+    // Configurar la tarea run para que use la clase principal correcta
+    run {
+        mainClass = 'ServidorNacionalUI.ServidorNacionalUI'
+        // Configurar para que funcione con GUI
+        systemProperty 'java.awt.headless', 'false'
+        // Configurar encoding
+        systemProperty 'file.encoding', 'UTF-8'
     }
 }

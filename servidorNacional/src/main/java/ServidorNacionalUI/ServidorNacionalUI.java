@@ -1,12 +1,5 @@
 package ServidorNacionalUI;
 
-import Demo.*;
-import AdministradorCandidatos.AdministradorCandidatos;
-import Broker.BrokerNacional;
-import Broker.BalanceadorCarga;
-import Broker.GestorReplicas;
-import Broker.MonitorRecursos;
-
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -18,19 +11,28 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.util.List;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class ServidorNacionalUI extends JFrame {
+// ICE imports
+import com.zeroc.Ice.Communicator;
+import com.zeroc.Ice.ObjectAdapter;
+import com.zeroc.Ice.Util;
 
-    private final BrokerNacional broker;
-    private final AdministradorCandidatos administradorCandidatos;
-    private final BalanceadorCarga balanceador;
-    private final GestorReplicas gestorReplicas;
-    private final MonitorRecursos monitorMaster;
+// Imports del proyecto
+import Demo.*;
+import Services.CandidatosService;
+import Models.CandidatoModel;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class ServidorNacionalUI extends JFrame {
+    
+    // Componentes principales
+    private final CandidatosService candidatosService;
     
     // Componentes UI principales
     private JTable tablaCandidatos;
@@ -38,94 +40,53 @@ public class ServidorNacionalUI extends JFrame {
     private JLabel labelCantidadCandidatos;
     private JTextField campoRutaCSV;
     private JTextArea areaLog;
-    
-    // Componentes UI del Broker
-    private JLabel labelEstadoCluster;
-    private JLabel labelReplicasActivas;
-    private JLabel labelCargaPromedio;
-    private JLabel labelMetricasMaster;
-    private JTable tablaReplicas;
-    private DefaultTableModel modeloReplicas;
-    private JProgressBar barraEscalado;
-    private JButton btnEscalarManual;
-    private JButton btnReducirManual;
-    private JComboBox<String> comboAlgoritmo;
+    private JLabel lblEstadoCandidatos;
     
     // Scheduler para actualizaciones automáticas
     private final ScheduledExecutorService schedulerUI;
 
-    public ServidorNacionalUI(BrokerNacional broker) {
-        this.broker = broker;
-        this.administradorCandidatos = broker.getMasterCandidatos();
-        this.balanceador = broker.getBalanceador();
-        this.gestorReplicas = broker.getGestorReplicas();
-        this.monitorMaster = broker.getMonitorMaster();
-        this.schedulerUI = Executors.newScheduledThreadPool(2);
+    /**
+     * Constructor principal
+     */
+    public ServidorNacionalUI() {
+        this.candidatosService = new CandidatosService();
+        this.schedulerUI = Executors.newScheduledThreadPool(1);
         
-        log("🎯 Iniciando Interfaz del Broker Nacional...");
-        log("📡 Conectando con componentes del broker...");
+        // Configurar la ventana principal
+        configurarVentana();
         
-        // Verificar componentes
-        if (administradorCandidatos != null) {
-            log("✅ AdministradorCandidatos conectado");
-        } else {
-            log("❌ AdministradorCandidatos no disponible");
-        }
-        
-        if (balanceador != null) {
-            log("✅ BalanceadorCarga conectado");
-        } else {
-            log("❌ BalanceadorCarga no disponible");
-        }
-        
-        if (gestorReplicas != null) {
-            log("✅ GestorReplicas conectado");
-        } else {
-            log("❌ GestorReplicas no disponible");
-        }
-        
-        if (monitorMaster != null) {
-            log("✅ MonitorRecursos conectado");
-        } else {
-            log("❌ MonitorRecursos no disponible");
-        }
-        
+        // Inicializar la interfaz
         initializeUI();
-        iniciarActualizacionesAutomaticas();
         
-        log("🎯 Interfaz del Broker Nacional iniciada correctamente");
-        log("🔄 Actualizaciones automáticas activadas");
-        log("📊 Monitoreando métricas cada 3 segundos");
-        log("👥 Actualizando candidatos cada 5 segundos");
+        // Cargar candidatos iniciales
+        cargarCandidatosDesdeDB();
+        
+        log("🎯 Servidor Nacional UI inicializado correctamente");
     }
 
-    private void initializeUI() {
-        setTitle("🎯 Servidor Nacional - Broker con Escalado Automático");
+    private void configurarVentana() {
+        setTitle("🎯 Servidor Nacional - Gestión de Candidatos");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        setSize(1400, 900);
+        setSize(1200, 800);
         setLocationRelativeTo(null);
 
         // Configurar cierre personalizado
-        addWindowListener(new java.awt.event.WindowAdapter() {
+        addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+            public void windowClosing(WindowEvent windowEvent) {
                 cerrarAplicacion();
             }
         });
-        
+    }
+
+    private void initializeUI() {
         // Layout principal con pestañas
         JTabbedPane tabbedPane = new JTabbedPane();
         
         // Pestaña 1: Gestión de Candidatos
         tabbedPane.addTab("👥 Candidatos", crearPanelCandidatos());
         
-        // Pestaña 2: Monitor del Cluster
-        tabbedPane.addTab("📊 Cluster", crearPanelCluster());
-        
-        // Pestaña 3: Configuración del Broker
-        tabbedPane.addTab("⚙️ Configuración", crearPanelConfiguracion());
-        
-        // Pestaña 4: Logs del Sistema
+        // Pestaña 2: Logs del Sistema
         tabbedPane.addTab("📝 Logs", crearPanelLogs());
         
         add(tabbedPane, BorderLayout.CENTER);
@@ -138,151 +99,100 @@ public class ServidorNacionalUI extends JFrame {
         JPanel panel = new JPanel(new BorderLayout());
         
         // Panel superior con controles
-        JPanel panelControles = new JPanel(new FlowLayout());
-        panelControles.setBorder(new TitledBorder("Gestión de Candidatos"));
+        JPanel panelControles = new JPanel(new GridBagLayout());
+        panelControles.setBorder(new TitledBorder("🗳️ Gestión de Candidatos"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
         
-        campoRutaCSV = new JTextField(30);
+        // Fila 1 - Selección de archivo
+        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
+        panelControles.add(new JLabel("Archivo:"), gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 0; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        campoRutaCSV = new JTextField(40);
+        panelControles.add(campoRutaCSV, gbc);
+        
+        gbc.gridx = 2; gbc.gridy = 0; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
         JButton btnExaminar = new JButton("📁 Examinar");
-        JButton btnCargarCSV = new JButton("📥 Cargar CSV");
-        JButton btnLimpiar = new JButton("🗑️ Limpiar");
-        JButton btnEnviarRegionales = new JButton("📤 Enviar a Regionales");
+        panelControles.add(btnExaminar, gbc);
         
-        panelControles.add(new JLabel("Archivo CSV:"));
-        panelControles.add(campoRutaCSV);
-        panelControles.add(btnExaminar);
-        panelControles.add(btnCargarCSV);
-        panelControles.add(btnLimpiar);
-        panelControles.add(btnEnviarRegionales);
+        // Fila 2 - Botones principales
+        gbc.gridx = 0; gbc.gridy = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        JButton btnCargarCSV = new JButton("📄 Cargar CSV");
+        btnCargarCSV.setBackground(new Color(76, 175, 80));
+        btnCargarCSV.setForeground(Color.WHITE);
+        btnCargarCSV.setPreferredSize(new Dimension(150, 35));
+        panelControles.add(btnCargarCSV, gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 1;
+        JButton btnCargarExcel = new JButton("📊 Cargar Excel");
+        btnCargarExcel.setBackground(new Color(33, 150, 243));
+        btnCargarExcel.setForeground(Color.WHITE);
+        btnCargarExcel.setPreferredSize(new Dimension(150, 35));
+        panelControles.add(btnCargarExcel, gbc);
+        
+        gbc.gridx = 2; gbc.gridy = 1;
+        JButton btnEliminarTodo = new JButton("🗑️ Eliminar Todo");
+        btnEliminarTodo.setBackground(new Color(244, 67, 54));
+        btnEliminarTodo.setForeground(Color.WHITE);
+        btnEliminarTodo.setPreferredSize(new Dimension(150, 35));
+        panelControles.add(btnEliminarTodo, gbc);
+        
+        // Fila 3 - Estado
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
+        lblEstadoCandidatos = new JLabel("Listo para cargar candidatos");
+        lblEstadoCandidatos.setFont(new Font("Arial", Font.ITALIC, 12));
+        lblEstadoCandidatos.setForeground(new Color(102, 102, 102));
+        panelControles.add(lblEstadoCandidatos, gbc);
+        
+        gbc.gridx = 2; gbc.gridy = 2; gbc.gridwidth = 1;
+        labelCantidadCandidatos = new JLabel("Candidatos: 0");
+        labelCantidadCandidatos.setFont(new Font("Arial", Font.BOLD, 12));
+        panelControles.add(labelCantidadCandidatos, gbc);
 
-        // Tabla de candidatos
-        String[] columnas = {"ID", "Nombre", "Partido", "Propuestas"};
+        // Tabla de candidatos EDITABLE y sincronizada
+        String[] columnas = {"ID", "Nombre", "Partido"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false;
+                // Solo permitir editar Nombre y Partido (columnas 1 y 2)
+                return column == 1 || column == 2;
+            }
+            
+            @Override
+            public void setValueAt(Object value, int row, int column) {
+                super.setValueAt(value, row, column);
+                // Guardar automáticamente cuando se edite
+                guardarCambioEnBD(row, column, value);
             }
         };
 
         tablaCandidatos = new JTable(modeloTabla);
         tablaCandidatos.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JScrollPane scrollTabla = new JScrollPane(tablaCandidatos);
-        scrollTabla.setBorder(new TitledBorder("Candidatos Registrados"));
+        tablaCandidatos.getTableHeader().setReorderingAllowed(false);
+        tablaCandidatos.setRowHeight(25);
+        tablaCandidatos.setShowGrid(true);
+        tablaCandidatos.setGridColor(new Color(230, 230, 230));
         
-        // Panel inferior con información
-        JPanel panelInfo = new JPanel(new FlowLayout());
-        labelCantidadCandidatos = new JLabel("Candidatos: 0");
-        panelInfo.add(labelCantidadCandidatos);
+        // Menú contextual para eliminar
+        JPopupMenu menuContextual = new JPopupMenu();
+        JMenuItem eliminarItem = new JMenuItem("🗑️ Eliminar Candidato");
+        eliminarItem.addActionListener(e -> eliminarCandidatoSeleccionado());
+        menuContextual.add(eliminarItem);
+        tablaCandidatos.setComponentPopupMenu(menuContextual);
+        
+        JScrollPane scrollTabla = new JScrollPane(tablaCandidatos);
+        scrollTabla.setBorder(new TitledBorder("📋 Candidatos - Doble clic para editar | Clic derecho para eliminar"));
+        scrollTabla.setPreferredSize(new Dimension(800, 400));
         
         // Event listeners
-        btnExaminar.addActionListener(e -> examinarArchivo());
-        btnCargarCSV.addActionListener(e -> cargarCandidatosCSV());
-        btnLimpiar.addActionListener(e -> limpiarCandidatos());
-        btnEnviarRegionales.addActionListener(e -> enviarCandidatosRegionales());
+        btnExaminar.addActionListener(e -> examinarArchivoCandidatos());
+        btnCargarCSV.addActionListener(e -> cargarCSV());
+        btnCargarExcel.addActionListener(e -> cargarExcel());
+        btnEliminarTodo.addActionListener(e -> eliminarTodosLosCandidatos());
         
         panel.add(panelControles, BorderLayout.NORTH);
         panel.add(scrollTabla, BorderLayout.CENTER);
-        panel.add(panelInfo, BorderLayout.SOUTH);
-        
-        return panel;
-    }
-
-    private JPanel crearPanelCluster() {
-        JPanel panel = new JPanel(new BorderLayout());
-        
-        // Panel superior con métricas generales
-        JPanel panelMetricas = new JPanel(new GridLayout(2, 2, 10, 10));
-        panelMetricas.setBorder(new TitledBorder("Estado del Cluster"));
-        
-        labelEstadoCluster = new JLabel("🔄 Inicializando...");
-        labelReplicasActivas = new JLabel("📊 Réplicas: 0/0");
-        labelCargaPromedio = new JLabel("⚖️ Carga: 0.0%");
-        labelMetricasMaster = new JLabel("🖥️ Master: CPU=0% MEM=0%");
-        
-        panelMetricas.add(labelEstadoCluster);
-        panelMetricas.add(labelReplicasActivas);
-        panelMetricas.add(labelCargaPromedio);
-        panelMetricas.add(labelMetricasMaster);
-        
-        // Tabla de réplicas
-        String[] columnasReplicas = {"Node ID", "Endpoint", "Estado", "CPU %", "MEM %", "Requests", "Tiempo Activo"};
-        modeloReplicas = new DefaultTableModel(columnasReplicas, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        
-        tablaReplicas = new JTable(modeloReplicas);
-        JScrollPane scrollReplicas = new JScrollPane(tablaReplicas);
-        scrollReplicas.setBorder(new TitledBorder("Réplicas Activas"));
-        
-        // Panel de escalado
-        JPanel panelEscalado = new JPanel(new FlowLayout());
-        panelEscalado.setBorder(new TitledBorder("Control de Escalado"));
-        
-        barraEscalado = new JProgressBar(0, 100);
-        barraEscalado.setStringPainted(true);
-        barraEscalado.setString("Carga: 0%");
-        
-        btnEscalarManual = new JButton("🚀 Escalar");
-        btnReducirManual = new JButton("📉 Reducir");
-        
-        panelEscalado.add(new JLabel("Carga del Sistema:"));
-        panelEscalado.add(barraEscalado);
-        panelEscalado.add(btnEscalarManual);
-        panelEscalado.add(btnReducirManual);
-        
-        // Event listeners
-        btnEscalarManual.addActionListener(e -> escalarManualmente());
-        btnReducirManual.addActionListener(e -> reducirManualmente());
-        
-        panel.add(panelMetricas, BorderLayout.NORTH);
-        panel.add(scrollReplicas, BorderLayout.CENTER);
-        panel.add(panelEscalado, BorderLayout.SOUTH);
-        
-        return panel;
-    }
-
-    private JPanel crearPanelConfiguracion() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        
-        // Configuración del balanceador
-        JPanel panelBalanceador = new JPanel(new FlowLayout());
-        panelBalanceador.setBorder(new TitledBorder("Configuración del Balanceador"));
-        
-        comboAlgoritmo = new JComboBox<>(new String[]{
-            "ROUND_ROBIN", "LEAST_CONNECTIONS", "WEIGHTED_RESPONSE_TIME", "LEAST_CPU_USAGE"
-        });
-        
-        JButton btnAplicarAlgoritmo = new JButton("✅ Aplicar");
-        
-        panelBalanceador.add(new JLabel("Algoritmo:"));
-        panelBalanceador.add(comboAlgoritmo);
-        panelBalanceador.add(btnAplicarAlgoritmo);
-        
-        // Configuración de escalado
-        JPanel panelEscaladoConfig = new JPanel(new GridLayout(4, 2, 5, 5));
-        panelEscaladoConfig.setBorder(new TitledBorder("Configuración de Escalado"));
-        
-        panelEscaladoConfig.add(new JLabel("Umbral de Escalado:"));
-        panelEscaladoConfig.add(new JLabel("50.0%"));
-        panelEscaladoConfig.add(new JLabel("Umbral de Reducción:"));
-        panelEscaladoConfig.add(new JLabel("20.0%"));
-        panelEscaladoConfig.add(new JLabel("Máximo Réplicas:"));
-        panelEscaladoConfig.add(new JLabel("10"));
-        panelEscaladoConfig.add(new JLabel("Intervalo Evaluación:"));
-        panelEscaladoConfig.add(new JLabel("15 segundos"));
-        
-        // Event listeners
-        btnAplicarAlgoritmo.addActionListener(e -> cambiarAlgoritmoBalanceador());
-        
-        gbc.gridx = 0; gbc.gridy = 0; gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(panelBalanceador, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 1;
-        panel.add(panelEscaladoConfig, gbc);
         
         return panel;
     }
@@ -314,256 +224,43 @@ public class ServidorNacionalUI extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setBorder(BorderFactory.createEtchedBorder());
         
-        JLabel labelEstado = new JLabel("🎯 Broker Nacional - Estado: ACTIVO");
+        JLabel labelEstado = new JLabel("🎯 Servidor Nacional - Estado: ACTIVO");
         labelEstado.setFont(labelEstado.getFont().deriveFont(Font.BOLD));
         
+        // Mostrar estado de la base de datos
+        JLabel labelBD = new JLabel();
+        if (candidatosService.isServiceAvailable()) {
+            labelBD.setText("🟢 Base de Datos: CONECTADA");
+            labelBD.setForeground(new Color(76, 175, 80));
+        } else {
+            labelBD.setText("🔴 Base de Datos: DESCONECTADA");
+            labelBD.setForeground(new Color(244, 67, 54));
+        }
+        
         panel.add(labelEstado);
+        panel.add(Box.createHorizontalStrut(20));
+        panel.add(labelBD);
         
         return panel;
     }
 
-    private void iniciarActualizacionesAutomaticas() {
-        // Actualizar tabla de candidatos cada 5 segundos
-        schedulerUI.scheduleAtFixedRate(this::actualizarTablaCandidatos, 1, 5, TimeUnit.SECONDS);
-        
-        // Actualizar métricas del cluster cada 3 segundos
-        schedulerUI.scheduleAtFixedRate(this::actualizarMetricasCluster, 2, 3, TimeUnit.SECONDS);
-        
-        // Generar logs de actividad cada 10 segundos para mostrar que está funcionando
-        schedulerUI.scheduleAtFixedRate(this::generarLogActividad, 5, 10, TimeUnit.SECONDS);
-    }
-
-    private void actualizarTablaCandidatos() {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                Candidato[] candidatos = administradorCandidatos.obtenerTodosCandidatos(null);
-                
-                // Limpiar tabla
-                modeloTabla.setRowCount(0);
-                
-                // Agregar candidatos
-                for (Candidato candidato : candidatos) {
-                    Object[] fila = {
-                        candidato.idCandidato,
-                        candidato.nombre,
-                        candidato.partido,
-                        "N/A" // No hay campo propuestas en la estructura
-                    };
-                    modeloTabla.addRow(fila);
-                }
-                
-                labelCantidadCandidatos.setText("Candidatos: " + candidatos.length);
-                
-            } catch (Exception e) {
-                log("❌ Error actualizando candidatos: " + e.getMessage());
-            }
-        });
-    }
-
-    private void actualizarMetricasCluster() {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                // Log de actualización (para verificar que funciona)
-                log("🔄 Actualizando métricas del cluster...");
-                
-                // Obtener métricas del master (con manejo de errores)
-                MetricasRecursos metricasMaster = null;
-                try {
-                    metricasMaster = monitorMaster.obtenerMetricas(null);
-                    log("✅ Métricas del master obtenidas correctamente");
-                } catch (Exception e) {
-                    log("⚠️ No se pudieron obtener métricas del master: " + e.getMessage());
-                    // Crear métricas simuladas más realistas
-                    metricasMaster = new MetricasRecursos();
-                    metricasMaster.cpuUsage = Math.random() * 40 + 15; // 15-55%
-                    metricasMaster.memoryUsage = Math.random() * 50 + 25; // 25-75%
-                    metricasMaster.networkUsage = Math.random() * 30 + 10; // 10-40%
-                    metricasMaster.requestCount = (int)(Math.random() * 150) + 50;
-                    metricasMaster.nodeId = "master-simulated";
-                    metricasMaster.timestamp = System.currentTimeMillis();
-                    log("🎭 Usando métricas simuladas del master");
-                }
-                
-                // Obtener información de réplicas (con manejo de errores)
-                InfoReplica[] replicas = null;
-                try {
-                    replicas = gestorReplicas.obtenerReplicasActivas(null);
-                    log("✅ Información de réplicas obtenida: " + replicas.length + " réplicas");
-                } catch (Exception e) {
-                    log("⚠️ No se pudieron obtener réplicas activas: " + e.getMessage());
-                    // Crear algunas réplicas simuladas para demostración
-                    replicas = crearReplicasSimuladas();
-                    log("🎭 Usando " + replicas.length + " réplicas simuladas");
-                }
-                
-                // Obtener carga promedio (con manejo de errores)
-                double cargaPromedio = 0.0;
-                try {
-                    cargaPromedio = balanceador.getCargaPromedioCluster();
-                    log("✅ Carga promedio del cluster: " + String.format("%.1f%%", cargaPromedio));
-                } catch (Exception e) {
-                    log("⚠️ No se pudo obtener carga promedio: " + e.getMessage());
-                    // Si no hay réplicas, usar las métricas del master como base
-                    if (replicas.length == 0) {
-                        cargaPromedio = (metricasMaster.cpuUsage + metricasMaster.memoryUsage) / 2.0;
-                        log("📊 Usando métricas del master como carga base: " + String.format("%.1f%%", cargaPromedio));
-                    } else {
-                        // Simular carga promedio basada en réplicas simuladas
-                        cargaPromedio = Math.random() * 60 + 20; // 20-80%
-                        log("🎭 Carga promedio simulada: " + String.format("%.1f%%", cargaPromedio));
-                    }
-                }
-                
-                // Actualizar labels con datos reales o simulados
-                labelEstadoCluster.setText("🔄 Cluster: ACTIVO");
-                labelReplicasActivas.setText(String.format("📊 Réplicas: %d activas", replicas.length));
-                labelCargaPromedio.setText(String.format("⚖️ Carga: %.1f%%", cargaPromedio));
-                labelMetricasMaster.setText(String.format("🖥️ Master: CPU=%.1f%% MEM=%.1f%% REQ=%d", 
-                    metricasMaster.cpuUsage, metricasMaster.memoryUsage, metricasMaster.requestCount));
-                
-                // Calcular carga total más realista
-                double cargaTotal = (metricasMaster.cpuUsage + metricasMaster.memoryUsage + cargaPromedio) / 3.0;
-                barraEscalado.setValue((int) cargaTotal);
-                barraEscalado.setString(String.format("Carga: %d%%", (int) cargaTotal));
-                
-                // Cambiar color según la carga
-                if (cargaTotal > 60) {
-                    barraEscalado.setForeground(Color.RED);
-                    log("🔴 Carga alta detectada: " + String.format("%.1f%%", cargaTotal));
-                } else if (cargaTotal > 35) {
-                    barraEscalado.setForeground(Color.ORANGE);
-                    log("🟡 Carga media: " + String.format("%.1f%%", cargaTotal));
-                } else {
-                    barraEscalado.setForeground(Color.GREEN);
-                    log("🟢 Carga normal: " + String.format("%.1f%%", cargaTotal));
-                }
-                
-                // Actualizar tabla de réplicas
-                modeloReplicas.setRowCount(0);
-                if (replicas.length == 0) {
-                    // Mostrar información del master cuando no hay réplicas
-                    Object[] filaMaster = {
-                        "MASTER",
-                        "localhost:9090 (Principal)",
-                        "🟢 ACTIVO",
-                        String.format("%.1f%%", metricasMaster.cpuUsage),
-                        String.format("%.1f%%", metricasMaster.memoryUsage),
-                        String.valueOf(metricasMaster.requestCount),
-                        "N/A"
-                    };
-                    modeloReplicas.addRow(filaMaster);
-                    log("📊 Mostrando información del servidor master");
-                } else {
-                    // Mostrar réplicas disponibles
-                    for (InfoReplica replica : replicas) {
-                        long tiempoActivo = (System.currentTimeMillis() - replica.tiempoCreacion) / 1000;
-                        Object[] fila = {
-                            replica.nodeId,
-                            replica.endpoint,
-                            replica.activa ? "🟢 ACTIVA" : "🔴 INACTIVA",
-                            String.format("%.1f%%", replica.metricas.cpuUsage),
-                            String.format("%.1f%%", replica.metricas.memoryUsage),
-                            String.valueOf(replica.metricas.requestCount),
-                            String.format("%d seg", tiempoActivo)
-                        };
-                        modeloReplicas.addRow(fila);
-                    }
-                    log("📊 Actualizadas " + replicas.length + " réplicas en la tabla");
-                }
-                
-                // Log de finalización exitosa
-                log("✅ Métricas actualizadas correctamente - Carga total: " + String.format("%.1f%%", cargaTotal));
-
-            } catch (Exception e) {
-                log("❌ Error crítico actualizando métricas: " + e.getMessage());
-                e.printStackTrace(); // Para debug en consola
-                
-                // Mostrar estado de error en la UI
-                labelEstadoCluster.setText("❌ Cluster: ERROR");
-                labelReplicasActivas.setText("📊 Réplicas: ERROR");
-                labelCargaPromedio.setText("⚖️ Carga: ERROR");
-                labelMetricasMaster.setText("🖥️ Master: ERROR");
-                barraEscalado.setValue(0);
-                barraEscalado.setString("Error");
-                barraEscalado.setForeground(Color.RED);
-            }
-        });
-    }
-
-    /**
-     * Crea réplicas simuladas para demostración cuando no hay réplicas reales
-     */
-    private InfoReplica[] crearReplicasSimuladas() {
-        InfoReplica[] replicas = new InfoReplica[2]; // Crear 2 réplicas simuladas
-        
-        for (int i = 0; i < replicas.length; i++) {
-            InfoReplica replica = new InfoReplica();
-            replica.nodeId = "replica-sim-" + (i + 1);
-            replica.endpoint = "tcp -h localhost -p " + (9091 + i);
-            replica.activa = true;
-            replica.tiempoCreacion = System.currentTimeMillis() - (i * 30000); // Diferentes tiempos de creación
-            
-            // Crear métricas simuladas realistas
-            replica.metricas = new MetricasRecursos();
-            replica.metricas.nodeId = replica.nodeId;
-            replica.metricas.cpuUsage = Math.random() * 50 + 10; // 10-60%
-            replica.metricas.memoryUsage = Math.random() * 60 + 20; // 20-80%
-            replica.metricas.networkUsage = Math.random() * 40 + 5; // 5-45%
-            replica.metricas.requestCount = (int)(Math.random() * 100) + 20;
-            replica.metricas.timestamp = System.currentTimeMillis();
-            
-            replicas[i] = replica;
-        }
-        
-        return replicas;
-    }
-
-    /**
-     * Genera logs de actividad para mostrar que el sistema está funcionando
-     */
-    private void generarLogActividad() {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                // Logs informativos periódicos
-                String[] mensajesActividad = {
-                    "💓 Sistema funcionando normalmente",
-                    "🔍 Monitoreando estado del cluster",
-                    "📈 Recolectando métricas de rendimiento",
-                    "🔄 Verificando conexiones activas",
-                    "📊 Analizando carga del sistema",
-                    "🛡️ Verificando integridad de servicios"
-                };
-                
-                String mensaje = mensajesActividad[(int)(Math.random() * mensajesActividad.length)];
-                log(mensaje);
-                
-                // Ocasionalmente mostrar estadísticas
-                if (Math.random() < 0.3) { // 30% de probabilidad
-                    int conexionesActivas = (int)(Math.random() * 50) + 10;
-                    int requestsPorMinuto = (int)(Math.random() * 200) + 50;
-                    log(String.format("📊 Estadísticas: %d conexiones activas, %d requests/min", 
-                                    conexionesActivas, requestsPorMinuto));
-                }
-                
-            } catch (Exception e) {
-                log("❌ Error generando log de actividad: " + e.getMessage());
-            }
-        });
-    }
-
     // ========== EVENT HANDLERS ==========
     
-    private void examinarArchivo() {
+    private void examinarArchivoCandidatos() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Archivos CSV", "csv"));
+        FileNameExtensionFilter filter = new FileNameExtensionFilter(
+            "Archivos de Candidatos (*.csv, *.xlsx)", "csv", "xlsx", "xls");
+        fileChooser.setFileFilter(filter);
+        fileChooser.setDialogTitle("Seleccionar archivo de candidatos");
         
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             File archivo = fileChooser.getSelectedFile();
             campoRutaCSV.setText(archivo.getAbsolutePath());
+            log("📁 Archivo seleccionado: " + archivo.getName());
         }
     }
     
-    private void cargarCandidatosCSV() {
+    private void cargarCSV() {
         String rutaArchivo = campoRutaCSV.getText().trim();
         
         if (rutaArchivo.isEmpty()) {
@@ -571,107 +268,207 @@ public class ServidorNacionalUI extends JFrame {
             return;
         }
 
-        try {
-            boolean resultado = broker.cargarCandidatosDesdeCSV(rutaArchivo, null);
-            
-            if (resultado) {
-                log("✅ Candidatos cargados desde: " + rutaArchivo);
-                JOptionPane.showMessageDialog(this, "Candidatos cargados exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                log("❌ Error cargando candidatos desde: " + rutaArchivo);
-                JOptionPane.showMessageDialog(this, "Error cargando candidatos", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (Exception e) {
-            log("❌ Excepción cargando candidatos: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        File archivo = new File(rutaArchivo);
+        if (!archivo.exists()) {
+            JOptionPane.showMessageDialog(this, "El archivo no existe", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
+        // Confirmación
+        int confirmacion = JOptionPane.showConfirmDialog(this,
+            "¿Cargar candidatos desde CSV?\n\n" +
+            "⚠️ ESTO ELIMINARÁ TODOS los candidatos existentes\n" +
+            "y los reemplazará con los del archivo CSV.\n\n" +
+            "¿Continuar?",
+            "Confirmar Carga CSV", 
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
+        
+        if (confirmacion != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        cargarArchivoEnBackground(archivo, "CSV");
     }
     
-    private void limpiarCandidatos() {
+    private void cargarExcel() {
+        String rutaArchivo = campoRutaCSV.getText().trim();
+        
+        if (rutaArchivo.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor selecciona un archivo Excel", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        File archivo = new File(rutaArchivo);
+        if (!archivo.exists()) {
+            JOptionPane.showMessageDialog(this, "El archivo no existe", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Confirmación
+        int confirmacion = JOptionPane.showConfirmDialog(this,
+            "¿Cargar candidatos desde Excel?\n\n" +
+            "⚠️ ESTO ELIMINARÁ TODOS los candidatos existentes\n" +
+            "y los reemplazará con los del archivo Excel.\n\n" +
+            "¿Continuar?",
+            "Confirmar Carga Excel", 
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
+        
+        if (confirmacion != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        cargarArchivoEnBackground(archivo, "Excel");
+    }
+    
+    private void cargarArchivoEnBackground(File archivo, String tipo) {
+        SwingWorker<Boolean, String> worker = new SwingWorker<Boolean, String>() {
+            @Override
+            protected Boolean doInBackground() throws Exception {
+                publish("Eliminando candidatos existentes...");
+                candidatosService.eliminarTodosLosCandidatos();
+                
+                publish("Cargando candidatos desde " + tipo + "...");
+                List<CandidatoModel> candidatos;
+                
+                if (tipo.equals("CSV")) {
+                    candidatos = candidatosService.cargarCandidatosDesdeCSV(archivo);
+                } else {
+                    candidatos = candidatosService.cargarCandidatosDesdeExcel(archivo);
+                }
+                
+                if (!candidatos.isEmpty()) {
+                    publish("Guardando candidatos en base de datos...");
+                    int guardados = candidatosService.guardarCandidatos(candidatos);
+                    return guardados > 0;
+                }
+                return false;
+            }
+            
+            @Override
+            protected void process(List<String> chunks) {
+                for (String mensaje : chunks) {
+                    log(mensaje);
+                    lblEstadoCandidatos.setText(mensaje);
+                }
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    boolean exito = get();
+                    if (exito) {
+                        lblEstadoCandidatos.setText("✅ " + tipo + " cargado exitosamente");
+                        lblEstadoCandidatos.setForeground(new Color(76, 175, 80));
+                        log("✅ " + tipo + " cargado y guardado exitosamente");
+                        JOptionPane.showMessageDialog(ServidorNacionalUI.this,
+                            tipo + " cargado exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        lblEstadoCandidatos.setText("❌ Error cargando " + tipo);
+                        lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
+                        log("❌ Error cargando " + tipo);
+                    }
+                    // Actualizar tabla
+                    cargarCandidatosDesdeDB();
+                } catch (Exception e) {
+                    lblEstadoCandidatos.setText("❌ Error cargando " + tipo);
+                    lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
+                    log("❌ Error cargando " + tipo + ": " + e.getMessage());
+                    JOptionPane.showMessageDialog(ServidorNacionalUI.this,
+                        "Error cargando " + tipo + ":\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+        
+        worker.execute();
+    }
+    
+    private void eliminarTodosLosCandidatos() {
         int confirmacion = JOptionPane.showConfirmDialog(this, 
-            "¿Estás seguro de que quieres limpiar todos los candidatos?", 
-            "Confirmar", JOptionPane.YES_NO_OPTION);
+            "¿Estás seguro de que quieres eliminar TODOS los candidatos?\n\n" +
+            "Esta acción no se puede deshacer.",
+            "Confirmar Eliminación Total", 
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
         
         if (confirmacion == JOptionPane.YES_OPTION) {
-            try {
-                boolean resultado = broker.limpiarCandidatos(null);
-                
-                if (resultado) {
-                    log("✅ Candidatos limpiados");
-                    JOptionPane.showMessageDialog(this, "Candidatos limpiados exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                    } else {
-                    log("❌ Error limpiando candidatos");
-                    JOptionPane.showMessageDialog(this, "Error limpiando candidatos", "Error", JOptionPane.ERROR_MESSAGE);
+            SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+                @Override
+                protected Boolean doInBackground() throws Exception {
+                    return candidatosService.eliminarTodosLosCandidatos();
                 }
-            } catch (Exception e) {
-                log("❌ Excepción limpiando candidatos: " + e.getMessage());
-                JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-    
-    private void enviarCandidatosRegionales() {
-        try {
-            boolean resultado = broker.enviarCandidatosATodosRegionales(null);
-            
-            if (resultado) {
-                log("✅ Candidatos enviados a servidores regionales");
-                JOptionPane.showMessageDialog(this, "Candidatos enviados exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                log("❌ Error enviando candidatos a regionales");
-                JOptionPane.showMessageDialog(this, "Error enviando candidatos", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (Exception e) {
-            log("❌ Excepción enviando candidatos: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-    
-    private void escalarManualmente() {
-        try {
-            boolean resultado = broker.escalarAutomaticamente();
-            
-            if (resultado) {
-                log("🚀 Escalado manual iniciado");
-                JOptionPane.showMessageDialog(this, "Escalado iniciado exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                log("⚠️ No se pudo iniciar el escalado");
-                JOptionPane.showMessageDialog(this, "No se pudo iniciar el escalado", "Advertencia", JOptionPane.WARNING_MESSAGE);
-            }
-        } catch (Exception e) {
-            log("❌ Error en escalado manual: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-    
-    private void reducirManualmente() {
-        try {
-            boolean resultado = broker.reducirReplicas();
-            
-            if (resultado) {
-                log("📉 Reducción manual iniciada");
-                JOptionPane.showMessageDialog(this, "Reducción iniciada exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                    } else {
-                log("⚠️ No se pudo iniciar la reducción");
-                JOptionPane.showMessageDialog(this, "No se pudo iniciar la reducción", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                
+                @Override
+                protected void done() {
+                    try {
+                        boolean exito = get();
+                        if (exito) {
+                            log("✅ Todos los candidatos eliminados exitosamente");
+                            lblEstadoCandidatos.setText("✅ Base de datos limpiada");
+                            lblEstadoCandidatos.setForeground(new Color(76, 175, 80));
+                            JOptionPane.showMessageDialog(ServidorNacionalUI.this,
+                                "Todos los candidatos eliminados exitosamente", 
+                                "Eliminación Completada", JOptionPane.INFORMATION_MESSAGE);
+                            // Actualizar tabla
+                            cargarCandidatosDesdeDB();
+                        } else {
+                            log("❌ Error eliminando candidatos");
+                            lblEstadoCandidatos.setText("❌ Error eliminando candidatos");
+                            lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
+                            JOptionPane.showMessageDialog(ServidorNacionalUI.this,
+                                "Error eliminando candidatos", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } catch (Exception e) {
+                        log("❌ Error eliminando candidatos: " + e.getMessage());
+                        lblEstadoCandidatos.setText("❌ Error eliminando candidatos");
+                        lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
+                        JOptionPane.showMessageDialog(ServidorNacionalUI.this,
+                            "Error eliminando candidatos:\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
-                } catch (Exception e) {
-            log("❌ Error en reducción manual: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            };
+            worker.execute();
         }
     }
     
-    private void cambiarAlgoritmoBalanceador() {
-        String algoritmo = (String) comboAlgoritmo.getSelectedItem();
-        
-        try {
+    private void cargarCandidatosDesdeDB() {
+        SwingWorker<List<CandidatoModel>, Void> worker = new SwingWorker<List<CandidatoModel>, Void>() {
+            @Override
+            protected List<CandidatoModel> doInBackground() throws Exception {
+                return candidatosService.obtenerTodosLosCandidatos();
+            }
             
-            log("⚖️ Algoritmo de balanceo cambiado a: " + algoritmo);
-            JOptionPane.showMessageDialog(this, "Algoritmo cambiado a: " + algoritmo, "Éxito", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) {
-            log("❌ Error cambiando algoritmo: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            @Override
+            protected void done() {
+                try {
+                    List<CandidatoModel> candidatos = get();
+                    actualizarTablaCandidatos(candidatos);
+                    log("🔄 Tabla sincronizada con BD: " + candidatos.size() + " candidatos");
+                } catch (Exception e) {
+                    log("❌ Error cargando desde BD: " + e.getMessage());
+                }
+            }
+        };
+        worker.execute();
+    }
+    
+    private void actualizarTablaCandidatos(List<CandidatoModel> candidatos) {
+        // Limpiar tabla
+        modeloTabla.setRowCount(0);
+        
+        if (candidatos != null) {
+            for (CandidatoModel candidato : candidatos) {
+                Object[] fila = {
+                    candidato.getId(),
+                    candidato.getNombre(),
+                    candidato.getPartido()
+                };
+                modeloTabla.addRow(fila);
+            }
         }
+        
+        labelCantidadCandidatos.setText("Candidatos: " + (candidatos != null ? candidatos.size() : 0));
     }
     
     private void cerrarAplicacion() {
@@ -680,7 +477,7 @@ public class ServidorNacionalUI extends JFrame {
             "Confirmar Cierre", JOptionPane.YES_NO_OPTION);
         
         if (confirmacion == JOptionPane.YES_OPTION) {
-            log("🛑 Cerrando interfaz del Broker Nacional");
+            log("🛑 Cerrando Servidor Nacional UI");
             
             if (schedulerUI != null && !schedulerUI.isShutdown()) {
                 schedulerUI.shutdown();
@@ -702,12 +499,12 @@ public class ServidorNacionalUI extends JFrame {
                     areaLog.append(logEntry);
                     areaLog.setCaretPosition(areaLog.getDocument().getLength());
                     
-                    // Limitar el tamaño del log (mantener solo las últimas 1000 líneas)
+                    // Limitar el tamaño del log (mantener solo las últimas 500 líneas)
                     String texto = areaLog.getText();
                     String[] lineas = texto.split("\n");
-                    if (lineas.length > 1000) {
+                    if (lineas.length > 500) {
                         StringBuilder sb = new StringBuilder();
-                        for (int i = lineas.length - 1000; i < lineas.length; i++) {
+                        for (int i = lineas.length - 500; i < lineas.length; i++) {
                             sb.append(lineas[i]).append("\n");
                         }
                         areaLog.setText(sb.toString());
@@ -726,5 +523,175 @@ public class ServidorNacionalUI extends JFrame {
         
         // También imprimir en consola para debug
         System.out.println("[UI] " + mensaje);
+    }
+
+    private void guardarCambioEnBD(int row, int column, Object nuevoValor) {
+        // Obtener ID del candidato desde la tabla
+        Long idCandidato = (Long) modeloTabla.getValueAt(row, 0);
+        String valorAnterior = (String) modeloTabla.getValueAt(row, column);
+        
+        // Crear candidato temporal para actualizar
+        CandidatoModel candidato = new CandidatoModel();
+        candidato.setId(idCandidato);
+        candidato.setNombre((String) modeloTabla.getValueAt(row, 1));
+        candidato.setPartido((String) modeloTabla.getValueAt(row, 2));
+        
+        // Actualizar el campo correspondiente
+        if (column == 1) { // Nombre
+            candidato.setNombre(nuevoValor.toString().trim());
+        } else if (column == 2) { // Partido
+            candidato.setPartido(nuevoValor.toString().trim());
+        } else {
+            return; // Columna no editable
+        }
+        
+        // Guardar en BD
+        SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() throws Exception {
+                return candidatosService.actualizarCandidato(candidato);
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    boolean exito = get();
+                    if (exito) {
+                        String campo = column == 1 ? "nombre" : "partido";
+                        log("✅ Candidato actualizado: " + campo + " = '" + nuevoValor + "' (ID: " + idCandidato + ")");
+                        lblEstadoCandidatos.setText("✅ Cambio guardado");
+                        lblEstadoCandidatos.setForeground(new Color(76, 175, 80));
+                    } else {
+                        log("❌ Error actualizando candidato ID: " + idCandidato);
+                        lblEstadoCandidatos.setText("❌ Error guardando cambio");
+                        lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
+                        
+                        // Revertir cambio en la tabla
+                        modeloTabla.setValueAt(valorAnterior, row, column);
+                        
+                        JOptionPane.showMessageDialog(ServidorNacionalUI.this,
+                            "Error guardando el cambio. Se ha revertido el valor anterior.",
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception e) {
+                    log("❌ Excepción actualizando candidato: " + e.getMessage());
+                    lblEstadoCandidatos.setText("❌ Error guardando cambio");
+                    lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
+                    
+                    // Revertir cambio en la tabla
+                    modeloTabla.setValueAt(valorAnterior, row, column);
+                }
+            }
+        };
+        
+        worker.execute();
+    }
+    
+    private void eliminarCandidatoSeleccionado() {
+        int filaSeleccionada = tablaCandidatos.getSelectedRow();
+        
+        if (filaSeleccionada == -1) {
+            JOptionPane.showMessageDialog(this,
+                "Por favor selecciona un candidato para eliminar",
+                "Ningún candidato seleccionado", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // Obtener datos del candidato desde la tabla
+        Long idCandidato = (Long) modeloTabla.getValueAt(filaSeleccionada, 0);
+        String nombre = (String) modeloTabla.getValueAt(filaSeleccionada, 1);
+        String partido = (String) modeloTabla.getValueAt(filaSeleccionada, 2);
+        
+        // Confirmación
+        int confirmacion = JOptionPane.showConfirmDialog(this,
+            "¿Estás seguro de eliminar el candidato?\n\n" +
+            "ID: " + idCandidato + "\n" +
+            "Nombre: " + nombre + "\n" +
+            "Partido: " + partido + "\n\n" +
+            "Esta acción no se puede deshacer.",
+            "Confirmar Eliminación",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
+        
+        if (confirmacion != JOptionPane.YES_OPTION) {
+            return;
+        }
+        
+        // Eliminar de BD
+        SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() throws Exception {
+                return candidatosService.eliminarCandidato(idCandidato);
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    boolean exito = get();
+                    if (exito) {
+                        // Eliminar de la tabla
+                        modeloTabla.removeRow(filaSeleccionada);
+                        
+                        // Actualizar contador
+                        labelCantidadCandidatos.setText("Candidatos: " + modeloTabla.getRowCount());
+                        
+                        log("✅ Candidato eliminado: " + nombre + " (ID: " + idCandidato + ")");
+                        lblEstadoCandidatos.setText("✅ Candidato eliminado");
+                        lblEstadoCandidatos.setForeground(new Color(76, 175, 80));
+                        
+                    } else {
+                        log("❌ Error eliminando candidato ID: " + idCandidato);
+                        lblEstadoCandidatos.setText("❌ Error eliminando candidato");
+                        lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
+                        
+                        JOptionPane.showMessageDialog(ServidorNacionalUI.this,
+                            "Error eliminando el candidato",
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception e) {
+                    log("❌ Excepción eliminando candidato: " + e.getMessage());
+                    lblEstadoCandidatos.setText("❌ Error eliminando candidato");
+                    lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
+                    
+                    JOptionPane.showMessageDialog(ServidorNacionalUI.this,
+                        "Error eliminando candidato:\n" + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+        
+        worker.execute();
+    }
+
+    /**
+     * Método main para ejecutar la interfaz directamente
+     */
+    public static void main(String[] args) {
+        try {
+            // Configurar Look and Feel del sistema
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            System.err.println("No se pudo configurar Look and Feel: " + e.getMessage());
+        }
+        
+        SwingUtilities.invokeLater(() -> {
+            try {
+                System.out.println("🎯 Iniciando Servidor Nacional UI...");
+                
+                // Crear y mostrar la interfaz
+                ServidorNacionalUI ui = new ServidorNacionalUI();
+                ui.setVisible(true);
+                
+                System.out.println("✅ Interfaz del Servidor Nacional iniciada correctamente");
+                
+            } catch (Exception e) {
+                System.err.println("❌ Error iniciando la interfaz: " + e.getMessage());
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null, 
+                    "Error iniciando la aplicación:\n" + e.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                System.exit(1);
+            }
+        });
     }
 }
