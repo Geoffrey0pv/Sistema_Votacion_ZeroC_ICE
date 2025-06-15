@@ -438,7 +438,93 @@ Hora del servidor: 2024-01-15 14:30:25
 
 ## **6. Monitoreo y Administración**
 
-### **6.1 Comandos de Monitoreo del Broker Nacional**
+### **6.1 Interfaz Gráfica del Servidor Nacional**
+
+El Servidor Nacional incluye una **interfaz gráfica completa** para administración y monitoreo en tiempo real.
+
+#### **🖥️ Cómo Acceder a la Interfaz Gráfica**
+
+```bash
+# Opción 1: Usar el script de lanzamiento (RECOMENDADO)
+./servidor_nacional_ui.sh
+
+# Opción 2: Ejecutar directamente con parámetro --ui
+java -jar servidorNacional/build/libs/servidorNacional.jar --ui
+
+# Opción 3: Solo consola (sin interfaz gráfica)
+./servidor_nacional_ui.sh --console
+```
+
+#### **📱 Funcionalidades de la Interfaz Gráfica**
+
+La interfaz incluye **4 pestañas principales**:
+
+##### **1. 👥 Gestión de Candidatos**
+- **Cargar CSV**: Importar candidatos desde archivos CSV
+- **Visualizar**: Lista completa de candidatos registrados
+- **Enviar**: Distribuir candidatos a servidores regionales
+- **Limpiar**: Eliminar todos los candidatos de la base de datos
+
+##### **2. 📊 Monitor del Cluster**
+- **Estado en Tiempo Real**: Métricas de CPU, memoria y red
+- **Réplicas Activas**: Lista de réplicas con su estado
+- **Control de Escalado**: Botones para escalar/reducir manualmente
+- **Gráficos de Carga**: Barras de progreso con códigos de color
+
+##### **3. ⚙️ Configuración**
+- **Algoritmos de Balanceador**: 
+  - Round Robin
+  - Least Connections
+  - Weighted Response Time
+  - Least CPU Usage
+- **Parámetros de Escalado**: Umbrales y límites
+- **Configuración en Tiempo Real**: Cambios sin reiniciar
+
+##### **4. 📝 Logs del Sistema**
+- **Logs en Tiempo Real**: Ver eventos mientras ocurren
+- **Filtros**: Por tipo de evento y severidad
+- **Exportar**: Guardar logs para análisis
+- **Consola Integrada**: Estilo terminal con colores
+
+#### **🔧 Requisitos para la Interfaz Gráfica**
+
+```bash
+# Verificar que el entorno soporte GUI
+./servidor_nacional_ui.sh --check
+
+# En SSH, habilitar X11 forwarding
+ssh -X usuario@servidor
+
+# En sistemas sin GUI, usar modo consola
+./servidor_nacional_ui.sh --console
+```
+
+#### **📸 Capturas de Pantalla de la Interfaz**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🎯 Servidor Nacional - Broker con Escalado Automático      │
+├─────────────────────────────────────────────────────────────┤
+│ [👥 Candidatos] [📊 Cluster] [⚙️ Config] [📝 Logs]        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ 📋 Gestión de Candidatos                                   │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Archivo CSV: [/path/to/candidatos.csv] [📁] [📥] [🗑️] │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ ID │ Nombre           │ Partido      │ Propuestas      │ │
+│ │ 1  │ Juan Pérez       │ Partido A    │ N/A             │ │
+│ │ 2  │ María González   │ Partido B    │ N/A             │ │
+│ │ 3  │ Carlos López     │ Partido C    │ N/A             │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Candidatos: 3                                [📤 Enviar]   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### **6.2 Comandos de Monitoreo del Broker Nacional**
 
 ```bash
 # Ver estado del Servidor Nacional
@@ -457,16 +543,6 @@ icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 
 icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p "" \
   -e "server list"
 ```
-
-### **6.2 Métricas Monitoreadas**
-
-El Broker Nacional monitorea automáticamente:
-- **CPU Usage**: Porcentaje de uso de CPU
-- **Memory Usage**: Porcentaje de uso de memoria  
-- **Network Usage**: Uso de red
-- **Request Count**: Número de requests procesados
-- **Response Time**: Tiempo de respuesta promedio
-- **Active Connections**: Conexiones activas
 
 ### **6.3 Escalado Manual**
 

@@ -204,7 +204,7 @@ public class ConsultaMesaImpl implements IConsultaMesa {
      */
     public void shutdown() {
         if (connectionPool != null) {
-            connectionPool.close();
+            connectionPool.shutdown();
             System.out.println("✅ Pool de conexiones cerrado correctamente");
         }
     }

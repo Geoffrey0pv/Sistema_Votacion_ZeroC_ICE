@@ -3,6 +3,8 @@ import AdministradorCandidatos.AdministradorCandidatos;
 import Broker.BrokerNacional;
 import HelloWorld.HelloWorldImpl;
 import ConsultaMesa.ConsultaMesaImpl;
+import ServidorNacionalUI.ServidorNacionalUI;
+import Config.ConfigManager;
 import com.zeroc.Ice.*;
 import com.zeroc.Ice.Util;
 
@@ -17,14 +19,19 @@ public class ServidorNacional {
     private static ConsultaMesaImpl consultaMesa;
     private static Communicator communicator;
     private static ObjectAdapter adapter;
-    private static ConfigurationManager configManager;
+    private static ConfigManager configManager;
+    private static ServidorNacionalUI ui;
+    private static boolean useUI = false;
 
     public static void main(String[] args) {
         int status = 0;
 
         try {
+            // Verificar si se debe usar la interfaz gráfica
+            useUI = checkForUIParameter(args);
+            
             // Inicializar configuración
-            configManager = new ConfigurationManager();
+            configManager = ConfigManager.getInstance();
             System.out.println("✅ Configuración cargada correctamente");
             
             // Inicializar ICE
@@ -42,7 +49,7 @@ public class ServidorNacional {
             helloWorld = new HelloWorldImpl("Servidor Nacional - Sistema de Votación", "1.0.0");
             
             // Crear e inicializar ConsultaMesa con configuración
-            consultaMesa = new ConsultaMesaImpl(configManager);
+            consultaMesa = new ConsultaMesaImpl();
             
             // Registrar el Broker como IAdministradorCandidatos (compatibilidad hacia atrás)
             Identity candidatosId = Util.stringToIdentity("AdministradorCandidatos");
@@ -77,6 +84,27 @@ public class ServidorNacional {
             System.out.println("   • HelloWorld (endpoint de prueba) 🌍");
             System.out.println("   • ConsultaMesa (consulta por documento) 🔍");
             System.out.println("==========================================");
+            
+            if (useUI) {
+                System.out.println("   🖥️  Interfaz gráfica: HABILITADA");
+                System.out.println("   📱 Abriendo ventana de administración...");
+                
+                // Lanzar la interfaz gráfica en el hilo de eventos de Swing
+                SwingUtilities.invokeLater(() -> {
+                    try {
+                        ui = new ServidorNacionalUI(brokerNacional);
+                        ui.setVisible(true);
+                        System.out.println("✅ Interfaz gráfica iniciada correctamente");
+                    } catch (Exception e) {
+                        System.err.println("❌ Error iniciando interfaz gráfica: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                });
+            } else {
+                System.out.println("   💻 Modo consola: ACTIVO");
+                System.out.println("   💡 Para usar interfaz gráfica, ejecute con: --ui");
+            }
+            
             System.out.println("   ⏹️  Presiona Ctrl+C para detener");
             System.out.println();
             
@@ -100,8 +128,28 @@ public class ServidorNacional {
         System.exit(status);
     }
     
+    /**
+     * Verifica si se debe usar la interfaz gráfica
+     */
+    private static boolean checkForUIParameter(String[] args) {
+        for (String arg : args) {
+            if ("--ui".equals(arg) || "-ui".equals(arg) || "--gui".equals(arg)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     private static void shutdown() {
         try {
+            // Cerrar interfaz gráfica si está activa
+            if (ui != null) {
+                SwingUtilities.invokeLater(() -> {
+                    ui.dispose();
+                    System.out.println("✅ Interfaz gráfica cerrada");
+                });
+            }
+            
             // Detener el Broker Nacional
             if (brokerNacional != null) {
                 brokerNacional.shutdown();
@@ -150,7 +198,12 @@ public class ServidorNacional {
     }
     
     // Método para obtener el configuration manager (útil para testing)
-    public static ConfigurationManager getConfigurationManager() {
+    public static ConfigManager getConfigurationManager() {
         return configManager;
+    }
+    
+    // Método para obtener la UI (útil para testing)
+    public static ServidorNacionalUI getUI() {
+        return ui;
     }
 }
