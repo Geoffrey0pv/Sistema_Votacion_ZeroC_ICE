@@ -31,10 +31,7 @@ public class ReliableMessageManager {
         cargarMensajesPendientes();
         iniciarMonitoreoReenvio();
     }
-    
-    /**
-     * Guarda un voto para envío posterior cuando haya conectividad
-     */
+
     public void guardarVotoPendiente(VotoImp voto) {
         synchronized (lock) {
             MensajePendiente mensaje = new MensajePendiente(voto);
@@ -44,10 +41,7 @@ public class ReliableMessageManager {
             System.out.println("✓ Voto guardado para envío posterior - ID: " + mensaje.getId());
         }
     }
-    
-    /**
-     * Intenta enviar todos los mensajes pendientes
-     */
+
     public void procesarMensajesPendientes(IRegistrarVotoPrx servidor, 
                                          ObjectAdapter adapter, 
                                          com.zeroc.Ice.Communicator communicator) {
@@ -98,20 +92,12 @@ public class ReliableMessageManager {
             persistirMensajes();
         }
     }
-    
-    /**
-     * Verifica si hay mensajes pendientes
-     */
     public boolean hayMensajesPendientes() {
         synchronized (lock) {
             return mensajesPendientes.stream()
                     .anyMatch(m -> "PENDIENTE".equals(m.getEstado()));
         }
     }
-    
-    /**
-     * Obtiene estadísticas de mensajes
-     */
     public void mostrarEstadisticas() {
         synchronized (lock) {
             long pendientes = mensajesPendientes.stream()
