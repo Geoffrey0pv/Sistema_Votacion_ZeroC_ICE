@@ -113,8 +113,7 @@ public class TestConsultaMesa {
             // Test 3: Test de rendimiento (múltiples consultas rápidas)
             if (args.length == 0) { // Solo si no se especificó un documento particular
                 System.out.println("⚡ TEST 3: Test de rendimiento...");
-                String docRendimiento = "12345678";
-                int numConsultas = 5;
+                int numConsultas = 1000;
                 
                 long tiempoTotal = 0;
                 int exitosas = 0;
@@ -123,6 +122,7 @@ public class TestConsultaMesa {
                 
                 for (int i = 0; i < numConsultas; i++) {
                     try {
+                        String docRendimiento = String.format("%09d", (int)(Math.random() * 1000000000));
                         long start = System.currentTimeMillis();
                         MesaInfo mesa = consultaMesa.consultarMesaPorDocumento(docRendimiento);
                         long end = System.currentTimeMillis();

@@ -48,6 +48,7 @@ subprojects {
         implementation 'com.zeroc:icegrid:3.7.10'
         implementation 'com.google.code.gson:gson:2.10.1'
         implementation 'com.opencsv:opencsv:5.9'
+        implementation 'org.postgresql:postgresql:42.7.1'
     }
  
     //
