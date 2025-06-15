@@ -1,5 +1,7 @@
 import Demo.*;
 import com.zeroc.Ice.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 /**
  * Test class para consultar mesa de votación por documento
@@ -120,30 +122,53 @@ public class TestConsultaMesa {
                 int servicioInactivo = 0;
                 int errores = 0;
                 
+                // Crear un pool de hilos
+                ExecutorService executor = Executors.newFixedThreadPool(20);
+                CountDownLatch latch = new CountDownLatch(numConsultas);
+                AtomicLong tiempoTotalAtomic = new AtomicLong(0);
+                AtomicInteger exitosasAtomic = new AtomicInteger(0);
+                AtomicInteger servicioInactivoAtomic = new AtomicInteger(0);
+                AtomicInteger erroresAtomic = new AtomicInteger(0);
+
+                // Lanzar todas las consultas en hilos separados
                 for (int i = 0; i < numConsultas; i++) {
-                    try {
-                        String docRendimiento = String.format("%09d", (int)(Math.random() * 1000000000));
-                        long start = System.currentTimeMillis();
-                        MesaInfo mesa = consultaMesa.consultarMesaPorDocumento(docRendimiento);
-                        long end = System.currentTimeMillis();
-                        
-                        tiempoTotal += (end - start);
-                        
-                        if (mesa != null) {
-                            if ("SERVICIO_INACTIVO".equals(mesa.departamento)) {
-                                servicioInactivo++;
-                            } else if ("ERROR".equals(mesa.departamento)) {
-                                errores++;
-                            } else {
-                                exitosas++;
+                    executor.submit(() -> {
+                        try {
+                            String docRendimiento = String.format("%09d", (int)(Math.random() * 1000000000));
+                            long start = System.currentTimeMillis();
+                            MesaInfo mesa = consultaMesa.consultarMesaPorDocumento(docRendimiento);
+                            long end = System.currentTimeMillis();
+                            
+                            tiempoTotalAtomic.addAndGet(end - start);
+                            
+                            if (mesa != null) {
+                                if ("SERVICIO_INACTIVO".equals(mesa.departamento)) {
+                                    servicioInactivoAtomic.incrementAndGet();
+                                } else if ("ERROR".equals(mesa.departamento)) {
+                                    erroresAtomic.incrementAndGet();
+                                } else {
+                                    exitosasAtomic.incrementAndGet();
+                                }
                             }
+                            
+                        } catch (java.lang.Exception e) {
+                            System.err.println("   Error en consulta: " + e.getMessage());
+                            erroresAtomic.incrementAndGet();
+                        } finally {
+                            latch.countDown();
                         }
-                        
-                    } catch (java.lang.Exception e) {
-                        System.err.println("   Error en consulta " + (i + 1) + ": " + e.getMessage());
-                        errores++;
-                    }
+                    });
                 }
+
+                // Esperar máximo 5 segundos a que terminen todas las consultas
+                latch.await(20, TimeUnit.SECONDS);
+                executor.shutdownNow();
+                
+                // Actualizar contadores finales
+                tiempoTotal = tiempoTotalAtomic.get();
+                exitosas = exitosasAtomic.get();
+                servicioInactivo = servicioInactivoAtomic.get();
+                errores = erroresAtomic.get();
                 
                 System.out.println("   📊 RESULTADOS:");
                 System.out.println("      Consultas realizadas: " + numConsultas);
