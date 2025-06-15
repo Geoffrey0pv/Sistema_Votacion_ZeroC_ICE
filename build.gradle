@@ -99,4 +99,16 @@ subprojects {
             systemProperty 'file.encoding', 'UTF-8'
         }
     }
+    
+    // Configuración específica para webService
+    if (project.name == 'webService') {
+        application {
+            mainClass = 'WebServiceMain'
+        }
+        
+        run {
+            mainClass = 'WebServiceMain'
+            systemProperty 'file.encoding', 'UTF-8'
+        }
+    }
 }
