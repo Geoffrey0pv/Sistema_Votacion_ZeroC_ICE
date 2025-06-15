@@ -147,8 +147,7 @@ server list
 
 ```bash
 # Desde el directorio raíz del proyecto
-cd servidorNacional
-java -cp "build/classes/java/main:build/generated-src:build/libs/*" ServidorNacional
+java -jar servidorNacional/build/libs/servidorNacional.jar
 ```
 
 #### **Opción 2: Despliegue con IceGrid**
@@ -169,6 +168,160 @@ server list
 ```
 
 > ⚠️ **Nota:** Si hay conflictos de puerto, asegúrate de que no haya otra instancia del servidor corriendo en el puerto 9090.
+
+## **4.4 Cómo Ejecutar el Servidor Nacional**
+
+### **📋 Prerrequisitos**
+
+Antes de ejecutar el servidor nacional, asegúrate de tener:
+
+1. ✅ **Proyecto compilado** correctamente con Gradle
+2. ✅ **IceGrid Registry** ejecutándose (puerto 4061)
+3. ✅ **IceGrid Node** ejecutándose 
+4. ✅ **Base de datos PostgreSQL** disponible (para ConsultaMesa)
+5. ✅ **Puerto 9090** libre para el servidor nacional
+
+### **🚀 Pasos para Ejecutar**
+
+#### **Paso 1: Preparar el Entorno**
+
+```bash
+# 1. Ir al directorio de configuración
+cd Config/
+
+# 2. Iniciar IceGrid Registry (Terminal 1)
+icegridregistry --Ice.Config=grid.config
+
+# 3. Iniciar IceGrid Node (Terminal 2) 
+icegridnode --Ice.Config=node.config
+
+# 4. Verificar que IceGrid esté funcionando
+# En una nueva terminal (Terminal 3):
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p ""
+```
+
+#### **Paso 2: Compilar el Proyecto**
+
+```bash
+# Desde el directorio raíz del proyecto
+./gradlew clean build
+
+# O específicamente el servidor nacional
+./gradlew :servidorNacional:build
+```
+
+#### **Paso 3: Ejecutar el Servidor Nacional**
+
+**Opción A: Ejecución con JAR (Recomendada)**
+
+```bash
+# Desde el directorio raíz del proyecto
+java -jar servidorNacional/build/libs/servidorNacional.jar
+```
+
+**Opción B: Usando Gradle**
+
+```bash
+# Desde el directorio raíz
+./gradlew :servidorNacional:run
+```
+
+**Opción C: Con IceGrid (Avanzado)**
+
+```bash
+# 1. Cargar la aplicación en IceGrid
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p "" \
+  -e "application add Config/application.xml"
+
+# 2. Iniciar el servidor
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p "" \
+  -e "server start ServidorNacional"
+```
+
+### **✅ Verificar que el Servidor Esté Funcionando**
+
+Una vez ejecutado, deberías ver logs similares a:
+
+```
+🚀 ===== SERVIDOR NACIONAL - SISTEMA DE VOTACIÓN =====
+✅ ICE inicializado correctamente
+✅ Adaptador creado: ServidorNacionalAdapter
+✅ Endpoint: tcp -h localhost -p 9090
+✅ Broker Nacional inicializado
+✅ Hello World registrado
+✅ ConsultaMesa registrado
+✅ Driver PostgreSQL cargado correctamente
+🔌 Servidor listo para recibir conexiones...
+===============================================
+```
+
+### **🧪 Probar el Servidor**
+
+```bash
+# Probar con el test de consulta mesa
+./test_consulta.sh test 440527206
+
+# O probar Hello World
+java -cp "/tmp/ice-3.7.9.jar:." HelloWorldClient
+```
+
+### **🔧 Solución de Problemas Comunes**
+
+#### **Error: "Address already in use (puerto 9090)"**
+```bash
+# Verificar qué proceso usa el puerto
+lsof -i :9090
+
+# Terminar proceso si es necesario
+kill -9 <PID>
+```
+
+#### **Error: "Cannot connect to IceGrid Registry"**
+```bash
+# Verificar que IceGrid Registry esté corriendo
+ps aux | grep icegridregistry
+
+# Si no está corriendo, iniciarlo desde Config/
+cd Config/
+icegridregistry --Ice.Config=grid.config
+```
+
+#### **Error: "ClassNotFoundException PostgreSQL"**
+```bash
+# Verificar que el JAR de PostgreSQL esté en /tmp/
+ls -la /tmp/postgresql-*.jar
+
+# Si no está, copiarlo desde el build
+cp ~/.gradle/caches/modules-2/files-2.1/org.postgresql/postgresql/*/postgresql-*.jar /tmp/
+```
+
+#### **Error: "No se ven logs de IceGrid Node"**
+```bash
+# Ejecutar con logs habilitados
+icegridnode --Ice.Config=node.config --Ice.Trace.Network=1 --Ice.Trace.Protocol=1
+
+# O verificar logs en el directorio
+tail -f Config/logs/node.log
+```
+
+### **📊 Endpoints Disponibles del Servidor Nacional**
+
+Una vez ejecutándose, el servidor nacional expone:
+
+| Servicio | Endpoint | Puerto | Descripción |
+|----------|----------|--------|-------------|
+| `AdministradorCandidatos` | `tcp -h localhost -p 9090` | 9090 | Gestión de candidatos |
+| `BrokerNacional` | `tcp -h localhost -p 9090` | 9090 | Funcionalidades del broker |
+| `HelloWorld` | `tcp -h localhost -p 9090` | 9090 | **Endpoint de prueba** 🌍 |
+| `ConsultaMesa` | `tcp -h localhost -p 9090` | 9090 | **Consulta mesa de votación** 📊 |
+
+### **🎯 Siguiente Paso: Ejecutar Clientes**
+
+Una vez que el servidor nacional esté funcionando, puedes ejecutar:
+
+1. **Mesa de Votación**: `java -jar mesaVotacion/build/libs/MesaVotacion.jar`
+2. **Test ConsultaMesa**: `./test_consulta.sh test 440527206`
+3. **Cliente Hello World**: Para pruebas de conectividad
 
 ## **5. Ejecución de Clientes**
 
@@ -436,9 +589,8 @@ pkill -f ServidorNacional
 # 2. Verificar que el puerto 9090 esté libre
 netstat -tulpn | grep 9090
 
-# 3. Ejecutar en modo standalone (recomendado)
-cd servidorNacional
-java -cp "build/classes/java/main:build/generated-src:build/libs/*" ServidorNacional
+# 3. Ejecutar en modo JAR (recomendado)
+java -jar servidorNacional/build/libs/servidorNacional.jar
 ```
 
 ## **9. Desplegar en Red Privada (VPN)**
@@ -483,9 +635,8 @@ server state ServidorNacional
 
 ### **Ejecución Recomendada del Broker Nacional:**
 ```bash
-# Modo standalone (más estable)
-cd servidorNacional
-java -cp "build/classes/java/main:build/generated-src:build/libs/*" ServidorNacional
+# Modo JAR (más estable)
+java -jar servidorNacional/build/libs/servidorNacional.jar
 ```
 
 ### **Ejecución de Clientes:**

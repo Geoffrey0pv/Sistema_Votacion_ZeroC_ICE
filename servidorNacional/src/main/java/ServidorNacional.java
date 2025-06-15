@@ -2,6 +2,7 @@ import Demo.*;
 import AdministradorCandidatos.AdministradorCandidatos;
 import Broker.BrokerNacional;
 import HelloWorld.HelloWorldImpl;
+import ConsultaMesa.ConsultaMesaImpl;
 import com.zeroc.Ice.*;
 import com.zeroc.Ice.Util;
 
@@ -13,13 +14,19 @@ import javax.swing.SwingUtilities;
 public class ServidorNacional {
     private static BrokerNacional brokerNacional;
     private static HelloWorldImpl helloWorld;
+    private static ConsultaMesaImpl consultaMesa;
     private static Communicator communicator;
     private static ObjectAdapter adapter;
+    private static ConfigurationManager configManager;
 
     public static void main(String[] args) {
         int status = 0;
 
         try {
+            // Inicializar configuración
+            configManager = new ConfigurationManager();
+            System.out.println("✅ Configuración cargada correctamente");
+            
             // Inicializar ICE
             communicator = Util.initialize(args);
             
@@ -34,6 +41,9 @@ public class ServidorNacional {
             // Crear e inicializar Hello World
             helloWorld = new HelloWorldImpl("Servidor Nacional - Sistema de Votación", "1.0.0");
             
+            // Crear e inicializar ConsultaMesa con configuración
+            consultaMesa = new ConsultaMesaImpl(configManager);
+            
             // Registrar el Broker como IAdministradorCandidatos (compatibilidad hacia atrás)
             Identity candidatosId = Util.stringToIdentity("AdministradorCandidatos");
             adapter.add(brokerNacional, candidatosId);
@@ -46,6 +56,10 @@ public class ServidorNacional {
             Identity helloWorldId = Util.stringToIdentity("HelloWorld");
             adapter.add(helloWorld, helloWorldId);
             
+            // Registrar ConsultaMesa endpoint
+            Identity consultaMesaId = Util.stringToIdentity("ConsultaMesa");
+            adapter.add(consultaMesa, consultaMesaId);
+            
             // Activar adaptador
             adapter.activate();
             
@@ -55,11 +69,13 @@ public class ServidorNacional {
             System.out.println("   🔄 Escalado automático: ACTIVADO (50%)");
             System.out.println("   ⚖️  Balanceador de carga: ACTIVADO");
             System.out.println("   📊 Monitor de recursos: ACTIVADO");
+            System.out.println("   🗄️  Base de datos: " + configManager.getDatabaseUrl());
             System.out.println("==========================================");
             System.out.println("   🎮 Servicios disponibles:");
             System.out.println("   • AdministradorCandidatos (compatibilidad)");
             System.out.println("   • BrokerNacional (nueva funcionalidad)");
             System.out.println("   • HelloWorld (endpoint de prueba) 🌍");
+            System.out.println("   • ConsultaMesa (consulta por documento) 🔍");
             System.out.println("==========================================");
             System.out.println("   ⏹️  Presiona Ctrl+C para detener");
             System.out.println();
@@ -91,6 +107,11 @@ public class ServidorNacional {
                 brokerNacional.shutdown();
             }
             
+            // Cerrar conexiones de base de datos
+            if (consultaMesa != null) {
+                consultaMesa.shutdown();
+            }
+            
             // Desactivar adaptador
             if (adapter != null) {
                 adapter.deactivate();
@@ -118,8 +139,18 @@ public class ServidorNacional {
         return helloWorld;
     }
     
+    // Método para obtener ConsultaMesa (útil para testing)
+    public static ConsultaMesaImpl getConsultaMesa() {
+        return consultaMesa;
+    }
+    
     // Método para obtener el communicator (útil para testing)
     public static Communicator getCommunicator() {
         return communicator;
+    }
+    
+    // Método para obtener el configuration manager (útil para testing)
+    public static ConfigurationManager getConfigurationManager() {
+        return configManager;
     }
 }

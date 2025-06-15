@@ -141,4 +141,20 @@ module Demo
         string getServerInfo();
         long getCurrentTime();
     };
+
+    // ========== INTERFAZ CONSULTA MESA ==========
+    
+    struct MesaInfo
+    {
+        string departamento;
+        string municipio;
+        string puesto;
+        string mesa;
+    };
+
+    interface IConsultaMesa
+    {
+        MesaInfo consultarMesaPorDocumento(string documento);
+        bool verificarConexionBD();
+    };
 };
