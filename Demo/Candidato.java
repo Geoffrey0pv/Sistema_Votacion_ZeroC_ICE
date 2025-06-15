@@ -22,15 +22,19 @@ public class Candidato implements java.lang.Cloneable,
 
     public String nombre;
 
+    public String partido;
+
     public Candidato()
     {
         this.nombre = "";
+        this.partido = "";
     }
 
-    public Candidato(long idCandidato, String nombre)
+    public Candidato(long idCandidato, String nombre, String partido)
     {
         this.idCandidato = idCandidato;
         this.nombre = nombre;
+        this.partido = partido;
     }
 
     public boolean equals(java.lang.Object rhs)
@@ -58,6 +62,13 @@ public class Candidato implements java.lang.Cloneable,
                     return false;
                 }
             }
+            if(this.partido != r.partido)
+            {
+                if(this.partido == null || r.partido == null || !this.partido.equals(r.partido))
+                {
+                    return false;
+                }
+            }
 
             return true;
         }
@@ -71,6 +82,7 @@ public class Candidato implements java.lang.Cloneable,
         h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, "::Demo::Candidato");
         h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, idCandidato);
         h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, nombre);
+        h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, partido);
         return h_;
     }
 
@@ -92,12 +104,14 @@ public class Candidato implements java.lang.Cloneable,
     {
         ostr.writeLong(this.idCandidato);
         ostr.writeString(this.nombre);
+        ostr.writeString(this.partido);
     }
 
     public void ice_readMembers(com.zeroc.Ice.InputStream istr)
     {
         this.idCandidato = istr.readLong();
         this.nombre = istr.readString();
+        this.partido = istr.readString();
     }
 
     static public void ice_write(com.zeroc.Ice.OutputStream ostr, Candidato v)
@@ -153,5 +167,5 @@ public class Candidato implements java.lang.Cloneable,
     private static final Candidato _nullMarshalValue = new Candidato();
 
     /** @hidden */
-    public static final long serialVersionUID = 1104062172L;
+    public static final long serialVersionUID = -744044434L;
 }

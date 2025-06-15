@@ -10,6 +10,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/mesaVotacion" />
+            <option value="$PROJECT_DIR$/servidorNacional" />
             <option value="$PROJECT_DIR$/servidorRegional" />
           </set>
         </option>

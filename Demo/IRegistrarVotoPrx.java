@@ -55,44 +55,6 @@ public interface IRegistrarVotoPrx extends com.zeroc.Ice.ObjectPrx
         return f;
     }
 
-    default void enviarCandidatos(Candidato[] candidatos, IConfirmacionCandidatosPrx callback)
-    {
-        enviarCandidatos(candidatos, callback, com.zeroc.Ice.ObjectPrx.noExplicitContext);
-    }
-
-    default void enviarCandidatos(Candidato[] candidatos, IConfirmacionCandidatosPrx callback, java.util.Map<String, String> context)
-    {
-        _iceI_enviarCandidatosAsync(candidatos, callback, context, true).waitForResponse();
-    }
-
-    default java.util.concurrent.CompletableFuture<Void> enviarCandidatosAsync(Candidato[] candidatos, IConfirmacionCandidatosPrx callback)
-    {
-        return _iceI_enviarCandidatosAsync(candidatos, callback, com.zeroc.Ice.ObjectPrx.noExplicitContext, false);
-    }
-
-    default java.util.concurrent.CompletableFuture<Void> enviarCandidatosAsync(Candidato[] candidatos, IConfirmacionCandidatosPrx callback, java.util.Map<String, String> context)
-    {
-        return _iceI_enviarCandidatosAsync(candidatos, callback, context, false);
-    }
-
-    /**
-     * @hidden
-     * @param iceP_candidatos -
-     * @param iceP_callback -
-     * @param context -
-     * @param sync -
-     * @return -
-     **/
-    default com.zeroc.IceInternal.OutgoingAsync<Void> _iceI_enviarCandidatosAsync(Candidato[] iceP_candidatos, IConfirmacionCandidatosPrx iceP_callback, java.util.Map<String, String> context, boolean sync)
-    {
-        com.zeroc.IceInternal.OutgoingAsync<Void> f = new com.zeroc.IceInternal.OutgoingAsync<>(this, "enviarCandidatos", null, sync, null);
-        f.invoke(false, context, null, ostr -> {
-                     SeqCandidatosHelper.write(ostr, iceP_candidatos);
-                     ostr.writeProxy(iceP_callback);
-                 }, null);
-        return f;
-    }
-
     /**
      * Contacts the remote server to verify that the object implements this type.
      * Raises a local exception if a communication error occurs.

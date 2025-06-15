@@ -1,2 +1,4 @@
-package Resultados;public class AdministradorVotos {
+package Resultados;
+
+public class AdministradorVotos {
 }

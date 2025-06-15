@@ -18,7 +18,7 @@ public class GestorVotos implements IConfirmacionVoto {
         }
 
         System.out.println("============================");
-        System.out.print("==> "); // Mostrar prompt nuevamente
+        System.out.print("==> ");
         System.out.flush();
     }
 }

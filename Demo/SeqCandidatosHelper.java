@@ -39,7 +39,7 @@ public final class SeqCandidatosHelper
     public static Candidato[] read(com.zeroc.Ice.InputStream istr)
     {
         final Candidato[] v;
-        final int len0 = istr.readAndCheckSeqSize(9);
+        final int len0 = istr.readAndCheckSeqSize(10);
         v = new Candidato[len0];
         for(int i0 = 0; i0 < len0; i0++)
         {

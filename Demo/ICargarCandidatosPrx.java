@@ -17,39 +17,80 @@ package Demo;
 
 public interface ICargarCandidatosPrx extends com.zeroc.Ice.ObjectPrx
 {
-    default void cargarCandidatos(IConfirmacionCandidatosPrx callback)
+    default boolean enviarCandidatosATodasMesas()
     {
-        cargarCandidatos(callback, com.zeroc.Ice.ObjectPrx.noExplicitContext);
+        return enviarCandidatosATodasMesas(com.zeroc.Ice.ObjectPrx.noExplicitContext);
     }
 
-    default void cargarCandidatos(IConfirmacionCandidatosPrx callback, java.util.Map<String, String> context)
+    default boolean enviarCandidatosATodasMesas(java.util.Map<String, String> context)
     {
-        _iceI_cargarCandidatosAsync(callback, context, true).waitForResponse();
+        return _iceI_enviarCandidatosATodasMesasAsync(context, true).waitForResponse();
     }
 
-    default java.util.concurrent.CompletableFuture<Void> cargarCandidatosAsync(IConfirmacionCandidatosPrx callback)
+    default java.util.concurrent.CompletableFuture<java.lang.Boolean> enviarCandidatosATodasMesasAsync()
     {
-        return _iceI_cargarCandidatosAsync(callback, com.zeroc.Ice.ObjectPrx.noExplicitContext, false);
+        return _iceI_enviarCandidatosATodasMesasAsync(com.zeroc.Ice.ObjectPrx.noExplicitContext, false);
     }
 
-    default java.util.concurrent.CompletableFuture<Void> cargarCandidatosAsync(IConfirmacionCandidatosPrx callback, java.util.Map<String, String> context)
+    default java.util.concurrent.CompletableFuture<java.lang.Boolean> enviarCandidatosATodasMesasAsync(java.util.Map<String, String> context)
     {
-        return _iceI_cargarCandidatosAsync(callback, context, false);
+        return _iceI_enviarCandidatosATodasMesasAsync(context, false);
     }
 
     /**
      * @hidden
-     * @param iceP_callback -
      * @param context -
      * @param sync -
      * @return -
      **/
-    default com.zeroc.IceInternal.OutgoingAsync<Void> _iceI_cargarCandidatosAsync(IConfirmacionCandidatosPrx iceP_callback, java.util.Map<String, String> context, boolean sync)
+    default com.zeroc.IceInternal.OutgoingAsync<java.lang.Boolean> _iceI_enviarCandidatosATodasMesasAsync(java.util.Map<String, String> context, boolean sync)
     {
-        com.zeroc.IceInternal.OutgoingAsync<Void> f = new com.zeroc.IceInternal.OutgoingAsync<>(this, "cargarCandidatos", null, sync, null);
-        f.invoke(false, context, null, ostr -> {
-                     ostr.writeProxy(iceP_callback);
-                 }, null);
+        com.zeroc.IceInternal.OutgoingAsync<java.lang.Boolean> f = new com.zeroc.IceInternal.OutgoingAsync<>(this, "enviarCandidatosATodasMesas", null, sync, null);
+        f.invoke(true, context, null, null, istr -> {
+                     boolean ret;
+                     ret = istr.readBool();
+                     return ret;
+                 });
+        return f;
+    }
+
+    default boolean enviarCandidatosAMesas(String endpointMesa)
+    {
+        return enviarCandidatosAMesas(endpointMesa, com.zeroc.Ice.ObjectPrx.noExplicitContext);
+    }
+
+    default boolean enviarCandidatosAMesas(String endpointMesa, java.util.Map<String, String> context)
+    {
+        return _iceI_enviarCandidatosAMesasAsync(endpointMesa, context, true).waitForResponse();
+    }
+
+    default java.util.concurrent.CompletableFuture<java.lang.Boolean> enviarCandidatosAMesasAsync(String endpointMesa)
+    {
+        return _iceI_enviarCandidatosAMesasAsync(endpointMesa, com.zeroc.Ice.ObjectPrx.noExplicitContext, false);
+    }
+
+    default java.util.concurrent.CompletableFuture<java.lang.Boolean> enviarCandidatosAMesasAsync(String endpointMesa, java.util.Map<String, String> context)
+    {
+        return _iceI_enviarCandidatosAMesasAsync(endpointMesa, context, false);
+    }
+
+    /**
+     * @hidden
+     * @param iceP_endpointMesa -
+     * @param context -
+     * @param sync -
+     * @return -
+     **/
+    default com.zeroc.IceInternal.OutgoingAsync<java.lang.Boolean> _iceI_enviarCandidatosAMesasAsync(String iceP_endpointMesa, java.util.Map<String, String> context, boolean sync)
+    {
+        com.zeroc.IceInternal.OutgoingAsync<java.lang.Boolean> f = new com.zeroc.IceInternal.OutgoingAsync<>(this, "enviarCandidatosAMesas", null, sync, null);
+        f.invoke(true, context, null, ostr -> {
+                     ostr.writeString(iceP_endpointMesa);
+                 }, istr -> {
+                     boolean ret;
+                     ret = istr.readBool();
+                     return ret;
+                 });
         return f;
     }
 
