@@ -337,62 +337,136 @@ public class GestorMesa implements IRecibirCandidatos {
 
     private static IRegistrarVotoPrx obtenerServidorRegional(com.zeroc.Ice.Communicator communicator) {
         IRegistrarVotoPrx registrarVoto = null;
-        com.zeroc.IceGrid.QueryPrx query = null;
-
+        
         try {
-            query = com.zeroc.IceGrid.QueryPrx.checkedCast(
+            // Primero intentar conectar directamente usando IceGrid con la identidad específica
+            System.out.println("🔗 Conectando al servidor regional (receptorVotos)...");
+            
+            // Conectar usando IceGrid Query para encontrar el objeto por identidad
+            com.zeroc.IceGrid.QueryPrx query = com.zeroc.IceGrid.QueryPrx.checkedCast(
                     communicator.stringToProxy("DemoIceGrid/Query"));
-        } catch (Exception e) {
-            System.err.println("No se pudo conectar a IceGrid Query: " + e.getMessage());
-        }
-
-        try {
-            registrarVoto = IRegistrarVotoPrx.checkedCast(
-                    communicator.stringToProxy("regionalAdapter"));
-        } catch(com.zeroc.Ice.NotRegisteredException ex) {
+            
             if (query != null) {
                 try {
-                    registrarVoto = IRegistrarVotoPrx.checkedCast(
-                            query.findObjectByType("::Demo::IRegistrarVoto"));
+                    // Buscar el objeto por identidad específica
+                    com.zeroc.Ice.ObjectPrx obj = query.findObjectByType("::Demo::IRegistrarVoto");
+                    if (obj != null) {
+                        registrarVoto = IRegistrarVotoPrx.checkedCast(obj);
+                        if (registrarVoto != null) {
+                            System.out.println("✅ Conectado al servidor regional via IceGrid Query");
+                            return registrarVoto;
+                        }
+                    }
                 } catch (Exception e) {
-                    System.err.println("Error buscando objeto por tipo: " + e.getMessage());
+                    System.err.println("⚠️  Error buscando por tipo: " + e.getMessage());
+                }
+                
+                // Si no funciona por tipo, intentar por identidad directa
+                try {
+                    com.zeroc.Ice.ObjectPrx objById = query.findObjectById(
+                            com.zeroc.Ice.Util.stringToIdentity("receptorVotos"));
+                    if (objById != null) {
+                        registrarVoto = IRegistrarVotoPrx.checkedCast(objById);
+                        if (registrarVoto != null) {
+                            System.out.println("✅ Conectado al servidor regional via identidad");
+                            return registrarVoto;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("⚠️  Error buscando por identidad: " + e.getMessage());
                 }
             }
+            
+            // Método alternativo: conectar directamente al adaptador
+            try {
+                System.out.println("🔄 Intentando conexión directa al adaptador...");
+                String proxyString = "receptorVotos@RegionalAdapter";
+                com.zeroc.Ice.ObjectPrx directObj = communicator.stringToProxy(proxyString);
+                if (directObj != null) {
+                    registrarVoto = IRegistrarVotoPrx.checkedCast(directObj);
+                    if (registrarVoto != null) {
+                        System.out.println("✅ Conectado directamente al adaptador regional");
+                        return registrarVoto;
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️  Error en conexión directa: " + e.getMessage());
+            }
+            
         } catch (Exception e) {
-            System.err.println("Error conectando a regionalAdapter: " + e.getMessage());
+            System.err.println("❌ Error general conectando al servidor regional: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        return registrarVoto;
+        
+        System.err.println("❌ No se pudo establecer conexión con el servidor regional");
+        return null;
     }
 
     private ICargarCandidatosPrx obtenerGestionCandidatos(com.zeroc.Ice.Communicator communicator) {
         ICargarCandidatosPrx cargarCandidatos = null;
-        com.zeroc.IceGrid.QueryPrx query = null;
-
+        
         try {
-            query = com.zeroc.IceGrid.QueryPrx.checkedCast(
+            // Conectar al servicio de gestión de candidatos
+            System.out.println("🔗 Conectando al servicio de gestión de candidatos...");
+            
+            // Usar IceGrid Query para encontrar el servicio
+            com.zeroc.IceGrid.QueryPrx query = com.zeroc.IceGrid.QueryPrx.checkedCast(
                     communicator.stringToProxy("DemoIceGrid/Query"));
-        } catch (Exception e) {
-            System.err.println("No se pudo conectar a IceGrid Query: " + e.getMessage());
-        }
-
-        try {
-            cargarCandidatos = ICargarCandidatosPrx.checkedCast(
-                    communicator.stringToProxy("regionalAdapter"));
-        } catch(com.zeroc.Ice.NotRegisteredException ex) {
+            
             if (query != null) {
                 try {
-                    cargarCandidatos = ICargarCandidatosPrx.checkedCast(
-                            query.findObjectByType("::Demo::ICargarCandidatos"));
+                    // Buscar por tipo de interfaz
+                    com.zeroc.Ice.ObjectPrx obj = query.findObjectByType("::Demo::ICargarCandidatos");
+                    if (obj != null) {
+                        cargarCandidatos = ICargarCandidatosPrx.checkedCast(obj);
+                        if (cargarCandidatos != null) {
+                            System.out.println("✅ Conectado al servicio de candidatos via IceGrid Query");
+                            return cargarCandidatos;
+                        }
+                    }
                 } catch (Exception e) {
-                    System.err.println("Error buscando objeto por tipo: " + e.getMessage());
+                    System.err.println("⚠️  Error buscando gestión candidatos por tipo: " + e.getMessage());
+                }
+                
+                // Intentar por identidad específica
+                try {
+                    com.zeroc.Ice.ObjectPrx objById = query.findObjectById(
+                            com.zeroc.Ice.Util.stringToIdentity("gestionCandidatos"));
+                    if (objById != null) {
+                        cargarCandidatos = ICargarCandidatosPrx.checkedCast(objById);
+                        if (cargarCandidatos != null) {
+                            System.out.println("✅ Conectado al servicio de candidatos via identidad");
+                            return cargarCandidatos;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("⚠️  Error buscando gestión candidatos por identidad: " + e.getMessage());
                 }
             }
+            
+            // Método alternativo: conexión directa
+            try {
+                System.out.println("🔄 Intentando conexión directa al servicio de candidatos...");
+                String proxyString = "gestionCandidatos@RegionalAdapter";
+                com.zeroc.Ice.ObjectPrx directObj = communicator.stringToProxy(proxyString);
+                if (directObj != null) {
+                    cargarCandidatos = ICargarCandidatosPrx.checkedCast(directObj);
+                    if (cargarCandidatos != null) {
+                        System.out.println("✅ Conectado directamente al servicio de candidatos");
+                        return cargarCandidatos;
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️  Error en conexión directa a candidatos: " + e.getMessage());
+            }
+            
         } catch (Exception e) {
-            System.err.println("Error conectando a regionalAdapter: " + e.getMessage());
+            System.err.println("❌ Error general conectando al servicio de candidatos: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        return cargarCandidatos;
+        
+        System.err.println("❌ No se pudo establecer conexión con el servicio de gestión de candidatos");
+        return null;
     }
 
     private IConfirmacionVotoPrx crearCallback() {

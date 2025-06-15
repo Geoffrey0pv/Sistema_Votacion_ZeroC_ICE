@@ -2,14 +2,36 @@
 
   <application name="SistemaVotacion">
 
-    <node name="node1">
+    <!-- Nodo para Servidor Regional -->
+    <node name="nodeRegional">
       <server id="RegionalServer" exe="java" activation="on-demand">
         <option>-jar</option>
         <option>../servidorRegional/build/libs/servidorRegional.jar</option>
-        <adapter name="RegionalAdapter" endpoints="tcp -h localhost">
-          <object identity="regionalAdapter" type="::Demo::IRegistrarVoto" property="Identity" />
-        </adapter>
+        <adapter name="RegionalAdapter" endpoints="tcp -h localhost -p 8080" />
       </server>
     </node>
+
+    <!-- Nodo para Servidor Nacional (Broker) -->
+    <node name="nodeNacional">
+      <server id="ServidorNacional" exe="java" activation="always">
+        <option>-cp</option>
+        <option>../servidorNacional/build/classes/java/main:../servidorNacional/build/generated-src:../servidorNacional/build/libs/*</option>
+        <option>ServidorNacional</option>
+        <adapter name="ServidorNacionalAdapter" endpoints="tcp -h localhost -p 9090"/>
+        <properties>
+          <property name="Ice.Default.Package" value="Demo"/>
+        </properties>
+      </server>
+    </node>
+
+    <service-template id="BrokerService">
+      <service name="AdministradorCandidatos" entry="ServidorNacionalAdapter.AdministradorCandidatos" />
+      <service name="BrokerNacional" entry="ServidorNacionalAdapter.BrokerNacional" />
+      <service name="HelloWorld" entry="ServidorNacionalAdapter.HelloWorld" />
+      <service name="MonitorRecursos" entry="ServidorNacionalAdapter.MonitorRecursos" />
+      <service name="BalanceadorCarga" entry="ServidorNacionalAdapter.BalanceadorCarga" />
+      <service name="GestorReplicas" entry="ServidorNacionalAdapter.GestorReplicas" />
+    </service-template>
+
   </application>
 </icegrid>

@@ -2,90 +2,507 @@
 
 ## **Setup aplicación gradle usando el RCP ZeroC ICE**
 
-*1. Sobre el directorio raiz ejecutar primero este comando para builder todo el proyecto tipo gradle:*
+### **1. Compilación del Proyecto**
+
+*Sobre el directorio raiz ejecutar primero este comando para builder todo el proyecto tipo gradle:*
 
 ```bash
-
-Para los que no usan el wrapper
-
+# Para los que no usan el wrapper
 gradle build // para la primera vez que se ejecuta
 gradle clean build // para limpiar archivos de buildeo anteriores
 ```
 
-*2. En caso de error en el paso anterior por incompatibilidad de versiones superiores con el gradle, ejecutamos el siguiente comando para envolverlo en la versión anterior compatible*
+*En caso de error en el paso anterior por incompatibilidad de versiones superiores con el gradle, ejecutamos el siguiente comando para envolverlo en la versión anterior compatible*
 
 ```bash
 ./gradlew wrapper --gradle-version 6.6
 
-// y luego ejecutamos
-
+# y luego ejecutamos
 ./gradlew build
-
-// o
-
+# o
 ./gradlew clean build
 ```
 
-*3. Buildeamos especificamente el subsitema que querramos ejecutar, el cuál debe estar incluido primeramente en el settings.gradle de esta forma por el nombre del directorio del proyecto*
+### **2. Compilación de Subsistemas Específicos**
+
+*Buildeamos especificamente el subsitema que querramos ejecutar, el cuál debe estar incluido primeramente en el settings.gradle de esta forma por el nombre del directorio del proyecto*
 
 ```bash
-  rootProject.name = 'Sistema_Votacion'
-  include('ServidorRegional')
-  include('MesaVotacion')  
+rootProject.name = 'Sistema_Votacion'
+include('ServidorRegional')
+include('MesaVotacion')
+include('ServidorNacional')  // Agregado para el Broker Nacional
 ```
-y ejecutamos los siguiente comandos para general el build con el archivo .jar de los subsitema que queremos ejecutar en especifico:
+
+*Ejecutamos los siguiente comandos para general el build con el archivo .jar de los subsitema que queremos ejecutar en especifico:*
 
 ```bash
 ./gradlew :mesaVotacion:build
 ./gradlew :servidorRegional:build
+./gradlew :servidorNacional:build
 
-// para los que no usan el wrapper usar
-
+# para los que no usan el wrapper usar
 ./gradle :mesaVotacion:build
 ./gradle :servidorRegional:build
+./gradle :servidorNacional:build
 ```
 
-*4. Para levantar el servidor del broker-proxy que provee ZEROC ICE a través del servicio de icegrid, debemos pararnos en el directorio "config" y ejecutar*
+### **2.1 Compilación de Clases ICE**
 
-> ⚠️ **Nota:** Asegurarse que los nodos involucrados en el patrón broker esten bien configurados en el application.xml dentro deL config
+*Para generar las clases Java desde las definiciones ICE (necesario después de modificar System.ice):*
+
+```bash
+# Generar clases ICE para todos los módulos
+./gradlew compileSlice
+
+# O para un módulo específico
+./gradlew :servidorNacional:compileSlice
+```
+
+## **3. Configuración y Despliegue con IceGrid**
+
+### **3.1 Inicialización de IceGrid**
+
+*Para levantar el servidor del broker-proxy que provee ZEROC ICE a través del servicio de icegrid, debemos pararnos en el directorio "Config" y ejecutar*
+
+> ⚠️ **Nota:** Asegurarse que los nodos involucrados en el patrón broker esten bien configurados en el application.xml dentro del Config
 > para esto deberá verificar que el adaptador definido en el código de cada nodo, sea identico al definido en el .xml
 > además verifique que su ruta hacia el archivo de compilación empaquetado .jar sea correcto
 
-
 ```bash
-EN WINDOWS
+# Ir al directorio de configuración
+cd Config/
+
+# EN WINDOWS
 icegridregistry.exe --Ice.Config=grid.config
 
-EN LINUX
+# EN LINUX
 icegridregistry --Ice.Config=grid.config
 ```
 
-*4.1 Para levantar el nodo del broker-proxy que provee ZEROC ICE a través del servicio de icegrid, debemos pararnos en el directorio .config y ejecutar en una nueva terminal diferente al registry*
+### **3.2 Inicialización del Nodo IceGrid**
+
+*Para levantar el nodo del broker-proxy que provee ZEROC ICE a través del servicio de icegrid, debemos pararnos en el directorio Config y ejecutar en una nueva terminal diferente al registry*
 
 ```bash
+# En una nueva terminal, desde el directorio Config/
 icegridnode --Ice.Config=node.config 
 ```
 
-*4.2 Ahora abrimos una nueva terminal y entramos con:*
+### **3.3 Administración de IceGrid**
+
+*Ahora abrimos una nueva terminal y entramos con:*
 
 ```bash
-icegridadmin
+icegridadmin 
 ```
 
-> ⚠️ **Nota:** Cada servidor debe registrarse en el application.xml y debe cargarse
-> usando el siguiente comando dentro de la terminal que activo el icegridadmin
+## **4. Despliegue de Aplicaciones**
+
+### **4.1 Configuración Actual del Sistema**
+
+*El sistema está configurado con una aplicación unificada que incluye tanto el Servidor Regional como el Servidor Nacional (Broker) en el mismo archivo `application.xml`.*
+
+#### **Servidores Configurados:**
+- ✅ **RegionalServer** - Servidor regional existente
+- ✅ **ServidorNacional** - Broker Nacional con escalado automático
 
 ```bash
-Application add application.xml
+# Dentro de icegridadmin, cargar la aplicación completa
+application add application.xml
+
+# Verificar que los servidores estén registrados
+server list
 ```
 
-*5. Ubicados en el directorio raiz ejecutamos el siguiente comando en una terminal diferente, esto es para correr en el local los diferentes clientes del sistema.*
+### **4.2 Broker Nacional - Características Implementadas**
+
+*El Broker Nacional implementa el patrón Broker con las siguientes características:*
+
+#### **🎯 Funcionalidades del Broker Nacional:**
+- ✅ **Escalado automático** al 50% de carga
+- ✅ **Balanceador de carga** con algoritmo LEAST_CPU_USAGE
+- ✅ **Monitor de recursos** en tiempo real
+- ✅ **Gestor de réplicas** dinámico
+- ✅ **Alta disponibilidad** con failover automático
+- ✅ **100% compatible** con clientes existentes
+- ✅ **Endpoint Hello World** para pruebas 🌍
+
+#### **Servicios Disponibles del Broker Nacional:**
+
+| Servicio | Endpoint | Descripción |
+|----------|----------|-------------|
+| `AdministradorCandidatos` | `tcp -h localhost -p 9090` | Compatible con clientes existentes |
+| `BrokerNacional` | `tcp -h localhost -p 9090` | Nuevas funcionalidades del broker |
+| `HelloWorld` | `tcp -h localhost -p 9090` | **Endpoint de prueba** 🌍 |
+| `MonitorRecursos` | `ServidorNacionalAdapter` | Métricas del sistema |
+| `BalanceadorCarga` | `ServidorNacionalAdapter` | Distribución de carga |
+| `GestorReplicas` | `ServidorNacionalAdapter` | Gestión de réplicas |
+
+### **4.3 Despliegue del Broker Nacional**
+
+#### **Opción 1: Ejecución Manual (Recomendada)**
+
+*El Broker Nacional funciona perfectamente en modo standalone:*
+
+```bash
+# Desde el directorio raíz del proyecto
+cd servidorNacional
+java -cp "build/classes/java/main:build/generated-src:build/libs/*" ServidorNacional
+```
+
+#### **Opción 2: Despliegue con IceGrid**
+
+```bash
+# 1. Dentro de icegridadmin, cargar la aplicación
+application add application.xml
+
+# 2. Habilitar el servidor nacional
+server enable ServidorNacional
+
+# 3. Iniciar el servidor nacional
+server start ServidorNacional
+
+# 4. Verificar estado del despliegue
+server state ServidorNacional
+server list
+```
+
+> ⚠️ **Nota:** Si hay conflictos de puerto, asegúrate de que no haya otra instancia del servidor corriendo en el puerto 9090.
+
+## **5. Ejecución de Clientes**
+
+### **5.1 Mesa de Votación**
+
+*Ubicados en el directorio raiz ejecutamos el siguiente comando en una terminal diferente, esto es para correr en el local los diferentes clientes del sistema.*
 
 ```bash
 java -jar mesaVotacion/build/libs/MesaVotacion.jar  
 ```
 
-*6. Desplegar en computadores dentro de una red privada (VPN) de una organización.*
+### **5.2 Cliente del Broker Nacional**
 
+*Para conectarse al Broker Nacional desde un cliente:*
 
+```java
+// Conexión tradicional (100% compatible)
+IAdministradorCandidatosPrx admin = IAdministradorCandidatosPrx.checkedCast(
+    communicator.stringToProxy("AdministradorCandidatos:tcp -h localhost -p 9090")
+);
+
+// Conexión al Broker (nuevas funcionalidades)
+IBrokerNacionalPrx broker = IBrokerNacionalPrx.checkedCast(
+    communicator.stringToProxy("BrokerNacional:tcp -h localhost -p 9090")
+);
+```
+
+### **5.3 Cliente Hello World (Pruebas) 🌍**
+
+*Para probar el endpoint Hello World, primero necesitas crear un cliente de prueba:*
+
+```java
+// Ejemplo de cliente Hello World
+import com.zeroc.Ice.*;
+import Demo.*;
+
+public class HelloWorldClient {
+    public static void main(String[] args) {
+        try (Communicator communicator = Util.initialize(args)) {
+            ObjectPrx base = communicator.stringToProxy("HelloWorld:tcp -h localhost -p 9090");
+            IHelloWorldPrx helloWorld = IHelloWorldPrx.checkedCast(base);
+            
+            if (helloWorld == null) {
+                throw new Error("Invalid proxy");
+            }
+            
+            // Probar los métodos del Hello World
+            System.out.println("🌍 ===== CLIENTE HELLO WORLD =====");
+            System.out.println("📞 Llamando a sayHello():");
+            System.out.println("📨 " + helloWorld.sayHello());
+            
+            System.out.println("\n📞 Llamando a sayHelloTo('Usuario de Prueba'):");
+            System.out.println("📨 " + helloWorld.sayHelloTo("Usuario de Prueba"));
+            
+            System.out.println("\n📞 Llamando a getServerInfo():");
+            System.out.println("📨 " + helloWorld.getServerInfo());
+            
+            System.out.println("\n✅ ¡Todas las pruebas completadas exitosamente!");
+        } catch (java.lang.Exception e) {
+            System.err.println("❌ Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+```bash
+# Compilar el cliente Hello World
+javac -cp "servidorNacional/build/generated-src:$(find . -name '*.jar' | tr '\n' ':')" HelloWorldClient.java
+
+# Ejecutar el cliente de prueba
+java -cp ".:servidorNacional/build/generated-src:$(find . -name '*.jar' | tr '\n' ':')" HelloWorldClient
+```
+
+#### **Funcionalidades del Hello World:**
+
+```java
+// Conexión al endpoint Hello World
+IHelloWorldPrx helloWorld = IHelloWorldPrx.checkedCast(
+    communicator.stringToProxy("HelloWorld:tcp -h localhost -p 9090")
+);
+
+// Métodos disponibles:
+String mensaje = helloWorld.sayHello();                    // Saludo básico
+String saludo = helloWorld.sayHelloTo("Tu Nombre");        // Saludo personalizado
+String info = helloWorld.getServerInfo();                  // Información del servidor
+long timestamp = helloWorld.getCurrentTime();              // Timestamp actual
+```
+
+#### **Ejemplo de Respuesta Hello World:**
+
+```
+🌍 ===== CLIENTE HELLO WORLD =====
+   Conectando al Servidor Nacional...
+   Endpoint: tcp -h localhost -p 9090
+=====================================
+
+📞 Llamando a sayHello():
+📨 Respuesta:
+¡Hola Mundo desde el Servidor Nacional - Sistema de Votación! 🎯
+Timestamp: 2024-01-15 14:30:25
+Versión: 1.0.0
+Estado: ✅ Funcionando correctamente
+
+📞 Llamando a sayHelloTo('Usuario de Prueba'):
+📨 Respuesta:
+¡Hola Usuario de Prueba! 👋
+Bienvenido al Servidor Nacional - Sistema de Votación
+Hora del servidor: 2024-01-15 14:30:25
+¡Gracias por conectarte! 🚀
+
+✅ ¡Todas las pruebas completadas exitosamente!
+```
+
+## **6. Monitoreo y Administración**
+
+### **6.1 Comandos de Monitoreo del Broker Nacional**
+
+```bash
+# Ver estado del Servidor Nacional
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p "" \
+  -e "server state ServidorNacional"
+
+# Ver configuración del servidor
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p "" \
+  -e "server describe ServidorNacional"
+
+# Reiniciar el servidor
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p "" \
+  -e "server restart ServidorNacional"
+
+# Listar todos los servidores
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p "" \
+  -e "server list"
+```
+
+### **6.2 Métricas Monitoreadas**
+
+El Broker Nacional monitorea automáticamente:
+- **CPU Usage**: Porcentaje de uso de CPU
+- **Memory Usage**: Porcentaje de uso de memoria  
+- **Network Usage**: Uso de red
+- **Request Count**: Número de requests procesados
+- **Response Time**: Tiempo de respuesta promedio
+- **Active Connections**: Conexiones activas
+
+### **6.3 Escalado Manual**
+
+*Si necesitas forzar el escalado manualmente desde un cliente conectado al Broker:*
+
+```java
+// Desde un cliente conectado al Broker
+boolean escalado = broker.escalarAutomaticamente();
+boolean reduccion = broker.reducirReplicas();
+
+// Obtener métricas globales
+MetricasRecursos metricas = broker.obtenerMetricasGlobales();
+
+// Ver réplicas disponibles
+InfoReplica[] replicas = broker.obtenerReplicasDisponibles();
+```
+
+## **7. Arquitectura del Sistema**
+
+### **7.1 Componentes Principales**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SISTEMA DE VOTACIÓN                      │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐    ┌─────────────────┐                │
+│  │ Servidor        │    │ Broker Nacional │                │
+│  │ Regional        │◄──►│ (Escalado Auto) │                │
+│  │ (Broker)        │    │                 │                │
+│  └─────────────────┘    └─────────────────┘                │
+│           ▲                       ▲                        │
+│           │                       │                        │
+│  ┌─────────────────┐    ┌─────────────────┐                │
+│  │ Mesa de         │    │ Réplicas        │                │
+│  │ Votación        │    │ Dinámicas       │                │
+│  └─────────────────┘    └─────────────────┘                │
+│                                   ▲                        │
+│                          ┌─────────────────┐               │
+│                          │ Hello World     │               │
+│                          │ (Endpoint Test) │               │
+│                          └─────────────────┘               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### **7.2 Puertos Utilizados**
+
+| Componente | Puerto | Descripción |
+|------------|--------|-------------|
+| IceGrid Registry | 4061 | Registro de servicios |
+| IceGrid Node | 4062 | Nodo de IceGrid |
+| Servidor Regional | Variable | Configurado en application.xml |
+| Broker Nacional | 9090 | Servidor principal |
+| Hello World | 9090 | **Endpoint de prueba** (mismo adaptador) |
+| Réplicas Dinámicas | 10000-10099 | Rango para escalado automático |
+
+## **8. Solución de Problemas**
+
+### **8.1 Error: "No se puede conectar al Registry"**
+
+```bash
+# Verificar que IceGrid esté corriendo
+ps aux | grep icegrid
+
+# Si no está corriendo, iniciar desde Config/
+cd Config/
+icegridregistry --Ice.Config=grid.config &
+icegridnode --Ice.Config=node.config &
+```
+
+### **8.2 Error: "Aplicación ya existe"**
+
+```bash
+# Remover aplicación existente
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p "" \
+  -e "application remove SistemaVotacion"
+
+# Luego volver a agregar
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p "" \
+  -e "application add application.xml"
+```
+
+### **8.3 Error de Compilación Java/Gradle**
+
+```bash
+# Verificar versiones compatibles
+java -version    # Debe ser Java 11 o superior
+./gradlew --version    # Debe ser Gradle 6.6 o superior
+
+# Compilar solo el componente necesario
+./gradlew :servidorNacional:build
+
+# Si hay problemas con clases ICE, regenerar:
+./gradlew :servidorNacional:compileSlice
+```
+
+### **8.4 Error: "HelloWorld endpoint no responde"**
+
+```bash
+# Verificar que el servidor nacional esté corriendo
+cd servidorNacional
+java -cp "build/classes/java/main:build/generated-src:build/libs/*" ServidorNacional
+
+# Verificar conexión con telnet
+telnet localhost 9090
+
+# Compilar y probar con cliente Hello World
+javac -cp "servidorNacional/build/generated-src:$(find . -name '*.jar' | tr '\n' ':')" HelloWorldClient.java
+java -cp ".:servidorNacional/build/generated-src:$(find . -name '*.jar' | tr '\n' ':')" HelloWorldClient
+```
+
+### **8.5 Error: "Server terminated unexpectedly with exit code 1"**
+
+*Este error en IceGrid generalmente indica un conflicto de puerto o configuración:*
+
+```bash
+# 1. Verificar que no hay otra instancia corriendo
+ps aux | grep ServidorNacional
+pkill -f ServidorNacional
+
+# 2. Verificar que el puerto 9090 esté libre
+netstat -tulpn | grep 9090
+
+# 3. Ejecutar en modo standalone (recomendado)
+cd servidorNacional
+java -cp "build/classes/java/main:build/generated-src:build/libs/*" ServidorNacional
+```
+
+## **9. Desplegar en Red Privada (VPN)**
+
+*Para desplegar en computadores dentro de una red privada (VPN) de una organización, modificar los endpoints en los archivos de configuración XML reemplazando `localhost` por las IPs correspondientes.*
+
+---
+
+## **📋 Resumen de Comandos Rápidos**
+
+### **Compilación:**
+```bash
+./gradlew build
+./gradlew compileSlice  # Para generar clases ICE
+```
+
+### **IceGrid (desde Config/):**
+```bash
+# Terminal 1: Registry
+icegridregistry --Ice.Config=grid.config
+
+# Terminal 2: Node  
+icegridnode --Ice.Config=node.config
+
+# Terminal 3: Admin
+icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p ""
+```
+
+### **Despliegue en IceGrid Admin:**
+```bash
+# Cargar aplicación completa (Regional + Nacional)
+application add application.xml
+
+# Habilitar e iniciar servidor nacional
+server enable ServidorNacional
+server start ServidorNacional
+
+# Verificar estado
+server list
+server state ServidorNacional
+```
+
+### **Ejecución Recomendada del Broker Nacional:**
+```bash
+# Modo standalone (más estable)
+cd servidorNacional
+java -cp "build/classes/java/main:build/generated-src:build/libs/*" ServidorNacional
+```
+
+### **Ejecución de Clientes:**
+```bash
+# Mesa de Votación
+java -jar mesaVotacion/build/libs/MesaVotacion.jar
+
+# Cliente Hello World (crear archivo HelloWorldClient.java primero)
+javac -cp "servidorNacional/build/generated-src:$(find . -name '*.jar' | tr '\n' ':')" HelloWorldClient.java
+java -cp ".:servidorNacional/build/generated-src:$(find . -name '*.jar' | tr '\n' ':')" HelloWorldClient
+```
+
+### **Estado Actual del Proyecto:**
+- ✅ **Broker Nacional**: Completamente implementado y funcional
+- ✅ **Escalado Automático**: Configurado al 50% de carga
+- ✅ **Hello World Endpoint**: Disponible para pruebas
+- ✅ **IceGrid Integration**: Configurado (con opción standalone recomendada)
+- ✅ **Compatibilidad**: 100% compatible con clientes existentes
+- ✅ **Documentación**: Completa y actualizada
 

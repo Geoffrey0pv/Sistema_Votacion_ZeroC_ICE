@@ -1,0 +1,87 @@
+Endpoints regionales cargados: 2
+Administrador de Candidatos Nacional inicializado
+🔍 Monitor de Recursos iniciado para nodo: master
+⚖️ Balanceador de Carga iniciado con algoritmo: LEAST_CPU_USAGE
+🏭 Gestor de Réplicas iniciado
+🎯 Broker Nacional iniciado con escalado automático
+   📊 Umbral de escalado: 50,0%
+   📉 Umbral de reducción: 20,0%
+🎯 ===== SERVIDOR NACIONAL CON BROKER =====
+   🚀 Servidor iniciado con patrón Broker
+   📡 Endpoint: tcp -h localhost -p 9090
+   🔄 Escalado automático: ACTIVADO (50%)
+   ⚖️  Balanceador de carga: ACTIVADO
+   📊 Monitor de recursos: ACTIVADO
+==========================================
+   🎮 Servicios disponibles:
+   • AdministradorCandidatos (compatibilidad)
+   • BrokerNacional (nueva funcionalidad)
+   • HelloWorld (endpoint de prueba) 🌍
+==========================================
+   ⏹️  Presiona Ctrl+C para detener
+
+📊 [master] CPU: 0,1% | MEM: 0,2% | NET: 0,0% | REQ: 0 | DISP: ✅
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+🏥 Verificando salud de réplicas...
+📊 [master] CPU: 0,0% | MEM: 0,2% | NET: 0,2% | REQ: 2 | DISP: ✅
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+🏥 Verificando salud de réplicas...
+
+🎯 ===== ESTADO DEL BROKER NACIONAL =====
+   🖥️  Master: CPU=0,1%, MEM=0,2%, REQ=5
+   🔄 Réplicas: 0 total, 0 activas
+   📊 Carga promedio cluster: 0,0%
+   ⚖️  Algoritmo balanceo: LEAST_CPU_USAGE
+==========================================
+
+📊 [master] CPU: 0,0% | MEM: 0,2% | NET: 0,5% | REQ: 5 | DISP: ✅
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+🌍 [2025-06-15 02:47:51] Hello World endpoint llamado desde: local address = 127.0.0.1:9090
+remote address = 127.0.0.1:57438
+👋 [2025-06-15 02:47:51] Hello personalizado para: Postman User
+📊 [02:47:51] Información del servidor solicitada
+🕐 [02:47:51] Timestamp solicitado: 1749973671637
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,0%, Réplicas=0
+🏥 Verificando salud de réplicas...
+📊 [master] CPU: 0,1% | MEM: 0,1% | NET: 0,7% | REQ: 7 | DISP: ✅
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+🏥 Verificando salud de réplicas...
+📊 [master] CPU: 0,0% | MEM: 0,2% | NET: 0,9% | REQ: 9 | DISP: ✅
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+🏥 Verificando salud de réplicas...
+📊 [master] CPU: 0,0% | MEM: 0,2% | NET: 1,1% | REQ: 11 | DISP: ✅
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+🏥 Verificando salud de réplicas...
+
+🎯 ===== ESTADO DEL BROKER NACIONAL =====
+   🖥️  Master: CPU=0,0%, MEM=0,2%, REQ=14
+   🔄 Réplicas: 0 total, 0 activas
+   📊 Carga promedio cluster: 0,0%
+   ⚖️  Algoritmo balanceo: LEAST_CPU_USAGE
+==========================================
+
+📊 [master] CPU: 0,0% | MEM: 0,2% | NET: 1,4% | REQ: 14 | DISP: ✅
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+🌍 [2025-06-15 02:49:49] Hello World endpoint llamado desde: local address = 127.0.0.1:9090
+remote address = 127.0.0.1:57084
+👋 [2025-06-15 02:49:49] Hello personalizado para: Postman User
+📊 [02:49:49] Información del servidor solicitada
+🕐 [02:49:49] Timestamp solicitado: 1749973789032
+🌍 [2025-06-15 02:49:53] Hello World endpoint llamado desde: local address = 127.0.0.1:9090
+remote address = 127.0.0.1:54880
+👋 [2025-06-15 02:49:53] Hello personalizado para: Postman User
+📊 [02:49:53] Información del servidor solicitada
+🕐 [02:49:53] Timestamp solicitado: 1749973793564
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+🏥 Verificando salud de réplicas...
+📊 [master] CPU: 0,0% | MEM: 0,2% | NET: 1,6% | REQ: 16 | DISP: ✅
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
+🏥 Verificando salud de réplicas...
+📊 [master] CPU: 0,0% | MEM: 0,2% | NET: 1,8% | REQ: 18 | DISP: ✅
+📊 Evaluación escalado: Master=0,1%, Cluster=0,0%, Total=0,1%, Réplicas=0
