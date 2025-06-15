@@ -271,45 +271,212 @@ public class WebServiceMain {
                 "<head>\n" +
                 "    <meta charset=\"UTF-8\">\n" +
                 "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
-                "    <title>Sistema de Consulta de Mesas de Votación</title>\n" +
+                "    <title>Registraduría Nacional - Consulta de Mesa de Votación</title>\n" +
                 "    <style>\n" +
                 "        * { margin: 0; padding: 0; box-sizing: border-box; }\n" +
-                "        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }\n" +
-                "        .container { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); max-width: 500px; width: 90%; }\n" +
-                "        h1 { color: #333; text-align: center; margin-bottom: 2rem; font-size: 1.8rem; }\n" +
+                "        body { \n" +
+                "            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; \n" +
+                "            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); \n" +
+                "            min-height: 100vh; \n" +
+                "            display: flex; \n" +
+                "            flex-direction: column;\n" +
+                "            align-items: center; \n" +
+                "            justify-content: center; \n" +
+                "            padding: 20px;\n" +
+                "        }\n" +
+                "        .header {\n" +
+                "            text-align: center;\n" +
+                "            color: white;\n" +
+                "            margin-bottom: 2rem;\n" +
+                "        }\n" +
+                "        .header h1 {\n" +
+                "            font-size: 2.2rem;\n" +
+                "            font-weight: 300;\n" +
+                "            margin-bottom: 0.5rem;\n" +
+                "            text-shadow: 0 2px 4px rgba(0,0,0,0.3);\n" +
+                "        }\n" +
+                "        .header .subtitle {\n" +
+                "            font-size: 1.1rem;\n" +
+                "            opacity: 0.9;\n" +
+                "            font-weight: 400;\n" +
+                "        }\n" +
+                "        .container { \n" +
+                "            background: white; \n" +
+                "            padding: 2.5rem; \n" +
+                "            border-radius: 12px; \n" +
+                "            box-shadow: 0 15px 35px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.07); \n" +
+                "            max-width: 500px; \n" +
+                "            width: 100%; \n" +
+                "            border-top: 4px solid #1e3c72;\n" +
+                "        }\n" +
+                "        .service-title {\n" +
+                "            color: #1e3c72;\n" +
+                "            text-align: center;\n" +
+                "            margin-bottom: 1.5rem;\n" +
+                "            font-size: 1.4rem;\n" +
+                "            font-weight: 600;\n" +
+                "            display: flex;\n" +
+                "            align-items: center;\n" +
+                "            justify-content: center;\n" +
+                "            gap: 10px;\n" +
+                "        }\n" +
                 "        .form-group { margin-bottom: 1.5rem; }\n" +
-                "        label { display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500; }\n" +
-                "        input[type=\"text\"] { width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 16px; transition: border-color 0.3s; }\n" +
-                "        input[type=\"text\"]:focus { outline: none; border-color: #667eea; }\n" +
-                "        button { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: transform 0.2s; }\n" +
-                "        button:hover { transform: translateY(-2px); }\n" +
-                "        button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }\n" +
-                "        .result { margin-top: 2rem; padding: 1rem; border-radius: 8px; display: none; }\n" +
-                "        .result.success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }\n" +
-                "        .result.error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }\n" +
-                "        .loading { display: none; text-align: center; margin-top: 1rem; color: #667eea; }\n" +
-                "        .mesa-info { margin-top: 1rem; }\n" +
-                "        .mesa-info strong { color: #333; }\n" +
-                "        .connection-status { text-align: center; margin-bottom: 1rem; padding: 0.5rem; border-radius: 5px; font-size: 0.9rem; }\n" +
-                "        .connected { background: #d4edda; color: #155724; }\n" +
-                "        .disconnected { background: #f8d7da; color: #721c24; }\n" +
+                "        label { \n" +
+                "            display: block; \n" +
+                "            margin-bottom: 0.7rem; \n" +
+                "            color: #2c3e50; \n" +
+                "            font-weight: 500;\n" +
+                "            font-size: 0.95rem;\n" +
+                "        }\n" +
+                "        input[type=\"text\"] { \n" +
+                "            width: 100%; \n" +
+                "            padding: 14px 16px; \n" +
+                "            border: 2px solid #e8ecef; \n" +
+                "            border-radius: 8px; \n" +
+                "            font-size: 16px; \n" +
+                "            transition: all 0.3s ease;\n" +
+                "            background: #fafbfc;\n" +
+                "        }\n" +
+                "        input[type=\"text\"]:focus { \n" +
+                "            outline: none; \n" +
+                "            border-color: #1e3c72; \n" +
+                "            background: white;\n" +
+                "            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);\n" +
+                "        }\n" +
+                "        button { \n" +
+                "            width: 100%; \n" +
+                "            padding: 14px; \n" +
+                "            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); \n" +
+                "            color: white; \n" +
+                "            border: none; \n" +
+                "            border-radius: 8px; \n" +
+                "            font-size: 16px; \n" +
+                "            font-weight: 600;\n" +
+                "            cursor: pointer; \n" +
+                "            transition: all 0.3s ease;\n" +
+                "            text-transform: uppercase;\n" +
+                "            letter-spacing: 0.5px;\n" +
+                "        }\n" +
+                "        button:hover { \n" +
+                "            transform: translateY(-2px); \n" +
+                "            box-shadow: 0 8px 25px rgba(30, 60, 114, 0.3);\n" +
+                "        }\n" +
+                "        button:disabled { \n" +
+                "            opacity: 0.6; \n" +
+                "            cursor: not-allowed; \n" +
+                "            transform: none; \n" +
+                "            box-shadow: none;\n" +
+                "        }\n" +
+                "        .result { \n" +
+                "            margin-top: 2rem; \n" +
+                "            padding: 1.5rem; \n" +
+                "            border-radius: 8px; \n" +
+                "            display: none;\n" +
+                "            border-left: 4px solid;\n" +
+                "        }\n" +
+                "        .result.success { \n" +
+                "            background: #f8f9fa; \n" +
+                "            border-left-color: #28a745;\n" +
+                "            color: #155724; \n" +
+                "        }\n" +
+                "        .result.error { \n" +
+                "            background: #f8f9fa; \n" +
+                "            border-left-color: #dc3545;\n" +
+                "            color: #721c24; \n" +
+                "        }\n" +
+                "        .loading { \n" +
+                "            display: none; \n" +
+                "            text-align: center; \n" +
+                "            margin-top: 1.5rem; \n" +
+                "            color: #1e3c72;\n" +
+                "            font-weight: 500;\n" +
+                "        }\n" +
+                "        .mesa-info { \n" +
+                "            margin-top: 1rem;\n" +
+                "            background: white;\n" +
+                "            padding: 1rem;\n" +
+                "            border-radius: 6px;\n" +
+                "            border: 1px solid #e9ecef;\n" +
+                "        }\n" +
+                "        .mesa-info p {\n" +
+                "            margin-bottom: 0.5rem;\n" +
+                "            display: flex;\n" +
+                "            justify-content: space-between;\n" +
+                "            align-items: center;\n" +
+                "        }\n" +
+                "        .mesa-info strong { \n" +
+                "            color: #2c3e50;\n" +
+                "            font-weight: 600;\n" +
+                "            min-width: 140px;\n" +
+                "        }\n" +
+                "        .mesa-info span {\n" +
+                "            color: #1e3c72;\n" +
+                "            font-weight: 500;\n" +
+                "        }\n" +
+                "        .connection-status { \n" +
+                "            text-align: center; \n" +
+                "            margin-bottom: 1.5rem; \n" +
+                "            padding: 0.8rem; \n" +
+                "            border-radius: 6px; \n" +
+                "            font-size: 0.9rem;\n" +
+                "            font-weight: 500;\n" +
+                "        }\n" +
+                "        .connected { \n" +
+                "            background: #d1ecf1; \n" +
+                "            color: #0c5460;\n" +
+                "            border: 1px solid #bee5eb;\n" +
+                "        }\n" +
+                "        .disconnected { \n" +
+                "            background: #f8d7da; \n" +
+                "            color: #721c24;\n" +
+                "            border: 1px solid #f5c6cb;\n" +
+                "        }\n" +
+                "        .footer {\n" +
+                "            margin-top: 2rem;\n" +
+                "            text-align: center;\n" +
+                "            color: rgba(255,255,255,0.8);\n" +
+                "            font-size: 0.85rem;\n" +
+                "        }\n" +
+                "        @media (max-width: 600px) {\n" +
+                "            .header h1 { font-size: 1.8rem; }\n" +
+                "            .container { padding: 2rem; margin: 0 10px; }\n" +
+                "            .service-title { font-size: 1.2rem; }\n" +
+                "        }\n" +
                 "    </style>\n" +
                 "</head>\n" +
                 "<body>\n" +
+                "    <div class=\"header\">\n" +
+                "        <h1>Registraduría Nacional del Estado Civil</h1>\n" +
+                "        <div class=\"subtitle\">República de Colombia</div>\n" +
+                "    </div>\n" +
+                "    \n" +
                 "    <div class=\"container\">\n" +
-                "        <h1>🗳️ Consulta tu Mesa de Votación</h1>\n" +
-                "        <div class=\"connection-status connected\" id=\"connectionStatus\">\n" +
-                "            ✅ Conectado al servidor nacional\n" +
+                "        <div class=\"service-title\">\n" +
+                "            <span>🗳️</span>\n" +
+                "            <span>Consulta de Mesa de Votación</span>\n" +
                 "        </div>\n" +
+                "        \n" +
+                "        <div class=\"connection-status connected\" id=\"connectionStatus\">\n" +
+                "            ✅ Sistema conectado al servidor nacional\n" +
+                "        </div>\n" +
+                "        \n" +
                 "        <form id=\"consultaForm\">\n" +
                 "            <div class=\"form-group\">\n" +
-                "                <label for=\"documento\">Número de Documento:</label>\n" +
-                "                <input type=\"text\" id=\"documento\" name=\"documento\" placeholder=\"Ingresa tu número de documento\" required>\n" +
+                "                <label for=\"documento\">Número de Cédula de Ciudadanía:</label>\n" +
+                "                <input type=\"text\" id=\"documento\" name=\"documento\" placeholder=\"Ingrese su número de cédula\" required maxlength=\"15\">\n" +
                 "            </div>\n" +
-                "            <button type=\"submit\">Consultar Mesa</button>\n" +
+                "            <button type=\"submit\">Consultar Mesa de Votación</button>\n" +
                 "        </form>\n" +
-                "        <div class=\"loading\" id=\"loading\">🔍 Consultando...</div>\n" +
+                "        \n" +
+                "        <div class=\"loading\" id=\"loading\">\n" +
+                "            <span>🔍 Consultando en la base de datos nacional...</span>\n" +
+                "        </div>\n" +
+                "        \n" +
                 "        <div class=\"result\" id=\"result\"></div>\n" +
+                "    </div>\n" +
+                "    \n" +
+                "    <div class=\"footer\">\n" +
+                "        Sistema de Consulta Electoral • Registraduría Nacional\n" +
                 "    </div>\n" +
                 "\n" +
                 "    <script>\n" +
@@ -324,17 +491,22 @@ public class WebServiceMain {
                 "                \n" +
                 "                if (data.ice_connected) {\n" +
                 "                    status.className = 'connection-status connected';\n" +
-                "                    status.innerHTML = '✅ Conectado al servidor nacional';\n" +
+                "                    status.innerHTML = '✅ Sistema conectado al servidor nacional';\n" +
                 "                } else {\n" +
                 "                    status.className = 'connection-status disconnected';\n" +
-                "                    status.innerHTML = '❌ Desconectado del servidor nacional';\n" +
+                "                    status.innerHTML = '❌ Sistema desconectado del servidor nacional';\n" +
                 "                }\n" +
                 "            } catch (error) {\n" +
                 "                const status = document.getElementById('connectionStatus');\n" +
                 "                status.className = 'connection-status disconnected';\n" +
-                "                status.innerHTML = '❌ Error de conexión';\n" +
+                "                status.innerHTML = '❌ Error de conexión con el sistema';\n" +
                 "            }\n" +
                 "        }\n" +
+                "        \n" +
+                "        // Validar solo números en el campo de documento\n" +
+                "        document.getElementById('documento').addEventListener('input', function(e) {\n" +
+                "            this.value = this.value.replace(/[^0-9]/g, '');\n" +
+                "        });\n" +
                 "        \n" +
                 "        document.getElementById('consultaForm').addEventListener('submit', async function(e) {\n" +
                 "            e.preventDefault();\n" +
@@ -344,8 +516,8 @@ public class WebServiceMain {
                 "            const result = document.getElementById('result');\n" +
                 "            const button = document.querySelector('button');\n" +
                 "            \n" +
-                "            if (!documento) {\n" +
-                "                showError('Por favor ingresa un número de documento válido');\n" +
+                "            if (!documento || documento.length < 6) {\n" +
+                "                showError('Por favor ingrese un número de cédula válido (mínimo 6 dígitos)');\n" +
                 "                return;\n" +
                 "            }\n" +
                 "            \n" +
@@ -368,10 +540,10 @@ public class WebServiceMain {
                 "                if (data.success) {\n" +
                 "                    showSuccess(data);\n" +
                 "                } else {\n" +
-                "                    showError(data.error || 'Error desconocido');\n" +
+                "                    showError(data.error || 'No se encontró información para el documento consultado');\n" +
                 "                }\n" +
                 "            } catch (error) {\n" +
-                "                showError('Error de conexión: ' + error.message);\n" +
+                "                showError('Error de conexión con el servidor. Intente nuevamente.');\n" +
                 "            } finally {\n" +
                 "                loading.style.display = 'none';\n" +
                 "                button.disabled = false;\n" +
@@ -382,12 +554,15 @@ public class WebServiceMain {
                 "            const result = document.getElementById('result');\n" +
                 "            result.className = 'result success';\n" +
                 "            result.innerHTML = `\n" +
-                "                <h3>✅ Mesa encontrada</h3>\n" +
+                "                <h3 style=\"margin-bottom: 1rem; color: #155724; font-size: 1.1rem;\">✅ Información de Mesa de Votación</h3>\n" +
                 "                <div class=\"mesa-info\">\n" +
-                "                    <p><strong>Departamento:</strong> ${data.departamento}</p>\n" +
-                "                    <p><strong>Municipio:</strong> ${data.municipio}</p>\n" +
-                "                    <p><strong>Puesto de Votación:</strong> ${data.puesto}</p>\n" +
-                "                    <p><strong>Mesa:</strong> ${data.mesa}</p>\n" +
+                "                    <p><strong>Departamento:</strong> <span>${data.departamento}</span></p>\n" +
+                "                    <p><strong>Municipio:</strong> <span>${data.municipio}</span></p>\n" +
+                "                    <p><strong>Puesto de Votación:</strong> <span>${data.puesto}</span></p>\n" +
+                "                    <p><strong>Mesa:</strong> <span>${data.mesa}</span></p>\n" +
+                "                </div>\n" +
+                "                <div style=\"margin-top: 1rem; padding: 0.8rem; background: #e7f3ff; border-radius: 4px; font-size: 0.9rem; color: #0c5460;\">\n" +
+                "                    <strong>Importante:</strong> Recuerde llevar su documento de identidad el día de las elecciones.\n" +
                 "                </div>\n" +
                 "            `;\n" +
                 "            result.style.display = 'block';\n" +
@@ -396,7 +571,16 @@ public class WebServiceMain {
                 "        function showError(message) {\n" +
                 "            const result = document.getElementById('result');\n" +
                 "            result.className = 'result error';\n" +
-                "            result.innerHTML = `<h3>❌ Error</h3><p>${message}</p>`;\n" +
+                "            result.innerHTML = `\n" +
+                "                <h3 style=\"margin-bottom: 1rem; color: #721c24; font-size: 1.1rem;\">❌ Consulta sin resultados</h3>\n" +
+                "                <p style=\"margin-bottom: 1rem;\">${message}</p>\n" +
+                "                <div style=\"padding: 0.8rem; background: #fff3cd; border-radius: 4px; font-size: 0.9rem; color: #856404;\">\n" +
+                "                    <strong>Sugerencias:</strong><br>\n" +
+                "                    • Verifique que el número de cédula esté correcto<br>\n" +
+                "                    • Asegúrese de estar habilitado para votar<br>\n" +
+                "                    • Contacte a la Registraduría si persiste el problema\n" +
+                "                </div>\n" +
+                "            `;\n" +
                 "            result.style.display = 'block';\n" +
                 "        }\n" +
                 "    </script>\n" +

@@ -197,7 +197,7 @@ icegridnode --Ice.Config=node.config
 
 # 4. Verificar que IceGrid esté funcionando
 # En una nueva terminal (Terminal 3):
-icegridadmin --Ice.Default.Locator="DemoIceGrid/Locator:default -h localhost -p 4061" -u "" -p ""
+icegridadmin 
 ```
 
 #### **Paso 2: Compilar el Proyecto**
