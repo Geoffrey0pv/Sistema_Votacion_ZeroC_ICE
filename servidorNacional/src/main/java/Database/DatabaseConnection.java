@@ -11,8 +11,8 @@ public class DatabaseConnection {
     
     private final ConnectionPool connectionPool;
     
-    public DatabaseConnection() {
-        this.connectionPool = ConnectionPool.getInstance();
+    public DatabaseConnection(String type) {
+        this.connectionPool = ConnectionPool.getInstance(type);
         System.out.println("🔗 DatabaseConnection inicializada");
     }
     

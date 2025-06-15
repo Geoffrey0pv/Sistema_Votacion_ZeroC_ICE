@@ -200,4 +200,37 @@ module Demo
         
         bool verificarConexionBD();
     };
+
+    // ========== INTERFAZ PROCESAMIENTO DE VOTOS EN LOTE ==========
+    
+    struct ResultadoProcesamiento
+    {
+        bool exito;
+        int totalVotos;
+        int votosEncolados;
+        string mensaje;
+        long timestamp;
+    };
+
+    struct EstadisticasVotos
+    {
+        long totalVotos;
+        int totalMesas;
+        int totalCandidatos;
+        int totalMunicipios;
+        string primerVoto;
+        string ultimoVoto;
+    };
+
+    interface IConfirmacionLoteVotos
+    {
+        void recibirConfirmacion(ResultadoProcesamiento resultado);
+    };
+
+    interface IProcesadorLoteVotos
+    {
+        void procesarLoteVotos(string jsonVotos, IConfirmacionLoteVotos* callback);
+        EstadisticasVotos obtenerEstadisticas();
+        bool verificarDisponibilidad();
+    };
 };

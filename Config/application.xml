@@ -20,6 +20,27 @@
         <adapter name="ServidorNacionalAdapter" endpoints="tcp -h localhost -p 9090"/>
         <properties>
           <property name="Ice.Default.Package" value="Demo"/>
+          
+          <!-- Configuración del ReliableMessageQueue -->
+          <property name="ReliableQueue.BaseDir" value="reliable_queue"/>
+          <property name="ReliableQueue.ProcessingInterval" value="5000"/>
+          <property name="ReliableQueue.BatchSize" value="50"/>
+          <property name="ReliableQueue.MaxRetries" value="3"/>
+          <property name="ReliableQueue.RetryDelay" value="10000"/>
+          <property name="ReliableQueue.ProcessingThreads" value="5"/>
+          <property name="ReliableQueue.SchedulerThreads" value="2"/>
+          <property name="ReliableQueue.PersistenceEnabled" value="1"/>
+          <property name="ReliableQueue.AutoCleanup" value="1"/>
+          <property name="ReliableQueue.CleanupInterval" value="3600000"/>
+          <property name="ReliableQueue.MaxProcessedFiles" value="1000"/>
+          <property name="ReliableQueue.LogLevel" value="INFO"/>
+          <property name="ReliableQueue.LogStatistics" value="1"/>
+          <property name="ReliableQueue.StatisticsInterval" value="30000"/>
+          
+          <!-- Configuración de base de datos para votos -->
+          <property name="VotosDB.ConnectionTimeout" value="5000"/>
+          <property name="VotosDB.MaxRetries" value="3"/>
+          <property name="VotosDB.RetryInterval" value="2000"/>
         </properties>
       </server>
     </node>
@@ -31,6 +52,7 @@
       <service name="MonitorRecursos" entry="ServidorNacionalAdapter.MonitorRecursos" />
       <service name="BalanceadorCarga" entry="ServidorNacionalAdapter.BalanceadorCarga" />
       <service name="GestorReplicas" entry="ServidorNacionalAdapter.GestorReplicas" />
+      <service name="VotosService" entry="ServidorNacionalAdapter.VotosService" />
     </service-template>
 
   </application>

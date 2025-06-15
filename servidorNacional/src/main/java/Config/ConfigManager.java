@@ -8,10 +8,10 @@ import java.util.Properties;
  * Gestor de configuración para el Servidor Nacional
  * Carga y proporciona acceso a las propiedades de configuración
  */
-public class ConfigManager {
+public class ConfigManager implements IConfig {
     private static ConfigManager instance;
     private Properties properties;
-    private static final String CONFIG_FILE = "/votos.cfg";
+    private static final String CONFIG_FILE = "/servidorNacional.cfg";
     
     private ConfigManager() {
         loadConfiguration();
@@ -46,22 +46,22 @@ public class ConfigManager {
     }
     
     private void loadDefaultProperties() {
-        // Valores por defecto para base de datos (usando la configuración de votos.cfg)
-        properties.setProperty("votos.db.host", "10.147.17.101");
-        properties.setProperty("votos.db.port", "5432");
-        properties.setProperty("votos.db.name", "votos_elecciones_grajj");
-        properties.setProperty("votos.db.user", "votaciones_grajj");
-        properties.setProperty("votos.db.password", "votaciones_grajj");
+        // Valores por defecto para base de datos (usando la configuración de cfg)
+        properties.setProperty("db.host", "10.147.17.101");
+        properties.setProperty("db.port", "5432");
+        properties.setProperty("db.name", "votos_elecciones_grajj");
+        properties.setProperty("db.user", "votaciones_grajj");
+        properties.setProperty("db.password", "votaciones_grajj");
         
         // Pool de conexiones por defecto
-        properties.setProperty("votos.db.pool.minSize", "5");
-        properties.setProperty("votos.db.pool.maxSize", "50");
-        properties.setProperty("votos.db.pool.timeout", "30000");
+        properties.setProperty("db.pool.minSize", "5");
+        properties.setProperty("db.pool.maxSize", "50");
+        properties.setProperty("db.pool.timeout", "30000");
         
         // Reintentos por defecto
-        properties.setProperty("votos.db.retry.maxAttempts", "3");
-        properties.setProperty("votos.db.retry.delayMs", "2000");
-        properties.setProperty("votos.db.retry.backoffMultiplier", "2.0");
+        properties.setProperty("db.retry.maxAttempts", "3");
+        properties.setProperty("db.retry.delayMs", "2000");
+        properties.setProperty("db.retry.backoffMultiplier", "2.0");
         
         // ConsultaMesa por defecto
         properties.setProperty("consultaMesa.queryTimeout", "15000");
@@ -107,44 +107,44 @@ public class ConfigManager {
     // ========== MÉTODOS ESPECÍFICOS PARA BASE DE DATOS ==========
     
     public String getDatabaseUrl() {
-        String host = getProperty("votos.db.host", "10.147.17.101");
-        int port = getIntProperty("votos.db.port", 5432);
-        String dbName = getProperty("votos.db.name", "votos_elecciones_grajj");
+        String host = getProperty("db.host", "10.147.17.101");
+        int port = getIntProperty("db.port", 5432);
+        String dbName = getProperty("db.name", "votos_elecciones_grajj");
         return "jdbc:postgresql://" + host + ":" + port + "/" + dbName;
     }
     
     public String getDatabaseUser() {
-        return getProperty("votos.db.user", "votaciones_grajj");
+        return getProperty("db.user", "votaciones_grajj");
     }
     
     public String getDatabasePassword() {
-        return getProperty("votos.db.password", "votaciones_grajj");
+        return getProperty("db.password", "votaciones_grajj");
     }
     
     public int getPoolMinSize() {
-        return getIntProperty("votos.db.pool.minSize", 5);
+        return getIntProperty("db.pool.minSize", 5);
     }
     
     public int getPoolMaxSize() {
-        return getIntProperty("votos.db.pool.maxSize", 50);
+        return getIntProperty("db.pool.maxSize", 50);
     }
     
     public int getPoolTimeout() {
-        return getIntProperty("votos.db.pool.timeout", 30000);
+        return getIntProperty("db.pool.timeout", 30000);
     }
     
     // ========== MÉTODOS ESPECÍFICOS PARA REINTENTOS ==========
     
     public int getRetryMaxAttempts() {
-        return getIntProperty("votos.db.retry.maxAttempts", 3);
+        return getIntProperty("db.retry.maxAttempts", 3);
     }
     
     public int getRetryDelayMs() {
-        return getIntProperty("votos.db.retry.delayMs", 2000);
+        return getIntProperty("db.retry.delayMs", 2000);
     }
     
     public double getRetryBackoffMultiplier() {
-        return getDoubleProperty("votos.db.retry.backoffMultiplier", 2.0);
+        return getDoubleProperty("db.retry.backoffMultiplier", 2.0);
     }
     
     // ========== MÉTODOS ESPECÍFICOS PARA CONSULTA MESA ==========

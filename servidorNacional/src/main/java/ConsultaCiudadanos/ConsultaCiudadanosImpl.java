@@ -40,7 +40,7 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
     private final AtomicLong consultasMasLenta;
     
     public ConsultaCiudadanosImpl() {
-        this.dbConnection = new DatabaseConnection();
+        this.dbConnection = new DatabaseConnection("nacional");
         this.queryCache = new ConcurrentHashMap<>();
         
         // Inicializar métricas
@@ -88,8 +88,26 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
             "JOIN departamento d ON m.departamento_id = d.id " +
             "WHERE d.nombre IN ";
         
+        // Query para consultar ciudadano por documento específico
+        String documentoQuery = "SELECT " +
+            "c.id AS ciudadano_id, " +
+            "c.documento, " +
+            "c.nombre AS nombre_ciudadano, " +
+            "c.apellido, " +
+            "mv.consecutive AS mesa_consecutiva, " +
+            "pv.nombre AS nombre_puesto, " +
+            "m.nombre AS nombre_municipio, " +
+            "d.nombre AS nombre_departamento " +
+            "FROM ciudadano c " +
+            "JOIN mesa_votacion mv ON c.mesa_id = mv.id " +
+            "JOIN puesto_votacion pv ON mv.puesto_id = pv.id " +
+            "JOIN municipio m ON pv.municipio_id = m.id " +
+            "JOIN departamento d ON m.departamento_id = d.id " +
+            "WHERE c.documento = ?";
+        
         queryCache.put("BASE_QUERY", baseQuery);
         queryCache.put("COUNT_QUERY", countQuery);
+        queryCache.put("DOCUMENTO_QUERY", documentoQuery);
         
         System.out.println("💾 Cache de queries precargado con " + queryCache.size() + " queries");
     }
@@ -338,7 +356,9 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
             
             try {
                 conn = dbConnection.getConnection();
-                
+                // ip de la base de datos
+                System.out.println("IP de la base de datos: " + dbConnection.getConnection().getMetaData().getURL());
+                System.out.println(dbConnection.getPoolStats());
                 if (conn == null) {
                     System.err.println("❌ No se pudo establecer conexión con la base de datos");
                     return -1;
@@ -385,6 +405,8 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
             }
             
             long startTime = System.currentTimeMillis();
+            // query
+            System.out.println("Query: " + stmt.toString());
             try (ResultSet rs = stmt.executeQuery()) {
                 long queryTime = System.currentTimeMillis() - startTime;
                 

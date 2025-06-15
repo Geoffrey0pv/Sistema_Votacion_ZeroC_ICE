@@ -19,9 +19,43 @@ public class CandidatosService {
     private final AtomicLong nextGeneratedId;
     
     public CandidatosService() {
-        this.dbConnection = new DatabaseConnection();
+        this.dbConnection = new DatabaseConnection("votos");
         this.nextGeneratedId = new AtomicLong(100000); // IDs generados empiezan en 100000
+        
+        // Crear tabla si no existe
+        createCandidatoTableIfNotExists();
+        
+        // Test de conexión a base de datos
+        testDatabaseConnection();
+        
         System.out.println("🗳️  CandidatosService inicializado");
+    }
+    
+    /**
+     * Crea la tabla candidato si no existe
+     */
+    private void createCandidatoTableIfNotExists() {
+        String createTableSQL = "CREATE TABLE IF NOT EXISTS candidato (" +
+            "id BIGINT PRIMARY KEY," +
+            "nombre VARCHAR(255) NOT NULL," +
+            "partido VARCHAR(255) NOT NULL," +
+            "fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+            "activo BOOLEAN DEFAULT true" +
+            ")";
+        
+        String createIndexSQL = "CREATE INDEX IF NOT EXISTS idx_candidato_partido ON candidato(partido)";
+        
+        try (Connection conn = dbConnection.getConnection()) {
+            if (conn != null) {
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute(createTableSQL);
+                    stmt.execute(createIndexSQL);
+                    System.out.println("✅ Tabla 'candidato' verificada/creada en BD de votos");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("⚠️ No se pudo crear tabla candidato: " + e.getMessage());
+        }
     }
     
     /**
@@ -290,6 +324,7 @@ public class CandidatosService {
             }
             
             String sql = "SELECT id, nombre, partido FROM candidato ORDER BY id";
+            System.out.println("ip: " + conn.getMetaData().getURL());
             try (PreparedStatement stmt = conn.prepareStatement(sql);
                  ResultSet rs = stmt.executeQuery()) {
                 
@@ -320,6 +355,28 @@ public class CandidatosService {
      */
     public boolean isServiceAvailable() {
         return dbConnection.isServiceActive();
+    }
+    
+    /**
+     * Método de prueba para verificar la conexión y mostrar información de la BD
+     */
+    public void testDatabaseConnection() {
+        System.out.println("🧪 === TEST CONEXIÓN CANDIDATOS SERVICE ===");
+        try (Connection conn = dbConnection.getConnection()) {
+            if (conn != null) {
+                String url = conn.getMetaData().getURL();
+                String user = conn.getMetaData().getUserName();
+                System.out.println("✅ Conexión exitosa a BD de CANDIDATOS:");
+                System.out.println("   📍 URL: " + url);
+                System.out.println("   👤 Usuario: " + user);
+                System.out.println("   📊 Pool Stats: " + dbConnection.getPoolStats());
+            } else {
+                System.err.println("❌ No se pudo conectar a la BD de candidatos");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error en test de conexión: " + e.getMessage());
+        }
+        System.out.println("==========================================");
     }
     
     /**

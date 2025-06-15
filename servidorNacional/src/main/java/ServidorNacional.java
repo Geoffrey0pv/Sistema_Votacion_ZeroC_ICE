@@ -6,6 +6,7 @@ import ConsultaMesa.ConsultaMesaImpl;
 import ConsultaCiudadanos.ConsultaCiudadanosImpl;
 import ServidorNacionalUI.ServidorNacionalUI;
 import Config.ConfigManager;
+import Services.ProcesadorLoteVotosImpl;
 import com.zeroc.Ice.*;
 import com.zeroc.Ice.Util;
 
@@ -19,6 +20,7 @@ public class ServidorNacional {
     private static HelloWorldImpl helloWorld;
     private static ConsultaMesaImpl consultaMesa;
     private static ConsultaCiudadanosImpl consultaCiudadanos;
+    private static ProcesadorLoteVotosImpl procesadorLoteVotos;
     private static Communicator communicator;
     private static ObjectAdapter adapter;
     private static ConfigManager configManager;
@@ -56,6 +58,9 @@ public class ServidorNacional {
             // Crear e inicializar ConsultaCiudadanos con configuración
             consultaCiudadanos = new ConsultaCiudadanosImpl();
             
+            // Crear e inicializar ProcesadorLoteVotos
+            procesadorLoteVotos = new ProcesadorLoteVotosImpl();
+            
             // Registrar el Broker como IAdministradorCandidatos (compatibilidad hacia atrás)
             Identity candidatosId = Util.stringToIdentity("AdministradorCandidatos");
             adapter.add(brokerNacional, candidatosId);
@@ -76,6 +81,10 @@ public class ServidorNacional {
             Identity consultaCiudadanosId = Util.stringToIdentity("ConsultaCiudadanos");
             adapter.add(consultaCiudadanos, consultaCiudadanosId);
             
+            // Registrar ProcesadorLoteVotos endpoint
+            Identity procesadorLoteVotosId = Util.stringToIdentity("ProcesadorLoteVotos");
+            adapter.add(procesadorLoteVotos, procesadorLoteVotosId);
+            
             // Activar adaptador
             adapter.activate();
             
@@ -93,6 +102,7 @@ public class ServidorNacional {
             System.out.println("   • HelloWorld (endpoint de prueba) 🌍");
             System.out.println("   • ConsultaMesa (consulta por documento) 🔍");
             System.out.println("   • ConsultaCiudadanos (consulta por ciudadano) 🌍");
+            System.out.println("   • ProcesadorLoteVotos (procesamiento de votos) 🗳️");
             System.out.println("==========================================");
             
             if (useUI) {
@@ -117,6 +127,9 @@ public class ServidorNacional {
             
             System.out.println("   ⏹️  Presiona Ctrl+C para detener");
             System.out.println();
+            
+            // Test de conexiones de base de datos
+            testDatabaseConnections();
             
             // Configurar shutdown hook para limpieza
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -150,6 +163,29 @@ public class ServidorNacional {
         return false;
     }
     
+    /**
+     * Prueba las conexiones de base de datos de todos los servicios
+     */
+    private static void testDatabaseConnections() {
+        System.out.println("\n🧪 ===== VERIFICACIÓN DE CONEXIONES BD =====");
+        
+        // Test ConsultaCiudadanos (debe usar BD de ciudadanos)
+        if (consultaCiudadanos != null) {
+            System.out.println("🔍 Probando ConsultaCiudadanos...");
+            boolean ciudadanosOk = consultaCiudadanos.verificarConexionBD(null);
+            System.out.println("   Estado: " + (ciudadanosOk ? "✅ CONECTADO" : "❌ DESCONECTADO"));
+        }
+        
+        // Test ProcesadorLoteVotos (debe usar BD de votos)
+        if (procesadorLoteVotos != null) {
+            System.out.println("🗳️  Probando ProcesadorLoteVotos...");
+            boolean votosOk = procesadorLoteVotos.verificarDisponibilidad(null);
+            System.out.println("   Estado: " + (votosOk ? "✅ CONECTADO" : "❌ DESCONECTADO"));
+        }
+        
+        System.out.println("============================================\n");
+    }
+    
     private static void shutdown() {
         try {
             // Cerrar interfaz gráfica si está activa
@@ -173,6 +209,11 @@ public class ServidorNacional {
             // Cerrar servicio de consulta de ciudadanos
             if (consultaCiudadanos != null) {
                 consultaCiudadanos.shutdown();
+            }
+            
+            // Cerrar procesador de lote de votos
+            if (procesadorLoteVotos != null) {
+                procesadorLoteVotos.shutdown();
             }
             
             // Desactivar adaptador

@@ -30,7 +30,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class ServidorNacionalUI extends JFrame {
-    
+
     // Componentes principales
     private final CandidatosService candidatosService;
     
@@ -78,7 +78,7 @@ public class ServidorNacionalUI extends JFrame {
             }
         });
     }
-
+        
     private void initializeUI() {
         // Layout principal con pestañas
         JTabbedPane tabbedPane = new JTabbedPane();
@@ -306,7 +306,7 @@ public class ServidorNacionalUI extends JFrame {
         }
 
         // Confirmación
-        int confirmacion = JOptionPane.showConfirmDialog(this,
+        int confirmacion = JOptionPane.showConfirmDialog(this, 
             "¿Cargar candidatos desde Excel?\n\n" +
             "⚠️ ESTO ELIMINARÁ TODOS los candidatos existentes\n" +
             "y los reemplazará con los del archivo Excel.\n\n" +
@@ -334,7 +334,7 @@ public class ServidorNacionalUI extends JFrame {
                 
                 if (tipo.equals("CSV")) {
                     candidatos = candidatosService.cargarCandidatosDesdeCSV(archivo);
-                } else {
+                    } else {
                     candidatos = candidatosService.cargarCandidatosDesdeExcel(archivo);
                 }
                 
@@ -364,7 +364,7 @@ public class ServidorNacionalUI extends JFrame {
                         log("✅ " + tipo + " cargado y guardado exitosamente");
                         JOptionPane.showMessageDialog(ServidorNacionalUI.this,
                             tipo + " cargado exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                    } else {
+            } else {
                         lblEstadoCandidatos.setText("❌ Error cargando " + tipo);
                         lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
                         log("❌ Error cargando " + tipo);
@@ -412,14 +412,14 @@ public class ServidorNacionalUI extends JFrame {
                                 "Eliminación Completada", JOptionPane.INFORMATION_MESSAGE);
                             // Actualizar tabla
                             cargarCandidatosDesdeDB();
-                        } else {
+            } else {
                             log("❌ Error eliminando candidatos");
                             lblEstadoCandidatos.setText("❌ Error eliminando candidatos");
                             lblEstadoCandidatos.setForeground(new Color(244, 67, 54));
                             JOptionPane.showMessageDialog(ServidorNacionalUI.this,
                                 "Error eliminando candidatos", "Error", JOptionPane.ERROR_MESSAGE);
-                        }
-                    } catch (Exception e) {
+            }
+        } catch (Exception e) {
                         log("❌ Error eliminando candidatos: " + e.getMessage());
                         lblEstadoCandidatos.setText("❌ Error eliminando candidatos");
                         lblEstadoCandidatos.setForeground(new Color(244, 67, 54));

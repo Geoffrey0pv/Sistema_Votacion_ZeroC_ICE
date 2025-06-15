@@ -38,7 +38,7 @@ public class ConsultaMesaImpl implements IConsultaMesa {
         this.config = ConfigManager.getInstance();
         
         // Obtener pool de conexiones
-        this.connectionPool = ConnectionPool.getInstance();
+        this.connectionPool = ConnectionPool.getInstance("nacional");
         
         // Mostrar configuración
         config.printConfiguration();

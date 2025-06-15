@@ -1,6 +1,6 @@
 package Database;
 
-import Config.ConfigManager;
+import Config.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -24,7 +24,7 @@ public class ConnectionPool {
     private final BlockingQueue<Connection> connectionPool;
     private final AtomicInteger currentConnections;
     private final AtomicBoolean isServiceActive;
-    private final ConfigManager config;
+    private final IConfig config;
     
     // CONFIGURACIÓN OPTIMIZADA PARA ALTO RENDIMIENTO
     private final int minPoolSize;
@@ -46,23 +46,39 @@ public class ConnectionPool {
     private final int retryDelayMs;
     private final double backoffMultiplier;
     
-    private ConnectionPool() {
-        this.config = ConfigManager.getInstance();
+    private ConnectionPool(String type) {
+        if (type.equals("nacional")) {
+            this.config = (IConfig) ConfigManager.getInstance();
+            // CONFIGURACIÓN SÚPER AGRESIVA PARA ALTO RENDIMIENTO
+            this.minPoolSize = Math.max(((ConfigManager) config).getPoolMinSize(), 50);  // Mínimo 50 conexiones
+            this.maxPoolSize = Math.max(((ConfigManager) config).getPoolMaxSize(), 200); // Máximo 200 conexiones
+            this.poolTimeout = Math.min(((ConfigManager) config).getPoolTimeout(), 100); // Timeout súper rápido
+            this.dbUrl = ((ConfigManager) config).getDatabaseUrl() + "?tcpKeepAlive=true&socketTimeout=30000&loginTimeout=10";
+            this.dbUser = ((ConfigManager) config).getDatabaseUser();
+            this.dbPassword = ((ConfigManager) config).getDatabasePassword();
+            
+            this.maxRetryAttempts = ((ConfigManager) config).getRetryMaxAttempts();
+            this.retryDelayMs = Math.min(((ConfigManager) config).getRetryDelayMs(), 50); // Reintentos súper rápidos
+            this.backoffMultiplier = ((ConfigManager) config).getRetryBackoffMultiplier();
+
+        } else {
+            this.config = VotosConfigManager.getInstance();
+            // CONFIGURACIÓN PARA VOTOS
+            this.minPoolSize = Math.max(((VotosConfigManager) config).getVotosPoolMinSize(), 5);
+            this.maxPoolSize = Math.max(((VotosConfigManager) config).getVotosPoolMaxSize(), 50);
+            this.poolTimeout = ((VotosConfigManager) config).getVotosPoolTimeout();
+            this.dbUrl = ((VotosConfigManager) config).getVotosDatabaseUrl() + "?tcpKeepAlive=true&socketTimeout=30000&loginTimeout=10";
+            this.dbUser = ((VotosConfigManager) config).getVotosDatabaseUser();
+            this.dbPassword = ((VotosConfigManager) config).getVotosDatabasePassword();
+            
+            this.maxRetryAttempts = ((VotosConfigManager) config).getVotosRetryMaxAttempts();
+            this.retryDelayMs = ((VotosConfigManager) config).getVotosRetryDelayMs();
+            this.backoffMultiplier = ((VotosConfigManager) config).getVotosRetryBackoffMultiplier();
+        }
         this.connectionPool = new LinkedBlockingQueue<>();
         this.currentConnections = new AtomicInteger(0);
         this.isServiceActive = new AtomicBoolean(false);
         
-        // CONFIGURACIÓN SÚPER AGRESIVA PARA ALTO RENDIMIENTO
-        this.minPoolSize = Math.max(config.getPoolMinSize(), 50);  // Mínimo 50 conexiones
-        this.maxPoolSize = Math.max(config.getPoolMaxSize(), 200); // Máximo 200 conexiones
-        this.poolTimeout = Math.min(config.getPoolTimeout(), 100); // Timeout súper rápido
-        this.dbUrl = config.getDatabaseUrl() + "?tcpKeepAlive=true&socketTimeout=30000&loginTimeout=10";
-        this.dbUser = config.getDatabaseUser();
-        this.dbPassword = config.getDatabasePassword();
-        
-        this.maxRetryAttempts = config.getRetryMaxAttempts();
-        this.retryDelayMs = Math.min(config.getRetryDelayMs(), 50); // Reintentos súper rápidos
-        this.backoffMultiplier = config.getRetryBackoffMultiplier();
         
         // NUEVAS MÉTRICAS Y OPTIMIZACIONES
         this.totalRequestsServed = new AtomicLong(0);
@@ -81,14 +97,12 @@ public class ConnectionPool {
         startMaintenanceTasks();
         
         System.out.println("🚀 POOL SÚPER OPTIMIZADO INICIADO:");
-        System.out.println("   📊 Pool: " + minPoolSize + "-" + maxPoolSize + " conexiones");
-        System.out.println("   ⚡ Timeout: " + poolTimeout + "ms (súper rápido)");
         System.out.println("   🔥 Optimizado para procesamiento masivo paralelo");
     }
     
-    public static synchronized ConnectionPool getInstance() {
+    public static synchronized ConnectionPool getInstance(String type) {
         if (instance == null) {
-            instance = new ConnectionPool();
+            instance = new ConnectionPool(type);
         }
         return instance;
     }
