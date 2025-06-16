@@ -8,11 +8,15 @@ import ReplicaInfo.ReplicaInfoImpl;
 import ServidorNacionalUI.ServidorNacionalUI;
 import Config.ConfigManager;
 import Services.ProcesadorLoteVotosImpl;
+import Services.ElectoralReportService;
 import com.zeroc.Ice.*;
 import com.zeroc.Ice.Util;
 
 import java.lang.Exception;
 import java.util.Properties;
+import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.swing.SwingUtilities;
 
@@ -28,7 +32,10 @@ public class ServidorNacional {
     private static ObjectAdapter adapter;
     private static ConfigManager configManager;
     private static ServidorNacionalUI ui;
+    private static ElectoralReportService reportService;
     private static boolean useUI = false;
+    private static ExecutorService commandExecutor;
+    private static volatile boolean serverRunning = true;
 
     public static void main(String[] args) {
         int status = 0;
@@ -40,6 +47,10 @@ public class ServidorNacional {
             // Inicializar configuración
             configManager = ConfigManager.getInstance();
             System.out.println("✅ Configuración cargada correctamente");
+            
+            // Inicializar servicio de reportes electorales
+            reportService = new ElectoralReportService();
+            System.out.println("✅ Servicio de reportes electorales inicializado");
             
             // Inicializar ICE
             communicator = Util.initialize(args);
@@ -192,15 +203,31 @@ public class ServidorNacional {
             
             System.out.println("   ⏹️  Presiona Ctrl+C para detener");
             System.out.println();
+            System.out.println("📝 ===== COMANDOS DISPONIBLES =====");
+            System.out.println("   • CERRAR REPORTES Y GENERAR - Cierra jornada y genera reportes");
+            System.out.println("   • CERRAR JORNADA - Solo cierra la jornada electoral");
+            System.out.println("   • GENERAR REPORTES - Solo genera reportes (requiere jornada cerrada)");
+            System.out.println("   • ESTADISTICAS - Muestra estadísticas actuales");
+            System.out.println("   • AYUDA - Muestra esta lista de comandos");
+            System.out.println("   • SALIR - Detiene el servidor");
+            System.out.println("=====================================");
+            System.out.println();
             
             // Test de conexiones de base de datos
             testDatabaseConnections();
             
+            // Inicializar executor para comandos
+            commandExecutor = Executors.newSingleThreadExecutor();
+            
             // Configurar shutdown hook para limpieza
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 System.out.println("\n🛑 Deteniendo servidor...");
+                serverRunning = false;
                 shutdown();
             }));
+            
+            // Iniciar el procesador de comandos por consola
+            startConsoleCommandProcessor();
             
             // Esperar hasta que se detenga
             communicator.waitForShutdown();
@@ -214,6 +241,263 @@ public class ServidorNacional {
         }
         
         System.exit(status);
+    }
+    
+    /**
+     * Inicia el procesador de comandos por consola
+     */
+    private static void startConsoleCommandProcessor() {
+        Thread consoleThread = new Thread(() -> {
+            Scanner scanner = new Scanner(System.in);
+            
+            while (serverRunning) {
+                try {
+                    System.out.print("🎯 ServidorNacional> ");
+                    
+                    if (scanner.hasNextLine()) {
+                        String command = scanner.nextLine().trim().toUpperCase();
+                        
+                        if (!command.isEmpty()) {
+                            processCommand(command);
+                        }
+                    }
+                    
+                    // Pequeña pausa para evitar consumo excesivo de CPU
+                    Thread.sleep(100);
+                    
+                } catch (Exception e) {
+                    if (serverRunning) {
+                        System.err.println("❌ Error procesando comando: " + e.getMessage());
+                    }
+                }
+            }
+            
+            scanner.close();
+        });
+        
+        consoleThread.setDaemon(true);
+        consoleThread.setName("ConsoleCommandProcessor");
+        consoleThread.start();
+        
+        System.out.println("✅ Procesador de comandos por consola iniciado");
+        System.out.println("💡 Escriba 'AYUDA' para ver los comandos disponibles");
+    }
+    
+    /**
+     * Procesa un comando ingresado por consola
+     */
+    private static void processCommand(String command) {
+        commandExecutor.submit(() -> {
+            try {
+                switch (command) {
+                    case "CERRAR REPORTES Y GENERAR":
+                    case "CERRAR Y GENERAR":
+                        executeCloseAndGenerateReports();
+                        break;
+                        
+                    case "CERRAR JORNADA":
+                    case "CERRAR":
+                        executeCloseElectoralDay();
+                        break;
+                        
+                    case "GENERAR REPORTES":
+                    case "REPORTES":
+                        executeGenerateReports();
+                        break;
+                        
+                    case "ESTADISTICAS":
+                    case "STATS":
+                        showStatistics();
+                        break;
+                        
+                    case "AYUDA":
+                    case "HELP":
+                        showHelp();
+                        break;
+                        
+                    case "SALIR":
+                    case "EXIT":
+                    case "QUIT":
+                        executeExit();
+                        break;
+                        
+                    default:
+                        System.out.println("❌ Comando no reconocido: " + command);
+                        System.out.println("💡 Escriba 'AYUDA' para ver los comandos disponibles");
+                        break;
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error ejecutando comando '" + command + "': " + e.getMessage());
+            }
+        });
+    }
+    
+    /**
+     * Ejecuta el comando para cerrar jornada y generar reportes
+     */
+    private static void executeCloseAndGenerateReports() {
+        System.out.println("\n🚀 ===== CERRANDO JORNADA Y GENERANDO REPORTES =====");
+        
+        try {
+            // Primero cerrar la jornada si no está cerrada
+            if (!reportService.isJornadaCerrada()) {
+                System.out.println("🔒 Cerrando jornada electoral...");
+                boolean closed = reportService.cerrarJornada();
+                if (!closed) {
+                    System.err.println("❌ No se pudo cerrar la jornada electoral");
+                    return;
+                }
+                System.out.println("✅ Jornada cerrada exitosamente");
+            } else {
+                System.out.println("ℹ️  La jornada ya estaba cerrada");
+            }
+            
+            // Luego generar reportes
+            System.out.println("📄 Generando reportes CSV...");
+            ElectoralReportService.ReportResult result = reportService.generateAllReports();
+            
+            if (result.success) {
+                System.out.println("\n🎉 ¡PROCESO COMPLETADO EXITOSAMENTE!");
+                System.out.println("✅ Jornada electoral cerrada");
+                System.out.println("✅ Reportes generados");
+                System.out.println("📁 Directorio: " + result.reportDirectory);
+                System.out.println("📄 Archivos generados: " + result.filesGenerated);
+                System.out.println("\nArchivos disponibles:");
+                System.out.println("• resume.csv - Reporte general con todos los resultados");
+                System.out.println("• partial-{mesaId}.csv - Reportes individuales por mesa");
+                System.out.println("Formato: candidateId,candidateName,totalVotes");
+            } else {
+                System.err.println("❌ Error generando reportes: " + result.message);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error en el proceso: " + e.getMessage());
+        }
+        
+        System.out.println("====================================================\n");
+    }
+    
+    /**
+     * Ejecuta el comando para cerrar solo la jornada electoral
+     */
+    private static void executeCloseElectoralDay() {
+        System.out.println("\n🔒 ===== CERRANDO JORNADA ELECTORAL =====");
+        
+        try {
+            if (reportService.isJornadaCerrada()) {
+                System.out.println("ℹ️  La jornada electoral ya está cerrada");
+                System.out.println("📅 Fecha de cierre: " + reportService.getFechaCierre());
+            } else {
+                boolean closed = reportService.cerrarJornada();
+                if (closed) {
+                    System.out.println("✅ Jornada electoral cerrada exitosamente");
+                    System.out.println("📅 Fecha de cierre: " + reportService.getFechaCierre());
+                } else {
+                    System.err.println("❌ No se pudo cerrar la jornada electoral");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error cerrando jornada: " + e.getMessage());
+        }
+        
+        System.out.println("========================================\n");
+    }
+    
+    /**
+     * Ejecuta el comando para generar solo los reportes
+     */
+    private static void executeGenerateReports() {
+        System.out.println("\n📄 ===== GENERANDO REPORTES =====");
+        
+        try {
+            if (!reportService.isJornadaCerrada()) {
+                System.err.println("❌ La jornada electoral debe estar cerrada para generar reportes");
+                System.out.println("💡 Use 'CERRAR JORNADA' primero o 'CERRAR REPORTES Y GENERAR'");
+                return;
+            }
+            
+            ElectoralReportService.ReportResult result = reportService.generateAllReports();
+            
+            if (result.success) {
+                System.out.println("✅ Reportes generados exitosamente");
+                System.out.println("📁 Directorio: " + result.reportDirectory);
+                System.out.println("📄 Archivos generados: " + result.filesGenerated);
+                System.out.println("\nArchivos disponibles:");
+                System.out.println("• resume.csv - Reporte general");
+                System.out.println("• partial-{mesaId}.csv - Reportes por mesa");
+            } else {
+                System.err.println("❌ Error generando reportes: " + result.message);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error generando reportes: " + e.getMessage());
+        }
+        
+        System.out.println("=================================\n");
+    }
+    
+    /**
+     * Muestra las estadísticas actuales
+     */
+    private static void showStatistics() {
+        System.out.println("\n📊 ===== ESTADÍSTICAS ACTUALES =====");
+        
+        try {
+            ElectoralReportService.JornadaStats stats = reportService.getJornadaStats();
+            
+            System.out.println("🗳️  Total de votos: " + stats.totalVotos);
+            System.out.println("🏛️  Total de mesas: " + stats.totalMesas);
+            System.out.println("👥 Total de candidatos: " + stats.totalCandidatos);
+            System.out.println("📅 Estado de jornada: " + (stats.jornadaCerrada ? "🔒 CERRADA" : "🔓 ABIERTA"));
+            
+            if (stats.primerVoto != null) {
+                System.out.println("⏰ Primer voto: " + stats.primerVoto);
+            }
+            if (stats.ultimoVoto != null) {
+                System.out.println("⏰ Último voto: " + stats.ultimoVoto);
+            }
+            if (stats.fechaCierre != null) {
+                System.out.println("🔒 Fecha de cierre: " + stats.fechaCierre);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error obteniendo estadísticas: " + e.getMessage());
+        }
+        
+        System.out.println("====================================\n");
+    }
+    
+    /**
+     * Muestra la ayuda con los comandos disponibles
+     */
+    private static void showHelp() {
+        System.out.println("\n📝 ===== COMANDOS DISPONIBLES =====");
+        System.out.println("• CERRAR REPORTES Y GENERAR - Cierra jornada y genera reportes");
+        System.out.println("• CERRAR JORNADA - Solo cierra la jornada electoral");
+        System.out.println("• GENERAR REPORTES - Solo genera reportes (requiere jornada cerrada)");
+        System.out.println("• ESTADISTICAS - Muestra estadísticas actuales");
+        System.out.println("• AYUDA - Muestra esta lista de comandos");
+        System.out.println("• SALIR - Detiene el servidor");
+        System.out.println("\n💡 Aliases disponibles:");
+        System.out.println("• CERRAR Y GENERAR = CERRAR REPORTES Y GENERAR");
+        System.out.println("• CERRAR = CERRAR JORNADA");
+        System.out.println("• REPORTES = GENERAR REPORTES");
+        System.out.println("• STATS = ESTADISTICAS");
+        System.out.println("• HELP = AYUDA");
+        System.out.println("• EXIT, QUIT = SALIR");
+        System.out.println("===================================\n");
+    }
+    
+    /**
+     * Ejecuta el comando para salir del servidor
+     */
+    private static void executeExit() {
+        System.out.println("\n🛑 Iniciando cierre del servidor...");
+        serverRunning = false;
+        
+        if (communicator != null) {
+            communicator.shutdown();
+        }
     }
     
     /**
@@ -267,6 +551,11 @@ public class ServidorNacional {
     
     private static void shutdown() {
         try {
+            // Detener el procesador de comandos
+            if (commandExecutor != null && !commandExecutor.isShutdown()) {
+                commandExecutor.shutdown();
+            }
+            
             // Cerrar interfaz gráfica si está activa
             if (ui != null) {
                 SwingUtilities.invokeLater(() -> {

@@ -343,4 +343,48 @@ module Demo
         EstadisticasVotos obtenerEstadisticas();
         bool verificarDisponibilidad();
     };
+
+    // ========== INTERFAZ REPORTES ELECTORALES ==========
+    
+    struct JornadaStats
+    {
+        long totalVotos;
+        int totalMesas;
+        int totalCandidatos;
+        string primerVoto;
+        string ultimoVoto;
+        bool jornadaCerrada;
+        string fechaCierre;
+    };
+    
+    struct ReportResult
+    {
+        bool success;
+        string message;
+        string reportDirectory;
+        int filesGenerated;
+    };
+    
+    exception ReportException
+    {
+        string reason;
+    };
+    
+    interface IElectoralReports
+    {
+        // Cerrar jornada electoral
+        bool cerrarJornada() throws ReportException;
+        
+        // Generar todos los reportes CSV
+        ReportResult generateAllReports() throws ReportException;
+        
+        // Obtener estadísticas de la jornada
+        JornadaStats getJornadaStats() throws ReportException;
+        
+        // Verificar si la jornada está cerrada
+        bool isJornadaCerrada();
+        
+        // Obtener fecha de cierre
+        string getFechaCierre();
+    };
 };
