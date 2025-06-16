@@ -68,10 +68,12 @@ public class MesaVotacion {
         System.out.println("📍 Mesa: " + mesaId);
         System.out.println("🖥️ Modo: Interfaz Gráfica de Votación");
         
-        // Inicializar comunicador ICE para GestorMesa
+        // Inicializar comunicador ICE para GestorMesa con archivo de configuración
         Communicator communicator = null;
         try {
-            communicator = Util.initialize();
+            // Cargar configuración desde mesa.cfg
+            String[] iceArgs = {"--Ice.Config=mesaVotacion/src/main/resources/mesa.cfg"};
+            communicator = Util.initialize(iceArgs);
             
             // Crear GestorMesa (ya incluye Sistema de Verificación integrado)
             GestorMesa gestorMesa = new GestorMesa(mesaId);
