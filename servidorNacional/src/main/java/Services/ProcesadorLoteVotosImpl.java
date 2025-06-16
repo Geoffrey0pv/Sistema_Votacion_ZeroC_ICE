@@ -62,7 +62,8 @@ public class ProcesadorLoteVotosImpl implements IProcesadorLoteVotos {
             
         } catch (Exception e) {
             System.err.println("❌ Error procesando lote: " + e.getMessage());
-            enviarRespuesta(callback, false, 0, 0, "Error interno: " + e.getMessage());
+            String errorMessage = "Error interno: " + (e.getMessage() != null ? e.getMessage().replace("%", "%%") : "Error desconocido");
+            enviarRespuesta(callback, false, 0, 0, errorMessage);
         }
     }
     

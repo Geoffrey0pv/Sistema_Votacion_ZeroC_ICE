@@ -35,7 +35,7 @@
           <property name="ReliableQueue.AutoCleanup" value="1"/>
           <property name="ReliableQueue.CleanupInterval" value="3600000"/>
           <property name="ReliableQueue.MaxProcessedFiles" value="1000"/>
-          <property name="ReliableQueue.LogLevel" value="INFO"/>
+          <property name="ReliableQueue.LogLevel" value="DEBUG"/>
           <property name="ReliableQueue.LogStatistics" value="1"/>
           <property name="ReliableQueue.StatisticsInterval" value="30000"/>
           
@@ -71,7 +71,7 @@
           <property name="ReliableQueue.AutoCleanup" value="1"/>
           <property name="ReliableQueue.CleanupInterval" value="3600000"/>
           <property name="ReliableQueue.MaxProcessedFiles" value="1000"/>
-          <property name="ReliableQueue.LogLevel" value="INFO"/>
+          <property name="ReliableQueue.LogLevel" value="DEBUG"/>
           <property name="ReliableQueue.LogStatistics" value="1"/>
           <property name="ReliableQueue.StatisticsInterval" value="30000"/>
           
@@ -94,16 +94,6 @@
       <service name="ReplicaInfo" entry="ServidorNacionalAdapter1.ReplicaInfo" />
     </service-template>
 
-    <service-template id="BrokerServiceReplica2">
-      <service name="AdministradorCandidatos" entry="ServidorNacionalAdapter2.AdministradorCandidatos" />
-      <service name="BrokerNacional" entry="ServidorNacionalAdapter2.BrokerNacional" />
-      <service name="HelloWorld" entry="ServidorNacionalAdapter2.HelloWorld" />
-      <service name="MonitorRecursos" entry="ServidorNacionalAdapter2.MonitorRecursos" />
-      <service name="BalanceadorCarga" entry="ServidorNacionalAdapter2.BalanceadorCarga" />
-      <service name="GestorReplicas" entry="ServidorNacionalAdapter2.GestorReplicas" />
-      <service name="VotosService" entry="ServidorNacionalAdapter2.VotosService" />
-      <service name="ReplicaInfo" entry="ServidorNacionalAdapter2.ReplicaInfo" />
-    </service-template>
 
   </application>
 </icegrid>
