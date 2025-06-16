@@ -314,11 +314,12 @@ public class ReliableMessageQueue {
                             totalInQueue.decrementAndGet();
                             
                             if (config.isPersistenceEnabled()) {
-                                moveVoteFile(voto, processingDir, processedDir);
+                                deleteVoteFile(voto, processingDir);
+                                System.out.println("🗑️ Archivo JSON eliminado para voto: " + voto.getMesaId());
                             }
                             
                             if (config.getLogLevel().equals("DEBUG")) {
-                                System.out.println("✅ Voto procesado: " + voto.getMesaId());
+                                System.out.println("✅ Voto procesado y archivo eliminado: " + voto.getMesaId());
                             }
                         } else {
                             retries++;
@@ -382,6 +383,28 @@ public class ReliableMessageQueue {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             System.err.println("❌ Error moviendo archivo: " + e.getMessage());
+        }
+    }
+    
+    private void deleteVoteFile(VotoModel voto, String fromDir) {
+        try {
+            String pattern = "voto_" + voto.getId() + "_" + voto.getMesaId() + "_*.json";
+            Path fromPath = Paths.get(fromDir);
+            
+            Files.list(fromPath)
+                .filter(path -> path.getFileName().toString().matches(pattern.replace("*", ".*")))
+                .findFirst()
+                .ifPresent(file -> {
+                    try {
+                        Files.deleteIfExists(file);
+                        System.out.println("🗑️ Archivo eliminado: " + file.getFileName());
+                    } catch (IOException e) {
+                        System.err.println("❌ Error eliminando archivo: " + e.getMessage());
+                    }
+                });
+                
+        } catch (IOException e) {
+            System.err.println("❌ Error buscando archivo para eliminar: " + e.getMessage());
         }
     }
     

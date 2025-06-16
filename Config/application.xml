@@ -13,6 +13,30 @@
         </adapter>
         <properties>
           <property name="Ice.Default.Locator" value="${ice.default.locator}"/>
+          <property name="Ice.Default.Package" value="Demo"/>
+          <property name="Replica.Id" value="1"/>
+          <property name="Replica.Port" value="9090"/>
+          
+          <!-- Configuración del ReliableMessageQueue -->
+          <property name="ReliableQueue.BaseDir" value="reliable_queue_1"/>
+          <property name="ReliableQueue.ProcessingInterval" value="5000"/>
+          <property name="ReliableQueue.BatchSize" value="50"/>
+          <property name="ReliableQueue.MaxRetries" value="3"/>
+          <property name="ReliableQueue.RetryDelay" value="10000"/>
+          <property name="ReliableQueue.ProcessingThreads" value="5"/>
+          <property name="ReliableQueue.SchedulerThreads" value="2"/>
+          <property name="ReliableQueue.PersistenceEnabled" value="1"/>
+          <property name="ReliableQueue.AutoCleanup" value="1"/>
+          <property name="ReliableQueue.CleanupInterval" value="3600000"/>
+          <property name="ReliableQueue.MaxProcessedFiles" value="1000"/>
+          <property name="ReliableQueue.LogLevel" value="DEBUG"/>
+          <property name="ReliableQueue.LogStatistics" value="1"/>
+          <property name="ReliableQueue.StatisticsInterval" value="30000"/>
+          
+          <!-- Configuración de base de datos para votos -->
+          <property name="VotosDB.ConnectionTimeout" value="5000"/>
+          <property name="VotosDB.MaxRetries" value="3"/>
+          <property name="VotosDB.RetryInterval" value="2000"/>
         </properties>
       </server>
     </node>
@@ -42,7 +66,7 @@
           <property name="ReliableQueue.AutoCleanup" value="1"/>
           <property name="ReliableQueue.CleanupInterval" value="3600000"/>
           <property name="ReliableQueue.MaxProcessedFiles" value="1000"/>
-          <property name="ReliableQueue.LogLevel" value="INFO"/>
+          <property name="ReliableQueue.LogLevel" value="DEBUG"/>
           <property name="ReliableQueue.LogStatistics" value="1"/>
           <property name="ReliableQueue.StatisticsInterval" value="30000"/>
           
@@ -63,6 +87,16 @@
       <service name="GestorReplicas" entry="ServidorNacionalAdapter.GestorReplicas" />
       <service name="VotosService" entry="ServidorNacionalAdapter.VotosService" />
     </service-template>
+      <service name="AdministradorCandidatos" entry="ServidorNacionalAdapter1.AdministradorCandidatos" />
+      <service name="BrokerNacional" entry="ServidorNacionalAdapter1.BrokerNacional" />
+      <service name="HelloWorld" entry="ServidorNacionalAdapter1.HelloWorld" />
+      <service name="MonitorRecursos" entry="ServidorNacionalAdapter1.MonitorRecursos" />
+      <service name="BalanceadorCarga" entry="ServidorNacionalAdapter1.BalanceadorCarga" />
+      <service name="GestorReplicas" entry="ServidorNacionalAdapter1.GestorReplicas" />
+      <service name="VotosService" entry="ServidorNacionalAdapter1.VotosService" />
+      <service name="ReplicaInfo" entry="ServidorNacionalAdapter1.ReplicaInfo" />
+    </service-template>
+
 
   </application>
 </icegrid>
