@@ -145,10 +145,15 @@ public class ServidorRegional {
     private static void mostrarComandosDisponibles() {
         System.out.println("   conectar     - Conectar al servidor nacional");
         System.out.println("   estado       - Mostrar estado de conexión");
-        System.out.println("   contar <dep> - Contar votantes por departamento");
-        System.out.println("   listar <dep> - Listar votantes por departamento");
+        System.out.println("   contar <dep> - Contar votantes por departamento (servidor nacional)");
+        System.out.println("   listar <dep> - Listar votantes por departamento (servidor nacional)");
+        System.out.println("   guardar <dep>- Consultar y guardar votantes en SQLite");
+        System.out.println("   local <dep>  - Listar votantes desde SQLite local");
+        System.out.println("   contarlocal <dep> - Contar votantes desde SQLite local");
         System.out.println("   paginar <dep> <pag> <tam> - Consulta paginada");
         System.out.println("   multiple <dep1,dep2,...> - Múltiples departamentos");
+        System.out.println("   estadisticas - Ver estadísticas de base de datos local");
+        System.out.println("   limpiar <dep>- Limpiar datos de departamento en SQLite");
         System.out.println("   ejemplos     - Ejecutar ejemplos de prueba");
         System.out.println("   ayuda        - Mostrar esta ayuda");
         System.out.println("   salir        - Terminar el servidor");
@@ -191,6 +196,27 @@ public class ServidorRegional {
                             System.out.println("❌ Uso: listar <departamento>");
                         }
                         break;
+                    case "guardar":
+                        if (partes.length > 1) {
+                            comandoGuardar(String.join(" ", Arrays.copyOfRange(partes, 1, partes.length)));
+                        } else {
+                            System.out.println("❌ Uso: guardar <departamento>");
+                        }
+                        break;
+                    case "local":
+                        if (partes.length > 1) {
+                            comandoLocal(String.join(" ", Arrays.copyOfRange(partes, 1, partes.length)));
+                        } else {
+                            System.out.println("❌ Uso: local <departamento>");
+                        }
+                        break;
+                    case "contarlocal":
+                        if (partes.length > 1) {
+                            comandoContarLocal(String.join(" ", Arrays.copyOfRange(partes, 1, partes.length)));
+                        } else {
+                            System.out.println("❌ Uso: contarlocal <departamento>");
+                        }
+                        break;
                     case "paginar":
                         if (partes.length >= 4) {
                             comandoPaginar(partes[1], Integer.parseInt(partes[2]), Integer.parseInt(partes[3]));
@@ -203,6 +229,16 @@ public class ServidorRegional {
                             comandoMultiple(String.join(" ", Arrays.copyOfRange(partes, 1, partes.length)));
                         } else {
                             System.out.println("❌ Uso: multiple <dep1,dep2,dep3>");
+                        }
+                        break;
+                    case "estadisticas":
+                        comandoEstadisticas();
+                        break;
+                    case "limpiar":
+                        if (partes.length > 1) {
+                            comandoLimpiar(String.join(" ", Arrays.copyOfRange(partes, 1, partes.length)));
+                        } else {
+                            System.out.println("❌ Uso: limpiar <departamento>");
                         }
                         break;
                     case "ejemplos":
@@ -279,6 +315,72 @@ public class ServidorRegional {
         }
     }
 
+    private static void comandoGuardar(String departamento) {
+        if (!verificarConexion()) return;
+        
+        System.out.println("🔍 Consultando y guardando votantes de: " + departamento);
+        List<Demo.CiudadanoInfo> votantes = consultorVotantes.consultarVotantesPorDepartamento(departamento, true);
+        
+        System.out.println("📊 Total encontrados: " + String.format("%,d", votantes.size()));
+        
+        if (votantes.isEmpty()) {
+            System.out.println("   No se encontraron votantes.");
+            return;
+        }
+        
+        System.out.println("\n👥 Primeros 10 votantes:");
+        int maxMostrar = Math.min(10, votantes.size());
+        for (int i = 0; i < maxMostrar; i++) {
+            Demo.CiudadanoInfo v = votantes.get(i);
+            System.out.println(String.format("   %2d. %s %s (Doc: %s, Mesa: %s)", 
+                i + 1, v.nombre, v.apellido, v.documento, v.mesa));
+        }
+        
+        if (votantes.size() > 10) {
+            System.out.println("   ... y " + String.format("%,d", votantes.size() - 10) + " votantes más");
+        }
+    }
+
+    private static void comandoLocal(String departamento) {
+        if (consultorVotantes == null) {
+            System.out.println("❌ Consultor no inicializado");
+            return;
+        }
+        
+        System.out.println("🗄️ Consultando votantes locales de: " + departamento);
+        List<Demo.CiudadanoInfo> votantes = consultorVotantes.consultarVotantesLocales(departamento);
+        
+        System.out.println("📊 Total encontrados: " + String.format("%,d", votantes.size()));
+        
+        if (votantes.isEmpty()) {
+            System.out.println("   No se encontraron votantes en la base de datos local.");
+            return;
+        }
+        
+        System.out.println("\n👥 Primeros 10 votantes:");
+        int maxMostrar = Math.min(10, votantes.size());
+        for (int i = 0; i < maxMostrar; i++) {
+            Demo.CiudadanoInfo v = votantes.get(i);
+            System.out.println(String.format("   %2d. %s %s (Doc: %s, Mesa: %s)", 
+                i + 1, v.nombre, v.apellido, v.documento, v.mesa));
+        }
+        
+        if (votantes.size() > 10) {
+            System.out.println("   ... y " + String.format("%,d", votantes.size() - 10) + " votantes más");
+        }
+    }
+
+    private static void comandoContarLocal(String departamento) {
+        if (consultorVotantes == null) {
+            System.out.println("❌ Consultor no inicializado");
+            return;
+        }
+        
+        System.out.println("🔢 Contando votantes locales en: " + departamento);
+        long total = consultorVotantes.contarVotantesLocales(departamento);
+        System.out.println("📊 Total de votantes locales: " + String.format("%,d", total));
+    }
+
     private static void comandoPaginar(String departamento, int pagina, int tamano) {
         if (!verificarConexion()) return;
         
@@ -312,31 +414,42 @@ public class ServidorRegional {
         System.out.println("📊 Total en " + departamentos.size() + " departamentos: " + String.format("%,d", total));
     }
 
+    private static void comandoEstadisticas() {
+        if (consultorVotantes == null) {
+            System.out.println("❌ Consultor no inicializado");
+            return;
+        }
+        
+        consultorVotantes.mostrarEstadisticasLocales();
+    }
+
+    private static void comandoLimpiar(String departamento) {
+        if (consultorVotantes == null) {
+            System.out.println("❌ Consultor no inicializado");
+            return;
+        }
+        
+        System.out.println("🧹 Limpiando datos locales de: " + departamento);
+        int eliminados = consultorVotantes.limpiarDepartamentoLocal(departamento);
+        System.out.println("✅ Eliminados " + eliminados + " registros");
+    }
+
     private static void comandoEjemplos() {
         if (!verificarConexion()) return;
         
         System.out.println("🧪 Ejecutando ejemplos de prueba...");
         
-        // Ejemplo 1
-        System.out.println("\n1️⃣ Contando votantes en Valle del Cauca...");
-        try {
-            long total = consultorVotantes.contarVotantesPorDepartamentos(Arrays.asList("Valle del Cauca"));
-            System.out.println("   ✅ Total: " + String.format("%,d", total));
-        } catch (Exception e) {
-            System.out.println("   ❌ Error: " + e.getMessage());
-        }
+        // Ejemplo 1: Consultar un departamento específico
+        System.out.println("\n--- Ejemplo 1: Consultar Valle del Cauca ---");
+        comandoContar("Valle del Cauca");
         
-        // Ejemplo 2
-        System.out.println("\n2️⃣ Consulta paginada de Antioquia...");
-        try {
-            Demo.ResultadoPaginado resultado = consultorVotantes.consultarVotantesPaginado(
-                Arrays.asList("Antioquia"), 1, 5);
-            if (resultado != null) {
-                System.out.println("   ✅ Página 1/" + resultado.totalPaginas + " - " + resultado.ciudadanos.length + " registros");
-            }
-        } catch (Exception e) {
-            System.out.println("   ❌ Error: " + e.getMessage());
-        }
+        // Ejemplo 2: Consultar múltiples departamentos
+        System.out.println("\n--- Ejemplo 2: Múltiples departamentos ---");
+        comandoMultiple("Valle del Cauca,Cundinamarca");
+        
+        // Ejemplo 3: Consulta paginada
+        System.out.println("\n--- Ejemplo 3: Consulta paginada ---");
+        comandoPaginar("Valle del Cauca", 1, 5);
         
         System.out.println("\n🎉 Ejemplos completados!");
     }

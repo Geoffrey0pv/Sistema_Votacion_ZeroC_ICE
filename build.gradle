@@ -42,6 +42,9 @@ subprojects {
         implementation 'com.opencsv:opencsv:5.9'
         implementation 'org.postgresql:postgresql:42.7.1'
         
+        // SQLite JDBC para base de datos local en servidor regional
+        implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
+        
         // Apache POI para manejo de archivos Excel
         implementation 'org.apache.poi:poi:5.2.4'
         implementation 'org.apache.poi:poi-ooxml:5.2.4'
