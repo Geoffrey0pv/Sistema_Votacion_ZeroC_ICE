@@ -4,6 +4,7 @@ import Demo.*;
 import GestorVotos.VotoImp;
 import ReliableMessageManager.ReliableMessageManager;
 import GestorVotos.GestorVotos;
+import mesaVotacion.SistemaVerificacion;
 import com.zeroc.Ice.ObjectAdapter;
 import com.zeroc.Ice.Communicator;
 import java.util.List;
@@ -22,12 +23,37 @@ public class GestorMesa implements IRecibirCandidatos {
     private List<Candidato> candidatosDisponibles;
     private List<String> electoresYaVotaron;
     private boolean candidatosCargados = false;
+    
+    // NUEVO: Sistema de Verificación integrado
+    private SistemaVerificacion sistemaVerificacion;
+    private boolean verificacionLocalActiva = false;
 
     public GestorMesa(String idMesa) {
         this.idMesa = idMesa;
         this.candidatosDisponibles = new ArrayList<>();
         this.electoresYaVotaron = new ArrayList<>();
         this.messageManager = new ReliableMessageManager();
+        
+        // NUEVO: Inicializar Sistema de Verificación
+        try {
+            this.sistemaVerificacion = new SistemaVerificacion(idMesa);
+            this.verificacionLocalActiva = true;
+            System.out.println("✅ Sistema de Verificación local activado para Mesa " + idMesa);
+        } catch (Exception e) {
+            this.verificacionLocalActiva = false;
+            System.out.println("⚠️ Sistema de Verificación no disponible: " + e.getMessage());
+            System.out.println("💡 Mesa funcionará sin verificación local (solo validación básica)");
+        }
+        
+        try {
+            this.sistemaVerificacion = new SistemaVerificacion(idMesa);
+            this.verificacionLocalActiva = true;
+            System.out.println("✅ Sistema de Verificación local activado para Mesa " + idMesa);
+        } catch (Exception e) {
+            this.verificacionLocalActiva = false;
+            System.out.println("⚠️ Sistema de Verificación no disponible: " + e.getMessage());
+            System.out.println("💡 Mesa funcionará sin verificación local (solo validación básica)");
+        }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("\n Guardando mensajes pendientes...");
@@ -195,18 +221,40 @@ public class GestorMesa implements IRecibirCandidatos {
     }
 
     public boolean validarElector(String documentoIdentidad) {
+        // 1. VALIDACIÓN BÁSICA (Original)
+        if (documentoIdentidad == null || documentoIdentidad.trim().isEmpty()) {
+            System.err.println("❌ Documento de identidad no válido");
+            return false;
+        }
+        
         String hashElector = generarHashElector(documentoIdentidad);
         if (electoresYaVotaron.contains(hashElector)) {
-            System.err.println("  El elector ya votó en esta mesa");
+            System.err.println("❌ El elector ya votó en esta mesa");
             return false;
         }
 
-        boolean valido = documentoIdentidad != null && !documentoIdentidad.trim().isEmpty();
-        if (valido) {
-            System.out.println(" Elector validado: " + documentoIdentidad.substring(0,
-                    Math.min(3, documentoIdentidad.length())) + "***");
+        // 2. NUEVA VALIDACIÓN: Verificar que pertenece a esta mesa
+        if (verificacionLocalActiva) {
+            try {
+                boolean perteneceAMesa = sistemaVerificacion.verificarVotante(documentoIdentidad);
+                if (!perteneceAMesa) {
+                    System.err.println("❌ El documento " + documentoIdentidad.substring(0, Math.min(3, documentoIdentidad.length())) + "*** NO está registrado en esta mesa");
+                    System.err.println("💡 Verifique que está en la mesa correcta");
+                    return false;
+                }
+                System.out.println("✅ Documento verificado: pertenece a Mesa " + idMesa);
+            } catch (Exception e) {
+                System.err.println("⚠️ Error en verificación local: " + e.getMessage());
+                System.out.println("💡 Continuando con validación básica...");
+            }
+        } else {
+            System.out.println("⚠️ Verificación local no disponible - usando validación básica");
         }
-        return valido;
+
+        // 3. VALIDACIÓN EXITOSA
+        System.out.println("✅ Elector validado: " + documentoIdentidad.substring(0,
+                Math.min(3, documentoIdentidad.length())) + "***");
+        return true;
     }
 
     public boolean validarCandidato(long idCandidato) {

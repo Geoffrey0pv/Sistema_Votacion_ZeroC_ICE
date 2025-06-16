@@ -329,4 +329,11 @@ public class ConsultorVotantesRegional {
             System.out.println("🔌 Conexión con Servidor Nacional cerrada");
         }
     }
+
+    /**
+     * Obtiene el DatabaseManager para uso por otros componentes
+     */
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
+    }
 } 

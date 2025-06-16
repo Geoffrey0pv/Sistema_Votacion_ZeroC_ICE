@@ -211,6 +211,8 @@ module Demo
 
     sequence<CiudadanoInfo> SeqCiudadanos;
     sequence<string> SeqDepartamentos;
+    sequence<string> SeqMesas;
+    sequence<byte> SeqBytes;
 
     struct ResultadoPaginado
     {
@@ -343,4 +345,129 @@ module Demo
         EstadisticasVotos obtenerEstadisticas();
         bool verificarDisponibilidad();
     };
-};
+
+    // ========== INTERFAZ DISTRIBUCIÓN DE MESAS ==========
+    
+    struct DistribucionMesa
+    {
+        string mesaId;
+        string departamento;
+        string municipio;
+        string puesto;
+        int cantidadVotantes;
+        SeqCiudadanos votantes;
+    };
+
+    sequence<DistribucionMesa> SeqDistribucionMesas;
+
+    struct ResultadoDistribucion
+    {
+        bool exito;
+        int totalMesas;
+        int totalVotantes;
+        int mesasDistribuidas;
+        string mensaje;
+        long timestamp;
+    };
+
+    struct EstadisticasMesa
+    {
+        string mesaId;
+        string departamento;
+        string municipio;
+        string puesto;
+        int votantesAsignados;
+        int votantesVerificados;
+        bool mesaActiva;
+        long ultimaActualizacion;
+    };
+
+    sequence<EstadisticasMesa> SeqEstadisticasMesas;
+
+    interface IConfirmacionDistribucion
+    {
+        void recibirConfirmacionDistribucion(ResultadoDistribucion resultado);
+    };
+
+    interface IDistribuidorMesas
+    {
+        // Distribuir votantes de un departamento a todas sus mesas (LOCALMENTE)
+        ResultadoDistribucion distribuirVotantesPorDepartamento(string departamento);
+        
+        // NUEVO: Distribuir votantes remotamente a mesas registradas
+        ResultadoDistribucion distribuirVotantesRemotamente(string departamento);
+        
+        // NUEVO: Enviar archivo SQLite a una mesa específica
+        bool enviarArchivoAMesa(string mesaId, string endpointMesa);
+        
+        // Distribuir votantes específicos a una mesa
+        bool distribuirVotantesAMesa(string mesaId, SeqCiudadanos votantes);
+        
+        // Obtener estadísticas de distribución
+        SeqEstadisticasMesas obtenerEstadisticasDistribucion();
+        
+        // Limpiar distribución de un departamento
+        bool limpiarDistribucionDepartamento(string departamento);
+        
+        // Verificar mesas disponibles
+        SeqEstadisticasMesas obtenerMesasDisponibles();
+        
+        bool verificarConexion();
+    };
+
+    interface IMesaVotacion
+    {
+        // Recibir votantes asignados a esta mesa
+        bool recibirVotantesAsignados(SeqCiudadanos votantes, string departamento);
+        
+        // NUEVO: Recibir archivo SQLite completo
+        bool recibirArchivoSQLite(SeqBytes datosArchivo, string nombreArchivo);
+        
+        // NUEVO: Verificar si la mesa está lista para recibir datos
+        bool estaListaParaRecibir();
+        
+        // Verificar si un votante pertenece a esta mesa
+        bool verificarVotanteEnMesa(string documento);
+        
+        // Obtener información de un votante de la mesa
+        CiudadanoInfo obtenerVotanteDeMesa(string documento);
+        
+        // Obtener estadísticas de la mesa
+        EstadisticasMesa obtenerEstadisticasMesa();
+        
+        // Contar votantes en la mesa
+        int contarVotantesEnMesa();
+        
+        // Limpiar datos de la mesa
+        bool limpiarDatosMesa();
+        
+        // Verificar estado de la mesa
+        bool verificarEstadoMesa();
+        
+        // Obtener ID de la mesa
+        string obtenerIdMesa();
+    };
+
+    interface IRegistroMesas
+    {
+        // Registrar una nueva mesa en el sistema
+        bool registrarMesa(string mesaId, string endpoint, string departamento, string municipio, string puesto);
+        
+        // Desregistrar una mesa
+        bool desregistrarMesa(string mesaId);
+        
+        // Obtener endpoint de una mesa específica
+        string obtenerEndpointMesa(string mesaId);
+        
+        // Obtener todas las mesas registradas de un departamento
+        SeqMesas obtenerMesasPorDepartamento(string departamento);
+        
+        // Verificar si una mesa está registrada
+        bool mesaEstaRegistrada(string mesaId);
+        
+        // Obtener información de todas las mesas
+        SeqEstadisticasMesas obtenerTodasLasMesas();
+        
+        bool verificarConexion();
+    };
+}

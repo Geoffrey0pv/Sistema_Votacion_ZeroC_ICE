@@ -9,7 +9,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class ServidorRegional {
+    private static ReceptorVotos receptorVotos;
+    private static GestionCandidatos gestionCandidatos;
     private static ConsultorVotantesRegional consultorVotantes;
+    private static DistribuidorMesas distribuidorMesas;
     private static Scanner scanner;
     private static boolean servidorActivo = true;
 
@@ -33,11 +36,14 @@ public class ServidorRegional {
                 com.zeroc.Ice.Properties properties = communicator.getProperties();
 
                 // Componentes existentes
-                ReceptorVotos receptorVotos = new ReceptorVotos(properties.getProperty("Ice.ProgramName"));
-                GestionCandidatos gestionCandidatos = new GestionCandidatos(communicator);
+                receptorVotos = new ReceptorVotos(properties.getProperty("Ice.ProgramName"));
+                gestionCandidatos = new GestionCandidatos(communicator);
 
                 // Nuevo componente: Consultor de Votantes
                 consultorVotantes = new ConsultorVotantesRegional(communicator);
+                
+                // Nuevo componente: Distribuidor de Mesas
+                distribuidorMesas = new DistribuidorMesas(communicator, consultorVotantes.getDatabaseManager());
 
                 // Crear adaptador con configuración
                 com.zeroc.Ice.ObjectAdapter adapter;
@@ -74,6 +80,7 @@ public class ServidorRegional {
                 System.out.println("   • ReceptorVotos: " + idReceptor.name + " y " + idReceptorTipo.name);
                 System.out.println("   • GestionCandidatos: " + idGestion.name + " y " + idGestionTipo.name);
                 System.out.println("   • ConsultorVotantesRegional: Consulta de votantes del servidor nacional");
+                System.out.println("   • DistribuidorMesas: Distribución de votantes por mesas");
                 
                 try {
                     com.zeroc.IceGrid.RegistryPrx registry = com.zeroc.IceGrid.RegistryPrx.checkedCast(
@@ -150,6 +157,14 @@ public class ServidorRegional {
         System.out.println("   guardar <dep>- Consultar y guardar votantes en SQLite");
         System.out.println("   local <dep>  - Listar votantes desde SQLite local");
         System.out.println("   contarlocal <dep> - Contar votantes desde SQLite local");
+        System.out.println("   distribuir <dep> - Distribuir votantes por mesas (crear archivos SQLite LOCAL)");
+        System.out.println("   distribuirremoto <dep> - Distribuir archivos SQLite a mesas REMOTAS");
+        System.out.println("   registrar <mesa> <endpoint> - Registrar mesa remota");
+        System.out.println("   desregistrar <mesa> - Desregistrar mesa remota");
+        System.out.println("   verificarmesas - Verificar conectividad con mesas remotas");
+        System.out.println("   mesas <dep>  - Ver mesas identificadas de un departamento");
+        System.out.println("   estadisticasdist - Ver estadísticas de distribución");
+        System.out.println("   limpiardist <dep> - Limpiar archivos de distribución");
         System.out.println("   paginar <dep> <pag> <tam> - Consulta paginada");
         System.out.println("   multiple <dep1,dep2,...> - Múltiples departamentos");
         System.out.println("   estadisticas - Ver estadísticas de base de datos local");
@@ -241,6 +256,55 @@ public class ServidorRegional {
                             System.out.println("❌ Uso: limpiar <departamento>");
                         }
                         break;
+                    case "distribuir":
+                        if (partes.length > 1) {
+                            comandoDistribuir(String.join(" ", Arrays.copyOfRange(partes, 1, partes.length)));
+                        } else {
+                            System.out.println("❌ Uso: distribuir <departamento>");
+                        }
+                        break;
+                    case "mesas":
+                        if (partes.length > 1) {
+                            comandoMesas(String.join(" ", Arrays.copyOfRange(partes, 1, partes.length)));
+                        } else {
+                            System.out.println("❌ Uso: mesas <departamento>");
+                        }
+                        break;
+                    case "estadisticasdist":
+                        comandoEstadisticasDistribucion();
+                        break;
+                    case "limpiardist":
+                        if (partes.length > 1) {
+                            comandoLimpiarDistribucion(String.join(" ", Arrays.copyOfRange(partes, 1, partes.length)));
+                        } else {
+                            System.out.println("❌ Uso: limpiardist <departamento>");
+                        }
+                        break;
+                    case "distribuirremoto":
+                        if (partes.length > 1) {
+                            comandoDistribuirRemoto(String.join(" ", Arrays.copyOfRange(partes, 1, partes.length)));
+                        } else {
+                            System.out.println("❌ Uso: distribuirremoto <departamento>");
+                        }
+                        break;
+                    case "registrar":
+                        if (partes.length > 2) {
+                            comandoRegistrarMesa(partes[1], partes[2]);
+                        } else {
+                            System.out.println("❌ Uso: registrar <mesaId> <endpoint>");
+                        }
+                        break;
+                    case "desregistrar":
+                        if (partes.length > 1) {
+                            comandoDesregistrarMesa(partes[1]);
+                        } else {
+                            System.out.println("❌ Uso: desregistrar <mesaId>");
+                        }
+                        break;
+                    case "verificarmesas":
+                        comandoVerificarMesas();
+                        break;
+
                     case "ejemplos":
                         comandoEjemplos();
                         break;
@@ -434,6 +498,46 @@ public class ServidorRegional {
         System.out.println("✅ Eliminados " + eliminados + " registros");
     }
 
+    private static void comandoDistribuir(String departamento) {
+        if (distribuidorMesas == null) {
+            System.out.println("❌ Distribuidor de Mesas no inicializado");
+            return;
+        }
+        
+        System.out.println("🗳️ Distribuyendo votantes de: " + departamento);
+        boolean distribuidos = distribuidorMesas.distribuirVotantesPorDepartamento(departamento);
+        if (distribuidos) {
+            System.out.println("✅ Votantes distribuidos correctamente");
+        } else {
+            System.out.println("❌ No se pudo distribuir los votantes");
+        }
+    }
+
+    private static void comandoMesas(String departamento) {
+        if (distribuidorMesas == null) {
+            System.out.println("❌ Distribuidor de Mesas no inicializado");
+            return;
+        }
+        
+        System.out.println("🔍 Consultando mesas identificadas de: " + departamento);
+        java.util.Set<String> mesas = distribuidorMesas.obtenerMesasDelDepartamento(departamento);
+        
+        System.out.println("📊 Total identificadas: " + String.format("%,d", mesas.size()));
+        
+        if (mesas.isEmpty()) {
+            System.out.println("   No se encontraron mesas. Ejecute 'guardar " + departamento + "' primero.");
+            return;
+        }
+        
+        System.out.println("\n🗳️ Mesas identificadas:");
+        int i = 1;
+        for (String mesaId : mesas) {
+            System.out.println(String.format("   %2d. Mesa %s", i++, mesaId));
+        }
+        
+        System.out.println("\n💡 Use 'distribuir " + departamento + "' para crear archivos SQLite por mesa");
+    }
+
     private static void comandoEjemplos() {
         if (!verificarConexion()) return;
         
@@ -461,5 +565,98 @@ public class ServidorRegional {
             return false;
         }
         return true;
+    }
+
+    private static void comandoEstadisticasDistribucion() {
+        if (distribuidorMesas == null) {
+            System.out.println("❌ Distribuidor de Mesas no inicializado");
+            return;
+        }
+        
+        java.util.List<String> estadisticas = distribuidorMesas.obtenerEstadisticasDistribucion();
+        for (String linea : estadisticas) {
+            System.out.println(linea);
+        }
+    }
+
+    private static void comandoLimpiarDistribucion(String departamento) {
+        if (distribuidorMesas == null) {
+            System.out.println("❌ Distribuidor de Mesas no inicializado");
+            return;
+        }
+        
+        System.out.println("🧹 Limpiando archivos de distribución de: " + departamento);
+        int eliminados = distribuidorMesas.limpiarDistribucionDepartamento(departamento);
+        System.out.println("✅ Eliminados " + eliminados + " archivos");
+    }
+    
+    private static void comandoDistribuirRemoto(String departamento) {
+        if (distribuidorMesas == null) {
+            System.out.println("❌ Distribuidor de Mesas no inicializado");
+            return;
+        }
+        
+        System.out.println("🌐 Iniciando distribución remota para: " + departamento);
+        boolean exito = distribuidorMesas.distribuirVotantesRemotamente(departamento);
+        
+        if (exito) {
+            System.out.println("✅ Distribución remota completada exitosamente");
+        } else {
+            System.out.println("❌ Error en distribución remota");
+        }
+    }
+    
+    private static void comandoRegistrarMesa(String mesaId, String endpoint) {
+        if (distribuidorMesas == null) {
+            System.out.println("❌ Distribuidor de Mesas no inicializado");
+            return;
+        }
+        
+        System.out.println("📝 Registrando mesa remota: " + mesaId + " -> " + endpoint);
+        distribuidorMesas.registrarMesaRemota(mesaId, endpoint);
+        System.out.println("✅ Mesa remota registrada exitosamente");
+    }
+    
+    private static void comandoDesregistrarMesa(String mesaId) {
+        if (distribuidorMesas == null) {
+            System.out.println("❌ Distribuidor de Mesas no inicializado");
+            return;
+        }
+        
+        System.out.println("🗑️ Desregistrando mesa remota: " + mesaId);
+        boolean exito = distribuidorMesas.desregistrarMesaRemota(mesaId);
+        
+        if (exito) {
+            System.out.println("✅ Mesa desregistrada exitosamente");
+        } else {
+            System.out.println("❌ Mesa no estaba registrada");
+        }
+    }
+    
+    private static void comandoVerificarMesas() {
+        if (distribuidorMesas == null) {
+            System.out.println("❌ Distribuidor de Mesas no inicializado");
+            return;
+        }
+        
+        System.out.println("🔗 Verificando conectividad con mesas remotas...");
+        
+        // Mostrar mesas registradas
+        java.util.Map<String, String> mesasRegistradas = distribuidorMesas.obtenerMesasRegistradas();
+        System.out.println("📋 Mesas registradas: " + mesasRegistradas.size());
+        
+        if (mesasRegistradas.isEmpty()) {
+            System.out.println("⚠️ No hay mesas registradas");
+            System.out.println("💡 Use 'registrar <mesaId> <endpoint>' para registrar mesas");
+            return;
+        }
+        
+        for (java.util.Map.Entry<String, String> entry : mesasRegistradas.entrySet()) {
+            System.out.println("   • Mesa " + entry.getKey() + " -> " + entry.getValue());
+        }
+        
+        // Verificar conectividad
+        int conectadas = distribuidorMesas.verificarConectividadMesas();
+        System.out.println("📊 Resultado: " + conectadas + "/" + mesasRegistradas.size() + " mesas conectadas");
     }
 }

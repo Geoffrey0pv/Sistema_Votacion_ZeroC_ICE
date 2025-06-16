@@ -1,279 +1,205 @@
 import GestorMesa.GestorMesa;
 import InterfazGrafica.MesaVotacionUI;
-import GestorVotos.VotoImp;
+import mesaVotacion.MesaVotacionImpl;
+import com.zeroc.Ice.*;
+import javax.swing.SwingUtilities;
 
-import java.util.ArrayList;
-import java.util.Scanner;
-import java.util.List;
-
+/**
+ * Aplicación Principal de Mesa de Votación
+ * VERSIÓN DISTRIBUIDA: Soporta votación normal + distribución remota
+ */
 public class MesaVotacion {
-    private static GestorMesa gestorMesa;
-    private static MesaVotacionUI interfazUsuario;
-    private static final String ID_MESA_DEFAULT = "MESA_001";
-
+    
     public static void main(String[] args) {
-        int status = 0;
-        List<String> extraArgs = new ArrayList<>();
-
-        try (com.zeroc.Ice.Communicator communicator = com.zeroc.Ice.Util.initialize(args, "mesa.cfg", extraArgs)) {
-            if (!extraArgs.isEmpty()) {
-                System.err.println("Demasiados argumentos");
-                status = 1;
-            } else {
-                status = ejecutar(communicator);
-                communicator.waitForShutdown();
-            }
+        
+        // Verificar argumentos
+        if (args.length < 1) {
+            mostrarUso();
+            return;
         }
-        System.exit(status);
-    }
-
-    private static int ejecutar(com.zeroc.Ice.Communicator communicator) {
-
-        String idMesa = obtenerIdMesa();
-
-        gestorMesa = new GestorMesa(idMesa);
-
-        boolean inicializado = gestorMesa.inicializar(communicator);
-
-        if (!inicializado) {
-            System.err.println("Gestor de mesa inicializado sin conexión al servidor");
-            System.err.println(" Los votos se guardarán para envío posterior");
-        }
-
-        mostrarMenuInicial();
-
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Seleccione modo de operación (1-2): ");
-
+        
+        String mesaId = args[0];
+        String modo = args.length > 1 ? args[1] : "votar";
+        
         try {
-            int opcion = scanner.nextInt();
-
-            switch (opcion) {
-                case 1:
-                    iniciarModoGrafico();
+            switch (modo.toLowerCase()) {
+                case "votar":
+                case "local":
+                    ejecutarModoVotacion(mesaId);
                     break;
-                case 2:
-                    iniciarModoConsola(scanner);
+                case "servidor":
+                    ejecutarModoServidor(mesaId, args);
+                    break;
+                case "hibrido":
+                    ejecutarModoHibrido(mesaId, args);
                     break;
                 default:
-                    System.out.println("Opción inválida. Iniciando modo gráfico por defecto.");
-                    iniciarModoGrafico();
-                    break;
+                    System.err.println("❌ Modo desconocido: " + modo);
+                    mostrarUso();
             }
-        } catch (Exception e) {
-            System.out.println("Entrada inválida. Iniciando modo gráfico por defecto.");
-            iniciarModoGrafico();
+            
+        } catch (java.lang.Exception e) {
+            System.err.println("❌ Error iniciando mesa de votación: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        return 0;
     }
-
-    private static String obtenerIdMesa() {
-        // TODO: Implementar lectura desde configuración o argumentos
-        // Por ahora retorna el valor por defecto
-        String idMesa = System.getProperty("mesa.id", ID_MESA_DEFAULT);
-        System.out.println("Inicializando Mesa de Votación: " + idMesa);
-        return idMesa;
+    
+    private static void mostrarUso() {
+        System.err.println("❌ Uso:");
+        System.err.println("   java -jar mesaVotacion.jar <ID_MESA> [modo]");
+        System.err.println("");
+        System.err.println("Modos disponibles:");
+        System.err.println("   votar    - Interfaz gráfica de votación (por defecto)");
+        System.err.println("   local    - Interfaz gráfica de votación (igual que votar)");
+        System.err.println("   servidor - Solo servidor ICE para recibir archivos");
+        System.err.println("   hibrido  - Servidor ICE + interfaz de votación");
+        System.err.println("");
+        System.err.println("Ejemplos:");
+        System.err.println("   java -jar mesaVotacion.jar 1 votar");
+        System.err.println("   java -jar mesaVotacion.jar 1 servidor");
+        System.err.println("   java -jar mesaVotacion.jar 1 hibrido");
     }
-
-    private static void mostrarMenuInicial() {
-        System.out.println("\n" + "=".repeat(50));
-        System.out.println("BIENVENIDO AL SISTEMA DE VOTACIÓN ELECTRÓNICA");
-        System.out.println("=".repeat(50));
-        System.out.println("Mesa: " + gestorMesa.getIdMesa());
-
-        if (gestorMesa.hayMensajesPendientes()) {
-            System.out.println("Estado: Hay mensajes pendientes de envío");
-        } else {
-            System.out.println("Estado: Conexión normal");
-        }
-
-        System.out.println("\nModos de operación disponibles:");
-        System.out.println("  1. Modo Gráfico (Interfaz visual)");
-        System.out.println("  2. Modo Consola (Línea de comandos)");
-        System.out.println("=".repeat(50));
-    }
-
-    private static void iniciarModoGrafico() {
-        System.out.println(" Iniciando modo gráfico...");
-
+    
+    /**
+     * MODO VOTACIÓN: Interfaz gráfica original para votar
+     */
+    private static void ejecutarModoVotacion(String mesaId) {
+        System.out.println("🗳️ === INICIANDO MESA DE VOTACIÓN ===");
+        System.out.println("📍 Mesa: " + mesaId);
+        System.out.println("🖥️ Modo: Interfaz Gráfica de Votación");
+        
+        // Inicializar comunicador ICE para GestorMesa
+        Communicator communicator = null;
         try {
-            javax.swing.UIManager.setLookAndFeel(
-                    javax.swing.UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            System.out.println("No se pudo configurar el Look and Feel del sistema");
-        }
-
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            interfazUsuario = new MesaVotacionUI(gestorMesa);
-            interfazUsuario.mostrar();
-
-            System.out.println("Interfaz gráfica iniciada correctamente");
-            System.out.println("Para cerrar el sistema, use la opción cerrar ventana (X)");
-        });
-
+            communicator = Util.initialize();
+            
+            // Crear GestorMesa (ya incluye Sistema de Verificación integrado)
+            GestorMesa gestorMesa = new GestorMesa(mesaId);
+            boolean mesaInicializada = gestorMesa.inicializar(communicator);
+            
+            if (mesaInicializada) {
+                System.out.println("✅ Mesa de votación inicializada correctamente");
+            } else {
+                System.out.println("⚠️ Mesa funcionará sin conexión al servidor regional");
+            }
+            
+            // Iniciar interfaz gráfica
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    MesaVotacionUI interfaz = new MesaVotacionUI(gestorMesa);
+                    interfaz.mostrar();
+                    System.out.println("🖥️ Interfaz gráfica de votación iniciada");
+                                 } catch (java.lang.Exception e) {
+                     System.err.println("❌ Error iniciando interfaz gráfica: " + e.getMessage());
+                     e.printStackTrace();
+                 }
+            });
+            
+                 } catch (java.lang.Exception e) {
+             System.err.println("❌ Error inicializando mesa: " + e.getMessage());
+             e.printStackTrace();
+         }
+        
+        // Mantener el programa activo
+        System.out.println("💡 La mesa de votación está activa. Cierre la ventana para terminar.");
+        
+        // Configurar shutdown hook
+        final Communicator finalCommunicator = communicator;
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Cerrando sistema...");
-            if (gestorMesa != null) {
-                gestorMesa.shutdown();
+            System.out.println("\n🛑 Cerrando mesa de votación...");
+            if (finalCommunicator != null) {
+                finalCommunicator.destroy();
             }
         }));
-    }
-
-    private static void iniciarModoConsola(Scanner scanner) {
-        System.out.println("Iniciando modo consola...");
-
-        boolean continuar = true;
-
-        while (continuar) {
-            mostrarMenuConsola();
-            System.out.print("==> ");
-
-            try {
-                int opcion = scanner.nextInt();
-                scanner.nextLine();
-
-                switch (opcion) {
-                    case 1:
-                        procesarVotoConsola(scanner);
-                        break;
-                    case 2:
-                        mostrarEstadisticas();
-                        break;
-                    case 3:
-                        intentarReconexion();
-                        break;
-                    case 4:
-                        crearVotoPrueba();
-                        break;
-                    case 5:
-                        mostrarCandidatos();
-                        break;
-                    case 0:
-                        continuar = false;
-                        break;
-                    default:
-                        System.out.println("Opción inválida");
-                        break;
-                }
-            } catch (Exception e) {
-                System.out.println("Entrada inválida. Intente nuevamente.");
-                scanner.nextLine(); // Limpiar buffer
-            }
-        }
-
-        System.out.println("Cerrando sistema de votación...");
-        gestorMesa.shutdown();
-    }
-
-    private static void mostrarMenuConsola() {
-        System.out.println("\n" + "-".repeat(40));
-        System.out.println("MENÚ DE OPCIONES");
-        System.out.println("-".repeat(40));
-        System.out.println("1. Procesar voto");
-        System.out.println("2. Ver estadísticas");
-        System.out.println("3. Intentar reconexión");
-        System.out.println("4. Crear voto de prueba");
-        System.out.println("5. Mostrar candidatos");
-        System.out.println("0. Salir");
-        System.out.println("-".repeat(40));
-    }
-
-
-    private static void procesarVotoConsola(Scanner scanner) {
-        System.out.println("\n=== PROCESAR VOTO ===");
-
-        System.out.print("Documento de identidad: ");
-        String documento = scanner.nextLine().trim();
-
-        if (documento.isEmpty()) {
-            System.out.println("Documento no puede estar vacío");
-            return;
-        }
-
-        if (!gestorMesa.validarElector(documento)) {
-            System.out.println("Elector no válido o ya votó en esta mesa");
-            return;
-        }
-
-        System.out.println("Elector validado correctamente");
-
-        mostrarCandidatos();
-
-        System.out.print("Seleccione ID del candidato: ");
+        
+        // Esperar hasta que el usuario cierre la aplicación
         try {
-            long idCandidato = scanner.nextLong();
-            scanner.nextLine();
-
-            System.out.print("¿Confirma su voto por el candidato " + idCandidato + "? (s/n): ");
-            String confirmacion = scanner.nextLine().trim().toLowerCase();
-
-            if (confirmacion.equals("s") || confirmacion.equals("si") || confirmacion.equals("y") || confirmacion.equals("yes")) {
-                boolean exito = gestorMesa.registrarVoto(documento, idCandidato);
-
-                if (exito) {
-                    System.out.println("¡Voto registrado exitosamente!");
-                } else {
-                    System.out.println("Error registrando el voto");
-                }
+            Thread.currentThread().join();
+        } catch (InterruptedException e) {
+            System.out.println("🛑 Mesa de votación cerrada");
+        }
+    }
+    
+    /**
+     * MODO SERVIDOR: Solo servidor ICE para recibir archivos
+     */
+    private static void ejecutarModoServidor(String mesaId, String[] args) {
+        try {
+            System.out.println("🗳️ === INICIANDO MESA DE VOTACIÓN (MODO SERVIDOR ICE) ===");
+            
+            // Inicializar ICE
+            Communicator communicator = Util.initialize(args);
+            ObjectAdapter adapter = communicator.createObjectAdapterWithEndpoints("MesaVotacion", "tcp -p 1002" + mesaId);
+            
+            // Crear implementación
+            MesaVotacionImpl mesaImpl = new MesaVotacionImpl(mesaId);
+            ObjectPrx proxy = adapter.add(mesaImpl, Util.stringToIdentity("Mesa" + mesaId));
+            
+            adapter.activate();
+            
+            System.out.println("✅ Mesa " + mesaId + " lista para recibir archivos SQLite");
+            System.out.println("📡 Endpoint: " + proxy.toString());
+            System.out.println("💡 Registre esta mesa en el servidor regional:");
+            System.out.println("   registrar " + mesaId + " " + proxy.toString());
+            System.out.println("");
+            System.out.println("⏳ Presione Ctrl+C para detener el servidor...");
+            
+            communicator.waitForShutdown();
+            
+        } catch (java.lang.Exception e) {
+            System.err.println("❌ Error en modo servidor: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * MODO HÍBRIDO: Servidor ICE + Interfaz de votación
+     */
+    private static void ejecutarModoHibrido(String mesaId, String[] args) {
+        try {
+            System.out.println("🗳️ === INICIANDO MESA DE VOTACIÓN (MODO HÍBRIDO) ===");
+            
+            // Inicializar ICE para recibir archivos
+            Communicator communicator = Util.initialize(args);
+            ObjectAdapter adapter = communicator.createObjectAdapterWithEndpoints("MesaVotacion", "tcp -p 1002" + mesaId);
+            
+            MesaVotacionImpl mesaImpl = new MesaVotacionImpl(mesaId);
+            ObjectPrx proxy = adapter.add(mesaImpl, Util.stringToIdentity("Mesa" + mesaId));
+            
+            adapter.activate();
+            
+            System.out.println("✅ Servidor ICE activo: " + proxy.toString());
+            
+            // Inicializar GestorMesa para votación
+            GestorMesa gestorMesa = new GestorMesa(mesaId);
+            boolean mesaInicializada = gestorMesa.inicializar(communicator);
+            
+            if (mesaInicializada) {
+                System.out.println("✅ Mesa de votación lista para votar");
             } else {
-                System.out.println("Voto cancelado");
+                System.out.println("⚠️ Mesa funcionará sin conexión al servidor regional");
             }
-
-        } catch (Exception e) {
-            System.out.println("ID de candidato inválido");
-            scanner.nextLine();
+            
+            // Iniciar interfaz gráfica
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    MesaVotacionUI interfaz = new MesaVotacionUI(gestorMesa);
+                    interfaz.mostrar();
+                    System.out.println("🖥️ Interfaz de votación iniciada (modo híbrido)");
+                                 } catch (java.lang.Exception e) {
+                     System.err.println("❌ Error iniciando interfaz: " + e.getMessage());
+                     e.printStackTrace();
+                 }
+            });
+            
+            System.out.println("🌐 Mesa en modo híbrido:");
+            System.out.println("   📡 Puede recibir archivos remotos via ICE");
+            System.out.println("   🗳️ Interfaz de votación activa");
+            System.out.println("   💡 Registre la mesa: registrar " + mesaId + " " + proxy.toString());
+            
+            communicator.waitForShutdown();
+            
+        } catch (java.lang.Exception e) {
+            System.err.println("❌ Error en modo híbrido: " + e.getMessage());
         }
-    }
-
-    private static void mostrarEstadisticas() {
-        System.out.println("\n=== ESTADÍSTICAS DEL SISTEMA ===");
-        System.out.println("Mesa: " + gestorMesa.getIdMesa());
-
-        if (gestorMesa.hayMensajesPendientes()) {
-            System.out.println("Estado: Hay mensajes pendientes");
-        } else {
-            System.out.println("Estado: Sistema operativo");
-        }
-
-        gestorMesa.mostrarEstadisticas();
-        System.out.println("===============================");
-    }
-
-    private static void intentarReconexion() {
-        System.out.println("\nIntentando reconectar...");
-        boolean exito = gestorMesa.reconectarServidor();
-
-        if (exito) {
-            System.out.println("Reconexión exitosa");
-        } else {
-            System.out.println("No se pudo establecer conexión");
-        }
-    }
-
-    private static void crearVotoPrueba() {
-        System.out.println("\n Creando voto de prueba...");
-        VotoImp votoPrueba = VotoImp.crearVotoPrueba();
-        System.out.println("Voto creado: " + votoPrueba);
-
-        String documentoPrueba = "TEST_" + System.currentTimeMillis();
-        boolean exito = gestorMesa.registrarVoto(documentoPrueba, votoPrueba.idCandidato);
-
-        if (exito) {
-            System.out.println(" Voto de prueba procesado");
-        } else {
-            System.out.println(" Error procesando voto de prueba");
-        }
-    }
-
-    private static void mostrarCandidatos() {
-        System.out.println("\n Candidatos disponibles:");
-        System.out.println("-".repeat(30));
-
-        gestorMesa.getCandidatosDisponibles().forEach(candidato -> {
-            System.out.println("  " + candidato.idCandidato + " - " + candidato.nombre);
-        });
-
-        System.out.println("-".repeat(30));
     }
 }
