@@ -34,14 +34,8 @@ public class ServidorRegional {
             } else {
                 com.zeroc.Ice.Properties properties = communicator.getProperties();
 
-<<<<<<< HEAD
                 ReceptorVotos receptorVotos = new ReceptorVotos(properties.getProperty("Ice.ProgramName"), communicator);
                 GestionCandidatos gestionCandidatos = new GestionCandidatos(communicator);
-=======
-                // Componentes existentes
-                receptorVotos = new ReceptorVotos(properties.getProperty("Ice.ProgramName"));
-                gestionCandidatos = new GestionCandidatos(communicator);
->>>>>>> e88642a05c42ae57840246561b523ed1951fdfc4
 
                 // Nuevo componente: Consultor de Votantes
                 consultorVotantes = new ConsultorVotantesRegional(communicator);
