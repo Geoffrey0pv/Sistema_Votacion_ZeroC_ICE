@@ -49,16 +49,16 @@ public class ConnectionPool {
     private ConnectionPool(String type) {
         if (type.equals("nacional")) {
             this.config = (IConfig) ConfigManager.getInstance();
-            // CONFIGURACIÓN SÚPER AGRESIVA PARA ALTO RENDIMIENTO
-            this.minPoolSize = Math.max(((ConfigManager) config).getPoolMinSize(), 50);  // Mínimo 50 conexiones
-            this.maxPoolSize = Math.max(((ConfigManager) config).getPoolMaxSize(), 200); // Máximo 200 conexiones
-            this.poolTimeout = Math.min(((ConfigManager) config).getPoolTimeout(), 100); // Timeout súper rápido
+            // Leemos la configuración directamente del ConfigManager
+            this.minPoolSize = ((ConfigManager) config).getPoolMinSize();
+            this.maxPoolSize = ((ConfigManager) config).getPoolMaxSize();
+            this.poolTimeout = ((ConfigManager) config).getPoolTimeout();
             this.dbUrl = ((ConfigManager) config).getDatabaseUrl() + "?tcpKeepAlive=true&socketTimeout=30000&loginTimeout=10";
             this.dbUser = ((ConfigManager) config).getDatabaseUser();
             this.dbPassword = ((ConfigManager) config).getDatabasePassword();
             
             this.maxRetryAttempts = ((ConfigManager) config).getRetryMaxAttempts();
-            this.retryDelayMs = Math.min(((ConfigManager) config).getRetryDelayMs(), 50); // Reintentos súper rápidos
+            this.retryDelayMs = ((ConfigManager) config).getRetryDelayMs();
             this.backoffMultiplier = ((ConfigManager) config).getRetryBackoffMultiplier();
 
         } else {
@@ -96,8 +96,8 @@ public class ConnectionPool {
         // Iniciar mantenimiento automático
         startMaintenanceTasks();
         
-        System.out.println("🚀 POOL SÚPER OPTIMIZADO INICIADO:");
-        System.out.println("   🔥 Optimizado para procesamiento masivo paralelo");
+        System.out.println("🚀 Pool de conexiones iniciado:");
+        System.out.println("   🔥 Configuración estándar cargada");
     }
     
     public static synchronized ConnectionPool getInstance(String type) {
@@ -118,12 +118,12 @@ public class ConnectionPool {
     }
     
     private void initializePoolAggressively() {
-        System.out.println("🚀 Inicializando pool SÚPER OPTIMIZADO...");
+        System.out.println("�� Inicializando pool de conexiones...");
         System.out.println("   URL: " + dbUrl);
         System.out.println("   Pool: " + minPoolSize + "-" + maxPoolSize + " conexiones");
         
-        // CREAR TODAS LAS CONEXIONES MÍNIMAS DE UNA VEZ (PARALELO)
-        System.out.println("⚡ Creando " + minPoolSize + " conexiones iniciales en paralelo...");
+        // CREAR CONEXIONES MÍNIMAS
+        System.out.println("⚡ Creando " + minPoolSize + " conexiones iniciales...");
         
         for (int i = 0; i < minPoolSize; i++) {
             try {
@@ -146,8 +146,8 @@ public class ConnectionPool {
         checkServiceStatus();
         
         if (isServiceActive.get()) {
-            System.out.println("✅ Pool SÚPER OPTIMIZADO inicializado: " + currentConnections.get() + " conexiones");
-            System.out.println("🔥 LISTO PARA PROCESAMIENTO MASIVO PARALELO");
+            System.out.println("✅ Pool de conexiones inicializado: " + currentConnections.get() + " conexiones");
+            System.out.println("🔥 LISTO PARA OPERACIONES");
         } else {
             System.err.println("❌ Pool de conexiones no pudo inicializarse completamente");
         }
@@ -157,11 +157,10 @@ public class ConnectionPool {
         Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
         
         // OPTIMIZACIONES A NIVEL DE CONEXIÓN
-        conn.setAutoCommit(true); // Auto-commit para consultas rápidas
-        conn.setReadOnly(true);   // Solo lectura para consultas
+        conn.setAutoCommit(true);
         conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
         
-        // Configurar timeouts agresivos
+        // Configurar timeouts
         try (PreparedStatement stmt = conn.prepareStatement("SET statement_timeout = '30s'")) {
             stmt.execute();
         }

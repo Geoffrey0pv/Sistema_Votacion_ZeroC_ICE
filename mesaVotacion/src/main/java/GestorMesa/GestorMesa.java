@@ -1,15 +1,25 @@
 package GestorMesa;
 
-import Demo.*;
-import GestorVotos.VotoImp;
-import ReliableMessageManager.ReliableMessageManager;
-import GestorVotos.GestorVotos;
-import com.zeroc.Ice.ObjectAdapter;
-import com.zeroc.Ice.Communicator;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.security.NoSuchAlgorithmException;
+import com.zeroc.Ice.Exception;
+import com.zeroc.Ice.Current;
+import com.zeroc.Ice.Properties;
+import com.zeroc.Ice.Identity;
+import com.zeroc.Ice.ObjectAdapter;
+import ReliableMessageManager.ReliableMessageManager;
+import GestorVotos.GestorVotos;
+import GestorVotos.VotoImp;
+import Demo.IRecibirCandidatos;
+import Demo.ICargarCandidatosPrx;
+import Demo.IRegistrarVotoPrx;
+import Demo.IConfirmacionVotoPrx;
+import Demo.IConfirmacionCandidatosPrx;
+import Demo.Candidato;
+import com.zeroc.Ice.*;
 
 public class GestorMesa implements IRecibirCandidatos {
     private final ReliableMessageManager messageManager;
@@ -41,16 +51,18 @@ public class GestorMesa implements IRecibirCandidatos {
         this.communicator = communicator;
 
         try {
+            // Crear y activar el adaptador usando la configuración del .cfg
             this.adapter = communicator.createObjectAdapter("MesaCallbackAdapter");
 
             // Registrar esta mesa como receptor de candidatos
-            com.zeroc.Ice.Identity mesaIdentity = new com.zeroc.Ice.Identity();
-            mesaIdentity.name = "Mesa-" + idMesa;
+            Identity mesaIdentity = new Identity();
+            mesaIdentity.name = idMesa;
             mesaIdentity.category = "RecibirCandidatos";
             adapter.add(this, mesaIdentity);
 
             adapter.activate();
 
+            // Obtener el proxy de IceGrid Query usando el Locator configurado
             this.query = com.zeroc.IceGrid.QueryPrx.checkedCast(
                     communicator.stringToProxy("DemoIceGrid/Query"));
 
@@ -77,7 +89,7 @@ public class GestorMesa implements IRecibirCandidatos {
                 return false;
             }
 
-        } catch (Exception e) {
+        } catch (com.zeroc.Ice.Exception e) {
             System.err.println("❌ Error inicializando gestor de mesa: " + e.getMessage());
             e.printStackTrace();
             return false;
@@ -85,41 +97,41 @@ public class GestorMesa implements IRecibirCandidatos {
     }
 
     @Override
-    public void recibirCandidatos(Candidato[] candidatos, IConfirmacionCandidatosPrx callback,
-                                  com.zeroc.Ice.Current current) {
+    public void recibirCandidatos(Candidato[] candidatos, IConfirmacionCandidatosPrx callback, Current current) {
         try {
             System.out.println("📋 Recibiendo lista de candidatos del servidor regional...");
-
-            candidatosDisponibles.clear();
-            for (Candidato candidato : candidatos) {
-                candidatosDisponibles.add(candidato);
-                System.out.println("   ✓ " + candidato.idCandidato + " - " + candidato.nombre +
-                        " (" + candidato.partido + ")");
-            }
-
-            candidatosCargados = true;
-            System.out.println(" Candidatos cargados exitosamente. Total: " + candidatos.length);
-
-            if (callback != null) {
+            if (candidatos != null && candidatos.length > 0) {
+                this.candidatosDisponibles = new ArrayList<>();
+                for (Candidato candidato : candidatos) {
+                    candidatosDisponibles.add(candidato);
+                    System.out.println("   ✓ " + candidato.idCandidato + " - " + candidato.nombre +
+                            " (" + candidato.partido + ")");
+                }
+                System.out.println("✅ " + candidatos.length + " candidatos recibidos correctamente");
+                
                 try {
                     callback.recibirConfirmacion(true,
                             "Candidatos recibidos correctamente en mesa " + idMesa);
                 } catch (Exception callbackEx) {
                     System.err.println(" Error enviando confirmación: " + callbackEx.getMessage());
                 }
-            }
-
-        } catch (Exception e) {
-            System.err.println(" Error procesando candidatos: " + e.getMessage());
-            e.printStackTrace();
-
-            if (callback != null) {
+            } else {
+                System.err.println("❌ Lista de candidatos vacía o nula");
                 try {
                     callback.recibirConfirmacion(false,
-                            "Error procesando candidatos en mesa " + idMesa + ": " + e.getMessage());
+                            "Error procesando candidatos en mesa " + idMesa + ": Lista vacía");
                 } catch (Exception callbackEx) {
                     System.err.println("Error enviando confirmación de error: " + callbackEx.getMessage());
                 }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error procesando candidatos: " + e.getMessage());
+            e.printStackTrace();
+            try {
+                callback.recibirConfirmacion(false,
+                        "Error procesando candidatos en mesa " + idMesa + ": " + e.getMessage());
+            } catch (Exception callbackEx) {
+                System.err.println("Error enviando confirmación de error: " + callbackEx.getMessage());
             }
         }
     }
@@ -129,33 +141,58 @@ public class GestorMesa implements IRecibirCandidatos {
             try {
                 System.out.println(" Solicitando candidatos al servidor regional...");
 
-                String endpointMesa = "Mesa-" + idMesa + ":tcp -h localhost -p " +
-                        (10000 + Integer.parseInt(idMesa.replaceAll("\\D+", "")));
+                // Obtener la configuración del adaptador desde el communicator
+                Properties props = communicator.getProperties();
+                String endpoints = props.getProperty("MesaCallbackAdapter.Endpoints");
+                
+                // Construir el endpoint para la mesa
+                String endpointMesa = idMesa + ":" + endpoints;
+                System.out.println(" Usando endpoint: " + endpointMesa);
 
                 CompletableFuture.supplyAsync(() -> {
-                            try {
-                                return gestionCandidatos.enviarCandidatosAMesas(endpointMesa);
-                            } catch (Exception e) {
-                                System.err.println("Error en solicitud asíncrona: " + e.getMessage());
-                                return false;
-                            }
-                        }).orTimeout(5, TimeUnit.SECONDS)
-                        .thenAccept(resultado -> {
-                            if (resultado) {
-                                System.out.println(" Solicitud de candidatos enviada exitosamente");
-                            } else {
-                                System.err.println("  Error en la solicitud de candidatos");
-                                cargarCandidatosPorDefecto();
-                            }
-                        }).exceptionally(ex -> {
-                            System.err.println("  Timeout o error en solicitud de candidatos: " + ex.getMessage());
+                    try {
+                        return gestionCandidatos.enviarCandidatosAMesas(endpointMesa);
+                    } catch (Exception e) {
+                        System.err.println("Error en solicitud asíncrona: " + e.getMessage());
+                        e.printStackTrace();
+                        return false;
+                    }
+                }).orTimeout(10, TimeUnit.SECONDS)
+                .thenAccept(resultado -> {
+                    if (!resultado) {
+                        System.err.println("  Error en la solicitud de candidatos");
+                        if (!candidatosCargados) {
                             cargarCandidatosPorDefecto();
-                            return null;
-                        });
+                        }
+                    }
+                }).exceptionally(ex -> {
+                    System.err.println("  Timeout o error en solicitud de candidatos: " + ex.getMessage());
+                    if (!candidatosCargados) {
+                        cargarCandidatosPorDefecto();
+                    }
+                    return null;
+                });
+
+                // Esperar un poco más para dar tiempo a que lleguen los candidatos
+                Thread.sleep(5000);
+
+                if (!candidatosCargados) {
+                    System.err.println("  No se recibieron candidatos después de esperar, cargando por defecto");
+                    cargarCandidatosPorDefecto();
+                }
 
             } catch (Exception e) {
                 System.err.println(" Error solicitando candidatos: " + e.getMessage());
-                cargarCandidatosPorDefecto();
+                e.printStackTrace();
+                if (!candidatosCargados) {
+                    cargarCandidatosPorDefecto();
+                }
+            } catch (InterruptedException e) {
+                System.err.println(" Interrupción durante la espera: " + e.getMessage());
+                Thread.currentThread().interrupt();
+                if (!candidatosCargados) {
+                    cargarCandidatosPorDefecto();
+                }
             }
         } else {
             System.err.println("  No hay conexión con GestionCandidatos, cargando candidatos por defecto");
@@ -495,18 +532,19 @@ public class GestorMesa implements IRecibirCandidatos {
     private String generarHashElector(String documentoIdentidad) {
         try {
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest((documentoIdentidad + idMesa).getBytes()); // Incluir ID mesa para unicidad
+            byte[] hashBytes = md.digest(documentoIdentidad.getBytes());
+            
             StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
+            for (byte b : hashBytes) {
                 String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
+                if (hex.length() == 1) hexString.append('0');
                 hexString.append(hex);
             }
-            return hexString.toString().substring(0, 16);
-        } catch (Exception e) {
-            return "HASH_" + Math.abs((documentoIdentidad + idMesa).hashCode());
+            return hexString.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            System.err.println("Error crítico: No se encuentra el algoritmo SHA-256");
+            // En caso de error, retornar un hash simple (no seguro, solo para evitar fallos)
+            return documentoIdentidad.hashCode() + "";
         }
     }
 

@@ -2,6 +2,7 @@ package AdministradorCandidatos;
 
 import Demo.*;
 import com.zeroc.Ice.*;
+import com.zeroc.IceGrid.*;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvException;
 
@@ -176,29 +177,33 @@ public class AdministradorCandidatos implements IAdministradorCandidatos {
             }
 
             try {
-                // Crear proxy para el servidor regional
-                ObjectPrx base = communicator.stringToProxy(endpointRegional);
-                IRecibirCandidatosPrx regional = IRecibirCandidatosPrx.checkedCast(base);
+                // Crear proxy directo para el servidor regional
+                ObjectPrx base = communicator.stringToProxy("gestionCandidatos@RegionalAdapter");
+                ICargarCandidatosPrx regional = ICargarCandidatosPrx.checkedCast(base);
 
                 if (regional == null) {
-                    System.err.println("Proxy inválido para servidor regional: " + endpointRegional);
+                    System.err.println("Proxy inválido para servidor regional");
                     return false;
                 }
 
                 // Crear callback para recibir confirmación
-                IConfirmacionCandidatosPrx callback = new _IConfirmacionCandidatosPrxI();
+                ConfirmacionCallback callback = new ConfirmacionCallback();
+                ObjectAdapter adapter = communicator.createObjectAdapter("");
+                IConfirmacionCandidatosPrx callbackPrx = IConfirmacionCandidatosPrx.uncheckedCast(
+                    adapter.addWithUUID(callback)
+                );
 
                 Candidato[] arrayCandidatos = candidatos.toArray(new Candidato[0]);
-                regional.recibirCandidatos(arrayCandidatos, callback);
+                regional.enviarCandidatosAMesas(endpointRegional);
 
-                System.out.println("Candidatos enviados a servidor regional: " + endpointRegional);
+                System.out.println("Candidatos enviados a servidor regional");
                 return true;
 
             } catch (Exception e) {
-                System.err.println("Error enviando candidatos a regional " + endpointRegional + ": " + e.getMessage());
+                System.err.println("Error enviando candidatos a regional: " + e.getMessage());
+                e.printStackTrace();
                 return false;
             }
-
         } finally {
             lock.readLock().unlock();
         }

@@ -20,7 +20,10 @@
         <option>-cp</option>
         <option>../servidorNacional/build/classes/java/main:../servidorNacional/build/generated-src:../servidorNacional/build/libs/*</option>
         <option>ServidorNacional</option>
-        <adapter name="ServidorNacionalAdapter" endpoints="tcp -h localhost -p 9090"/>
+        <adapter name="ServidorNacionalAdapter" endpoints="tcp -h localhost -p 9090">
+          <object identity="administradorCandidatos" type="::Demo::IAdministradorCandidatos"/>
+          <object identity="brokerNacional" type="::Demo::IBrokerNacional"/>
+        </adapter>
         <properties>
           <property name="Ice.Default.Package" value="Demo"/>
           
