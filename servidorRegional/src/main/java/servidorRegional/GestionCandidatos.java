@@ -49,32 +49,25 @@ public class GestionCandidatos implements ICargarCandidatos {
     }
 
     private void conectarAServidorNacional() {
-        new Thread(() -> {
-            try {
-                System.out.println("🔄 Conectando con Servidor Nacional...");
+        try {
+            System.out.println("🔄 Intentando conectar GestionCandidatos con Servidor Nacional...");
 
-                // Proxy para IConsultaCandidatos
-                ObjectPrx consultaBase = communicator.stringToProxy("ConsultaCandidatos@ServidorNacionalAdapter");
-                consultaCandidatosNacional = IConsultaCandidatosPrx.checkedCast(consultaBase);
-                if (consultaCandidatosNacional == null) {
-                    throw new Error("Proxy nulo para IConsultaCandidatos");
-                }
-                
-                System.out.println("✅ Conexión establecida con el servicio de Consulta de Candidatos");
-                actualizarCandidatosElectoralesDesdeNacional();
-                
-            } catch (Exception e) {
-                System.err.println("❌ Error conectando con el Servidor Nacional: " + e.getMessage());
-                
-                try {
-                    System.out.println("🔄 Reintentando conexión en 5 segundos...");
-                    Thread.sleep(5000);
-                    conectarAServidorNacional();
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                }
+            // Proxy para IConsultaCandidatos
+            ObjectPrx consultaBase = communicator.stringToProxy("ConsultaCandidatos@ServidorNacionalAdapter");
+            consultaCandidatosNacional = IConsultaCandidatosPrx.checkedCast(consultaBase);
+            if (consultaCandidatosNacional == null) {
+                System.err.println("⚠️ No se pudo conectar al servicio de Consulta de Candidatos");
+                System.err.println("💡 Los candidatos se cargarán bajo demanda cuando sea necesario");
+                return;
             }
-        }).start();
+            
+            System.out.println("✅ GestionCandidatos conectado al servicio de Consulta de Candidatos");
+            actualizarCandidatosElectoralesDesdeNacional();
+            
+        } catch (Exception e) {
+            System.err.println("⚠️ GestionCandidatos no pudo conectar: " + e.getMessage());
+            System.err.println("💡 Los candidatos se cargarán bajo demanda cuando sea necesario");
+        }
     }
 
     private void actualizarCandidatosElectoralesDesdeNacional() {
