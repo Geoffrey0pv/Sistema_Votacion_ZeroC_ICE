@@ -32,3 +32,18 @@ build
 .vscode
 Config/db
 Demo
+
+# Scripts de automatización (no incluir en el repositorio)
+*.sh
+
+# Bases de datos SQLite (contienen datos específicos de ejecución)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Directorio de datos de mesas de votación
+data/
+**/data/
+mesaVotacion/data/
+servidorRegional/data/
