@@ -13,8 +13,9 @@ import java.io.File;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 // ICE imports
 import com.zeroc.Ice.Communicator;
 import com.zeroc.Ice.ObjectAdapter;
@@ -30,6 +31,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class ServidorNacionalUI extends JFrame {
+
     // Componentes principales
     private final CandidatosService candidatosService;
     private final ElectoralReportService reportService;
