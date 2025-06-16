@@ -14,14 +14,11 @@ public class VotoModel {
     private String municipio;
     private String departamento;
     private String hashVerificacion;
-    private String firmaMesa;
     private LocalDateTime fechaRecepcion;
-    private String estado; // PENDIENTE, PROCESADO, ERROR
     
     // Constructores
     public VotoModel() {
         this.fechaRecepcion = LocalDateTime.now();
-        this.estado = "PENDIENTE";
     }
     
     public VotoModel(String mesaId, String candidatoId, LocalDateTime timestamp, 
@@ -33,7 +30,6 @@ public class VotoModel {
         this.municipio = municipio;
         this.departamento = departamento;
         this.hashVerificacion = hashVerificacion;
-        this.firmaMesa = firmaMesa;
     }
     
     // Getters y Setters
@@ -93,13 +89,6 @@ public class VotoModel {
         this.hashVerificacion = hashVerificacion;
     }
     
-    public String getFirmaMesa() {
-        return firmaMesa;
-    }
-    
-    public void setFirmaMesa(String firmaMesa) {
-        this.firmaMesa = firmaMesa;
-    }
     
     public LocalDateTime getFechaRecepcion() {
         return fechaRecepcion;
@@ -109,13 +98,6 @@ public class VotoModel {
         this.fechaRecepcion = fechaRecepcion;
     }
     
-    public String getEstado() {
-        return estado;
-    }
-    
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
     
     // Métodos de utilidad
     public boolean isValid() {
@@ -124,8 +106,7 @@ public class VotoModel {
                timestamp != null &&
                municipio != null && !municipio.trim().isEmpty() &&
                departamento != null && !departamento.trim().isEmpty() &&
-               hashVerificacion != null && !hashVerificacion.trim().isEmpty() &&
-               firmaMesa != null && !firmaMesa.trim().isEmpty();
+               hashVerificacion != null && !hashVerificacion.trim().isEmpty();
     }
     
     public String toJson() {
@@ -135,16 +116,15 @@ public class VotoModel {
             "\"firma_mesa\":\"%s\",\"fecha_recepcion\":\"%s\",\"estado\":\"%s\"}",
             id, mesaId, candidatoId, 
             timestamp != null ? timestamp.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "",
-            municipio, departamento, hashVerificacion, firmaMesa,
-            fechaRecepcion != null ? fechaRecepcion.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "",
-            estado
+            municipio, departamento, hashVerificacion,
+            fechaRecepcion != null ? fechaRecepcion.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : ""
         );
     }
     
     @Override
     public String toString() {
         return String.format("VotoModel{id=%d, mesa='%s', candidato='%s', municipio='%s', estado='%s'}", 
-                           id, mesaId, candidatoId, municipio, estado);
+                           id, mesaId, candidatoId, municipio);
     }
     
     @Override

@@ -11,7 +11,7 @@ import java.util.Properties;
 public class VotosConfigManager implements IConfig {
     private static VotosConfigManager instance;
     private Properties properties;
-    private static final String CONFIG_FILE = "/cfg";
+    private static final String CONFIG_FILE = "/votos.cfg";
     
     private VotosConfigManager() {
         loadConfiguration();
@@ -117,11 +117,11 @@ public class VotosConfigManager implements IConfig {
     }
     
     public int getVotosPoolMinSize() {
-        return getIntProperty("db.pool.minSize", 5);
+        return getIntProperty("db.pool.minSize", 1);
     }
     
     public int getVotosPoolMaxSize() {
-        return getIntProperty("db.pool.maxSize", 50);
+        return getIntProperty("db.pool.maxSize", 1);
     }
     
     public int getVotosPoolTimeout() {

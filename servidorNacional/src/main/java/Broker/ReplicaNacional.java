@@ -1,225 +1,205 @@
 package Broker;
 
 import Demo.*;
-import AdministradorCandidatos.AdministradorCandidatos;
+import Services.CandidatosService;
+import ConsultaCandidatos.ConsultaCandidatosImpl;
+import Models.CandidatoModel;
 import com.zeroc.Ice.Current;
 import com.zeroc.Ice.Communicator;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
 
-public class ReplicaNacional implements IReplicaNacional {
+public class ReplicaNacional implements IAdministradorCandidatos {
     
+    private final MonitorRecursos monitorReplica;
+    private final Communicator communicator;
     private final String nodeId;
-    private final AdministradorCandidatos administradorCandidatos;
-    private final MonitorRecursos monitorRecursos;
-    private final BalanceadorCarga balanceador;
-    private final ScheduledExecutorService scheduler;
-    private volatile boolean activa;
+    private final CandidatosService candidatosService;
+    private final ConsultaCandidatosImpl consultaCandidatos;
     
-    public ReplicaNacional(String nodeId, Communicator communicator, BalanceadorCarga balanceador) {
+    public ReplicaNacional(String nodeId, Communicator communicator) {
         this.nodeId = nodeId;
-        this.administradorCandidatos = new AdministradorCandidatos(communicator);
-        this.monitorRecursos = new MonitorRecursos(nodeId);
-        this.balanceador = balanceador;
-        this.scheduler = Executors.newScheduledThreadPool(2);
-        this.activa = true;
-        
-        // Iniciar reporte periódico de métricas al balanceador
-        iniciarReporteMetricas();
+        this.communicator = communicator;
+        this.candidatosService = new CandidatosService();
+        this.consultaCandidatos = new ConsultaCandidatosImpl();
+        this.monitorReplica = new MonitorRecursos(nodeId);
         
         System.out.printf("🔄 Réplica Nacional iniciada: %s%n", nodeId);
     }
     
-    private void iniciarReporteMetricas() {
-        // Reportar métricas al balanceador cada 10 segundos
-        scheduler.scheduleAtFixedRate(() -> {
-            if (activa && balanceador != null) {
-                try {
-                    MetricasRecursos metricas = monitorRecursos.obtenerMetricas(null);
-                    balanceador.actualizarMetricas(nodeId, metricas, null);
-                } catch (Exception e) {
-                    System.err.printf("❌ Error reportando métricas de %s: %s%n", nodeId, e.getMessage());
-                }
-            }
-        }, 5, 10, TimeUnit.SECONDS);
-    }
-    
-    // ========== MÉTODOS DE IAdministradorCandidatos ==========
-    
     @Override
     public boolean cargarCandidatosDesdeCSV(String rutaArchivo, Current current) {
-        monitorRecursos.incrementarRequests();
-        return administradorCandidatos.cargarCandidatosDesdeCSV(rutaArchivo, current);
+        monitorReplica.incrementarRequests();
+        
+        try {
+            java.io.File archivo = new java.io.File(rutaArchivo);
+            if (!archivo.exists()) {
+                System.err.println("❌ Archivo CSV no encontrado: " + rutaArchivo);
+                return false;
+            }
+            
+            List<CandidatoModel> candidatos = candidatosService.cargarCandidatosDesdeCSV(archivo);
+            boolean resultado = candidatosService.guardarCandidatos(candidatos) > 0;
+            
+            System.out.printf("📄 [%s] CSV procesado: %d candidatos%n", nodeId, candidatos.size());
+            return resultado;
+        } catch (Exception e) {
+            System.err.printf("❌ [%s] Error cargando CSV: %s%n", nodeId, e.getMessage());
+            return false;
+        }
     }
     
     @Override
     public boolean cargarCandidatosDesdeArray(Candidato[] candidatos, Current current) {
-        monitorRecursos.incrementarRequests();
-        return administradorCandidatos.cargarCandidatosDesdeArray(candidatos, current);
+        monitorReplica.incrementarRequests();
+        
+        try {
+            // Convertir Candidato[] a CandidatoModel[]
+            java.util.List<CandidatoModel> candidatosModel = new java.util.ArrayList<>();
+            for (Candidato candidato : candidatos) {
+                candidatosModel.add(new CandidatoModel(candidato.idCandidato, candidato.nombre, candidato.partido));
+            }
+            
+            boolean resultado = candidatosService.guardarCandidatos(candidatosModel) > 0;
+            System.out.printf("📦 [%s] Array procesado: %d candidatos%n", nodeId, candidatos.length);
+            return resultado;
+        } catch (Exception e) {
+            System.err.printf("❌ [%s] Error cargando array: %s%n", nodeId, e.getMessage());
+            return false;
+        }
     }
     
     @Override
     public int obtenerCantidadCandidatos(Current current) {
-        monitorRecursos.incrementarRequests();
-        return administradorCandidatos.obtenerCantidadCandidatos(current);
+        monitorReplica.incrementarRequests();
+        return (int) consultaCandidatos.contarCandidatos(current);
     }
     
     @Override
     public Candidato[] obtenerTodosCandidatos(Current current) {
-        monitorRecursos.incrementarRequests();
-        return administradorCandidatos.obtenerTodosCandidatos(current);
+        monitorReplica.incrementarRequests();
+        
+        CandidatoElectoral[] candidatosElectorales = consultaCandidatos.obtenerTodosCandidatosElectorales(current);
+        
+        // Convertir CandidatoElectoral[] a Candidato[]
+        Candidato[] candidatos = new Candidato[candidatosElectorales.length];
+        for (int i = 0; i < candidatosElectorales.length; i++) {
+            candidatos[i] = new Candidato();
+            candidatos[i].idCandidato = candidatosElectorales[i].id;
+            candidatos[i].nombre = candidatosElectorales[i].nombre;
+            candidatos[i].partido = candidatosElectorales[i].partido;
+        }
+        
+        return candidatos;
     }
     
     @Override
     public boolean limpiarCandidatos(Current current) {
-        monitorRecursos.incrementarRequests();
-        return administradorCandidatos.limpiarCandidatos(current);
+        monitorReplica.incrementarRequests();
+        
+        boolean resultado = candidatosService.eliminarTodosLosCandidatos();
+        System.out.printf("🗑️ [%s] Candidatos limpiados: %s%n", nodeId, resultado ? "OK" : "ERROR");
+        return resultado;
     }
     
     @Override
     public boolean enviarCandidatosARegional(String endpointRegional, Current current) {
-        monitorRecursos.incrementarRequests();
-        return administradorCandidatos.enviarCandidatosARegional(endpointRegional, current);
+        monitorReplica.incrementarRequests();
+        
+        try {
+            // Obtener candidatos
+            Candidato[] candidatos = obtenerTodosCandidatos(current);
+            if (candidatos.length == 0) {
+                System.err.printf("❌ [%s] No hay candidatos para enviar%n", nodeId);
+                return false;
+            }
+            
+            // Crear proxy al servidor regional
+            com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(endpointRegional);
+            ICargarCandidatosPrx cargarCandidatos = ICargarCandidatosPrx.checkedCast(base);
+            
+            if (cargarCandidatos == null) {
+                System.err.printf("❌ [%s] No se pudo conectar al servidor regional: %s%n", nodeId, endpointRegional);
+                return false;
+            }
+            
+            // Enviar candidatos
+            boolean resultado = cargarCandidatos.enviarCandidatosATodasMesas();
+            System.out.printf("%s [%s] Candidatos enviados al regional: %s%n", 
+                resultado ? "✅" : "❌", nodeId, endpointRegional);
+            return resultado;
+            
+        } catch (Exception e) {
+            System.err.printf("❌ [%s] Error enviando candidatos a regional: %s%n", nodeId, e.getMessage());
+            return false;
+        }
     }
     
     @Override
     public boolean enviarCandidatosATodosRegionales(Current current) {
-        monitorRecursos.incrementarRequests();
-        return administradorCandidatos.enviarCandidatosATodosRegionales(current);
+        monitorReplica.incrementarRequests();
+        
+        // TODO: Implementar envío a todos los regionales conocidos
+        System.out.printf("⚠️ [%s] enviarCandidatosATodosRegionales no implementado completamente%n", nodeId);
+        return false;
     }
     
-    // ========== MÉTODOS DE IMonitorRecursos ==========
+    // Métodos específicos de la réplica
     
-    @Override
-    public MetricasRecursos obtenerMetricas(Current current) {
-        return monitorRecursos.obtenerMetricas(current);
+    public MetricasRecursos obtenerMetricas() {
+        return monitorReplica.obtenerMetricas(null);
     }
     
-    @Override
-    public boolean estaDisponible(Current current) {
-        return activa && monitorRecursos.estaDisponible(current);
-    }
-    
-    @Override
-    public void notificarCarga(double carga, Current current) {
-        monitorRecursos.notificarCarga(carga, current);
-    }
-    
-    // ========== MÉTODOS DE IReplicaNacional ==========
-    
-    @Override
-    public boolean sincronizarConMaster(Candidato[] candidatos, Current current) {
-        try {
-            System.out.printf("🔄 [%s] Sincronizando %d candidatos desde master%n", nodeId, candidatos.length);
-            
-            // Limpiar datos actuales
-            administradorCandidatos.limpiarCandidatos(current);
-            
-            // Cargar nuevos datos
-            boolean resultado = administradorCandidatos.cargarCandidatosDesdeArray(candidatos, current);
-            
-            if (resultado) {
-                System.out.printf("✅ [%s] Sincronización completada exitosamente%n", nodeId);
-            } else {
-                System.err.printf("❌ [%s] Error en sincronización%n", nodeId);
-            }
-            
-            return resultado;
-            
-        } catch (Exception e) {
-            System.err.printf("❌ [%s] Error sincronizando: %s%n", nodeId, e.getMessage());
-            return false;
-        }
-    }
-    
-    @Override
-    public boolean notificarEstado(MetricasRecursos metricas, Current current) {
-        try {
-            // Actualizar métricas en el balanceador si está disponible
-            if (balanceador != null) {
-                balanceador.actualizarMetricas(nodeId, metricas, null);
-            }
-            
-            // Log periódico del estado
-            if (metricas.requestCount % 50 == 0) {
-                System.out.printf("📊 [%s] Estado: CPU=%.1f%%, MEM=%.1f%%, REQ=%d%n",
-                    nodeId, metricas.cpuUsage, metricas.memoryUsage, metricas.requestCount);
-            }
-            
-            return true;
-            
-        } catch (Exception e) {
-            System.err.printf("❌ [%s] Error notificando estado: %s%n", nodeId, e.getMessage());
-            return false;
-        }
-    }
-    
-    @Override
-    public String obtenerNodeId(Current current) {
+    public String getNodeId() {
         return nodeId;
     }
     
-    // ========== MÉTODOS PÚBLICOS ADICIONALES ==========
-    
-    public boolean necesitaEscalado() {
-        return monitorRecursos.necesitaEscalado();
+    public boolean isServiceAvailable() {
+        return candidatosService.isServiceAvailable();
     }
     
-    public boolean puedeReducirse() {
-        return monitorRecursos.puedeReducirse();
+    /**
+     * Sincroniza los candidatos de esta réplica con los datos proporcionados
+     */
+    public boolean sincronizarCandidatos(Candidato[] candidatos) {
+        try {
+            System.out.printf("🔄 [%s] Sincronizando %d candidatos...%n", nodeId, candidatos.length);
+            
+            // Limpiar candidatos existentes
+            candidatosService.eliminarTodosLosCandidatos();
+            
+            // Cargar nuevos candidatos
+            boolean resultado = cargarCandidatosDesdeArray(candidatos, null);
+            
+            System.out.printf("%s [%s] Sincronización completada%n", 
+                resultado ? "✅" : "❌", nodeId);
+            return resultado;
+            
+        } catch (Exception e) {
+            System.err.printf("❌ [%s] Error en sincronización: %s%n", nodeId, e.getMessage());
+            return false;
+        }
     }
     
-    public double getCargaTotal() {
-        return monitorRecursos.getCargaTotal();
+    // Getters para acceso a componentes internos
+    public CandidatosService getCandidatosService() {
+        return candidatosService;
     }
     
-    public AdministradorCandidatos getAdministradorCandidatos() {
-        return administradorCandidatos;
+    public ConsultaCandidatosImpl getConsultaCandidatos() {
+        return consultaCandidatos;
     }
     
-    public MonitorRecursos getMonitorRecursos() {
-        return monitorRecursos;
-    }
-    
-    public boolean isActiva() {
-        return activa;
-    }
-    
-    public void setActiva(boolean activa) {
-        this.activa = activa;
-        System.out.printf("🔄 [%s] Estado cambiado a: %s%n", nodeId, activa ? "ACTIVA" : "INACTIVA");
+    public MonitorRecursos getMonitorReplica() {
+        return monitorReplica;
     }
     
     public void shutdown() {
-        System.out.printf("🔄 [%s] Deteniendo réplica...%n", nodeId);
+        System.out.printf("🛑 [%s] Cerrando réplica...%n", nodeId);
         
-        activa = false;
-        
-        // Detener scheduler
-        if (scheduler != null && !scheduler.isShutdown()) {
-            scheduler.shutdown();
-            try {
-                if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                    scheduler.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                scheduler.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
+        if (consultaCandidatos != null) {
+            consultaCandidatos.shutdown();
         }
         
-        // Detener monitor de recursos
-        if (monitorRecursos != null) {
-            monitorRecursos.shutdown();
-        }
-        
-        System.out.printf("✅ [%s] Réplica detenida%n", nodeId);
-    }
-    
-    @Override
-    public String toString() {
-        return String.format("ReplicaNacional{nodeId='%s', activa=%s, carga=%.1f%%}", 
-            nodeId, activa, getCargaTotal());
+        System.out.printf("✅ [%s] Réplica cerrada%n", nodeId);
     }
 } 

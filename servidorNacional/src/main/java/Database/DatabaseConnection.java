@@ -1,72 +1,51 @@
 package Database;
 
+import Config.ConfigManager;
 import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
- * Wrapper para el pool de conexiones de base de datos
- * Simplifica el uso del ConnectionPool para los servicios
+ * Conexión RÁPIDA y SIMPLE para la base de datos de Registraduría
  */
 public class DatabaseConnection {
     
-    private final ConnectionPool connectionPool;
+    private final ConnectionPoolManager poolManager;
+    private boolean isServiceActive = true;
     
-    public DatabaseConnection(String type) {
-        this.connectionPool = ConnectionPool.getInstance(type);
-        System.out.println("🔗 DatabaseConnection inicializada");
+    public DatabaseConnection() {
+        this.poolManager = ConnectionPoolManager.getInstance();
+        System.out.println("🔗 DatabaseConnection RÁPIDA inicializada");
     }
     
     /**
-     * Obtiene una conexión de la base de datos
-     * @return Connection o null si el servicio está inactivo
+     * Obtiene una conexión válida - RÁPIDO
      */
     public Connection getConnection() {
+        if (!isServiceActive) {
+            return null;
+        }
+        
         try {
-            return connectionPool.getConnection();
+            return poolManager.getRegistraduriaConnection();
         } catch (SQLException e) {
-            if ("SERVICIO_INACTIVO".equals(e.getMessage())) {
-                System.err.println("❌ Servicio de base de datos inactivo");
-                return null;
-            } else {
-                System.err.println("❌ Error obteniendo conexión: " + e.getMessage());
-                return null;
-            }
+            System.err.println("❌ Error conexión registraduría: " + e.getMessage());
+            return null;
         }
     }
     
-    /**
-     * Devuelve una conexión al pool
-     * @param conn Conexión a devolver
-     */
-    public void returnConnection(Connection conn) {
-        if (conn != null) {
-            connectionPool.returnConnection(conn);
-        }
-    }
-    
-    /**
-     * Cierra una conexión definitivamente
-     * @param conn Conexión a cerrar
-     */
-    public void closeConnection(Connection conn) {
-        if (conn != null) {
-            connectionPool.closeConnection(conn);
-        }
-    }
-    
-    /**
-     * Verifica si el servicio de base de datos está activo
-     * @return true si está activo, false si no
-     */
     public boolean isServiceActive() {
-        return connectionPool.isServiceActive();
+        return isServiceActive;
     }
     
-    /**
-     * Obtiene estadísticas del pool de conexiones
-     * @return String con estadísticas
-     */
-    public String getPoolStats() {
-        return connectionPool.getPoolStats();
+    public void reconnect() {
+        // No hacer nada, el pool maneja esto
+    }
+    
+    public void close() {
+        isServiceActive = false;
+    }
+    
+    public String getConnectionInfo() {
+        return isServiceActive ? "🔗 Registraduría: ACTIVA" : "❌ Registraduría: INACTIVA";
     }
 } 

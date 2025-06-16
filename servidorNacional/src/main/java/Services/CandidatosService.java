@@ -1,6 +1,7 @@
 package Services;
 
-import Database.DatabaseConnection;
+import Database.DatabaseManager;
+import Database.VotosDatabaseConnection;
 import Models.CandidatoModel;
 import java.io.*;
 import java.sql.*;
@@ -12,14 +13,17 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 /**
  * Servicio para gestionar candidatos
  * Maneja la carga desde CSV/Excel y operaciones de base de datos
+ * Utiliza la base de datos de votos
  */
 public class CandidatosService {
     
-    private final DatabaseConnection dbConnection;
+    private final DatabaseManager dbManager;
+    private final VotosDatabaseConnection dbConnection;
     private final AtomicLong nextGeneratedId;
     
     public CandidatosService() {
-        this.dbConnection = new DatabaseConnection("votos");
+        this.dbManager = DatabaseManager.getInstance();
+        this.dbConnection = dbManager.getVotosConnection();
         this.nextGeneratedId = new AtomicLong(100000); // IDs generados empiezan en 100000
         
         // Crear tabla si no existe
@@ -29,18 +33,19 @@ public class CandidatosService {
         testDatabaseConnection();
         
         System.out.println("🗳️  CandidatosService inicializado");
+        System.out.println("   📊 Base de datos: votos");
     }
     
     /**
      * Crea la tabla candidato si no existe
      */
     private void createCandidatoTableIfNotExists() {
+        // Primero eliminar la tabla si existe con el tipo incorrecto
+        String dropTableSQL = "DROP TABLE IF EXISTS candidato";
         String createTableSQL = "CREATE TABLE IF NOT EXISTS candidato (" +
             "id BIGINT PRIMARY KEY," +
             "nombre VARCHAR(255) NOT NULL," +
-            "partido VARCHAR(255) NOT NULL," +
-            "fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-            "activo BOOLEAN DEFAULT true" +
+            "partido VARCHAR(255) NOT NULL" +
             ")";
         
         String createIndexSQL = "CREATE INDEX IF NOT EXISTS idx_candidato_partido ON candidato(partido)";
@@ -48,9 +53,11 @@ public class CandidatosService {
         try (Connection conn = dbConnection.getConnection()) {
             if (conn != null) {
                 try (Statement stmt = conn.createStatement()) {
+                    // Eliminar tabla existente para recrear con tipo correcto
+                    stmt.execute(dropTableSQL);
                     stmt.execute(createTableSQL);
                     stmt.execute(createIndexSQL);
-                    System.out.println("✅ Tabla 'candidato' verificada/creada en BD de votos");
+                    System.out.println("✅ Tabla 'candidato' recreada con ID como BIGINT");
                 }
             }
         } catch (SQLException e) {
@@ -219,12 +226,10 @@ public class CandidatosService {
      */
     private Set<Long> obtenerIdsExistentes() {
         Set<Long> ids = new HashSet<>();
-        Connection conn = null;
         
-        try {
-            conn = dbConnection.getConnection();
+        try (Connection conn = dbConnection.getConnection()) {
             if (conn == null) {
-                System.err.println("⚠️  No se pudo conectar a la BD principal, continuando sin validar IDs existentes");
+                System.err.println("⚠️  No se pudo conectar a la BD de votos, continuando sin validar IDs existentes");
                 return ids;
             }
             
@@ -239,10 +244,6 @@ public class CandidatosService {
             
         } catch (SQLException e) {
             System.err.println("❌ Error obteniendo IDs existentes: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                dbConnection.returnConnection(conn);
-            }
         }
         
         return ids;
@@ -258,14 +259,15 @@ public class CandidatosService {
             return 0;
         }
         
-        Connection conn = null;
         int guardados = 0;
         
-        try {
-            conn = dbConnection.getConnection();
+        try (Connection conn = dbConnection.getConnection()) {
             if (conn == null) {
-                throw new SQLException("No se pudo conectar a la base de datos principal");
+                throw new SQLException("No se pudo conectar a la base de datos de votos");
             }
+            
+            // Deshabilitar autoCommit para manejar transacciones manualmente
+            conn.setAutoCommit(false);
             
             // Usar INSERT simple ya que eliminamos todos los candidatos antes
             String sql = "INSERT INTO candidato (id, nombre, partido) VALUES (?, ?, ?)";
@@ -285,25 +287,19 @@ public class CandidatosService {
                     }
                 }
                 
+                // Hacer commit en la conexión, no en dbConnection
                 conn.commit();
                 System.out.println("✅ Candidatos guardados en BD: " + guardados + "/" + candidatos.size());
                 
+            } catch (SQLException e) {
+                System.err.println("❌ Error en transacción: " + e.getMessage());
+                conn.rollback();
+                throw e;
             }
             
         } catch (SQLException e) {
             System.err.println("❌ Error guardando candidatos: " + e.getMessage());
             e.printStackTrace();
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException rollbackEx) {
-                    System.err.println("❌ Error en rollback: " + rollbackEx.getMessage());
-                }
-            }
-        } finally {
-            if (conn != null) {
-                dbConnection.returnConnection(conn);
-            }
         }
         
         return guardados;
@@ -315,12 +311,10 @@ public class CandidatosService {
      */
     public List<CandidatoModel> obtenerTodosLosCandidatos() {
         List<CandidatoModel> candidatos = new ArrayList<>();
-        Connection conn = null;
         
-        try {
-            conn = dbConnection.getConnection();
+        try (Connection conn = dbConnection.getConnection()) {
             if (conn == null) {
-                throw new SQLException("No se pudo conectar a la base de datos principal");
+                throw new SQLException("No se pudo conectar a la base de datos de votos");
             }
             
             String sql = "SELECT id, nombre, partido FROM candidato ORDER BY id";
@@ -340,10 +334,6 @@ public class CandidatosService {
             
         } catch (SQLException e) {
             System.err.println("❌ Error obteniendo candidatos: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                dbConnection.returnConnection(conn);
-            }
         }
         
         return candidatos;
@@ -369,7 +359,7 @@ public class CandidatosService {
                 System.out.println("✅ Conexión exitosa a BD de CANDIDATOS:");
                 System.out.println("   📍 URL: " + url);
                 System.out.println("   👤 Usuario: " + user);
-                System.out.println("   📊 Pool Stats: " + dbConnection.getPoolStats());
+                System.out.println("   📊 Connection Info: " + dbConnection.getConnectionInfo());
             } else {
                 System.err.println("❌ No se pudo conectar a la BD de candidatos");
             }

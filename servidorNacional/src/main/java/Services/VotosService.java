@@ -1,6 +1,7 @@
 package Services;
 
 import Models.VotoModel;
+import Database.DatabaseManager;
 import Database.DatabaseConnection;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -15,15 +16,18 @@ import java.util.List;
 
 /**
  * Servicio para gestionar votos con reliable messaging
+ * Utiliza la base de datos de registraduría
  */
 public class VotosService implements ReliableMessageQueue.VotoProcessor {
     
+    private final DatabaseManager dbManager;
     private final DatabaseConnection dbConnection;
     private final Gson gson;
     private final ReliableMessageQueue messageQueue;
     
     public VotosService() {
-        this.dbConnection = new DatabaseConnection("votos");
+        this.dbManager = DatabaseManager.getInstance();
+        this.dbConnection = dbManager.getRegistraduriaConnection();
         this.gson = new GsonBuilder()
             .registerTypeAdapter(LocalDateTime.class, (JsonDeserializer<LocalDateTime>) (json, typeOfT, context) -> 
                 LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_DATE_TIME))
@@ -37,6 +41,7 @@ public class VotosService implements ReliableMessageQueue.VotoProcessor {
         createVotosTableIfNotExists();
         
         System.out.println("✅ VotosService inicializado con reliable messaging");
+        System.out.println("   📊 Base de datos: registraduría");
     }
     
     private void createVotosTableIfNotExists() {
@@ -146,9 +151,8 @@ public class VotosService implements ReliableMessageQueue.VotoProcessor {
             stmt.setString(4, voto.getMunicipio());
             stmt.setString(5, voto.getDepartamento());
             stmt.setString(6, voto.getHashVerificacion());
-            stmt.setString(7, voto.getFirmaMesa());
-            stmt.setTimestamp(8, Timestamp.valueOf(voto.getFechaRecepcion()));
-            stmt.setString(9, "PROCESADO");
+            stmt.setTimestamp(7, Timestamp.valueOf(voto.getFechaRecepcion()));
+            stmt.setString(8, "PROCESADO");
             
             int rowsAffected = stmt.executeUpdate();
             
@@ -272,7 +276,7 @@ public class VotosService implements ReliableMessageQueue.VotoProcessor {
                 System.out.println("✅ Conexión exitosa a BD de VOTOS:");
                 System.out.println("   📍 URL: " + url);
                 System.out.println("   👤 Usuario: " + user);
-                System.out.println("   📊 Pool Stats: " + dbConnection.getPoolStats());
+                System.out.println("   📊 Connection Info: " + dbConnection.getConnectionInfo());
             } else {
                 System.err.println("❌ No se pudo conectar a la BD de votos");
             }
