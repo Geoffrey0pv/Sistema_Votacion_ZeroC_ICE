@@ -22,6 +22,7 @@ import com.zeroc.Ice.Util;
 // Imports del proyecto
 import Demo.*;
 import Services.CandidatosService;
+import Services.ElectoralReportService;
 import Models.CandidatoModel;
 
 import java.text.SimpleDateFormat;
@@ -30,6 +31,7 @@ import java.util.Date;
 public class ServidorNacionalUI extends JFrame {
     // Componentes principales
     private final CandidatosService candidatosService;
+    private final ElectoralReportService reportService;
     
     // Componentes UI principales
     private JTable tablaCandidatos;
@@ -39,6 +41,13 @@ public class ServidorNacionalUI extends JFrame {
     private JTextArea areaLog;
     private JLabel lblEstadoCandidatos;
     
+    // Componentes UI para reportes
+    private JLabel lblEstadoJornada;
+    private JLabel lblTotalVotos;
+    private JLabel lblTotalMesas;
+    private JLabel lblTotalCandidatos;
+    private JLabel lblFechaCierre;
+    
     // Scheduler para actualizaciones automáticas
     private final ScheduledExecutorService schedulerUI;
 
@@ -47,6 +56,7 @@ public class ServidorNacionalUI extends JFrame {
      */
     public ServidorNacionalUI() {
         this.candidatosService = new CandidatosService();
+        this.reportService = new ElectoralReportService();
         this.schedulerUI = Executors.newScheduledThreadPool(1);
         
         // Configurar la ventana principal
@@ -57,6 +67,9 @@ public class ServidorNacionalUI extends JFrame {
         
         // Cargar candidatos iniciales
         cargarCandidatosDesdeDB();
+        
+        // Iniciar actualizaciones automáticas de estadísticas
+        iniciarActualizacionEstadisticas();
         
         log("🎯 Servidor Nacional UI inicializado correctamente");
     }
@@ -85,6 +98,9 @@ public class ServidorNacionalUI extends JFrame {
         
         // Pestaña 2: Logs del Sistema
         tabbedPane.addTab("📝 Logs", crearPanelLogs());
+        
+        // Pestaña 3: Reportes
+        tabbedPane.addTab("📊 Reportes", crearPanelReportes());
         
         add(tabbedPane, BorderLayout.CENTER);
         
@@ -213,6 +229,101 @@ public class ServidorNacionalUI extends JFrame {
         
         panel.add(scrollLog, BorderLayout.CENTER);
         panel.add(panelControlesLog, BorderLayout.SOUTH);
+        
+        return panel;
+    }
+
+    private JPanel crearPanelReportes() {
+        JPanel panel = new JPanel(new BorderLayout());
+        
+        // Panel superior con estadísticas
+        JPanel panelEstadisticas = new JPanel(new GridBagLayout());
+        panelEstadisticas.setBorder(new TitledBorder("📊 Estadísticas de la Jornada Electoral"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        
+        // Fila 1 - Estado de la jornada
+        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
+        panelEstadisticas.add(new JLabel("Estado de la jornada:"), gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 0; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        lblEstadoJornada = new JLabel("🔄 Cargando...");
+        lblEstadoJornada.setFont(new Font("Arial", Font.BOLD, 12));
+        panelEstadisticas.add(lblEstadoJornada, gbc);
+        
+        // Fila 2 - Total de votos
+        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
+        panelEstadisticas.add(new JLabel("Total de votos:"), gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 1; gbc.weightx = 1.0;
+        lblTotalVotos = new JLabel("🔄 Cargando...");
+        lblTotalVotos.setFont(new Font("Arial", Font.BOLD, 12));
+        panelEstadisticas.add(lblTotalVotos, gbc);
+        
+        // Fila 3 - Total de mesas
+        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0;
+        panelEstadisticas.add(new JLabel("Total de mesas:"), gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 2; gbc.weightx = 1.0;
+        lblTotalMesas = new JLabel("🔄 Cargando...");
+        lblTotalMesas.setFont(new Font("Arial", Font.BOLD, 12));
+        panelEstadisticas.add(lblTotalMesas, gbc);
+        
+        // Fila 4 - Total de candidatos
+        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0;
+        panelEstadisticas.add(new JLabel("Total de candidatos:"), gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 3; gbc.weightx = 1.0;
+        lblTotalCandidatos = new JLabel("🔄 Cargando...");
+        lblTotalCandidatos.setFont(new Font("Arial", Font.BOLD, 12));
+        panelEstadisticas.add(lblTotalCandidatos, gbc);
+        
+        // Fila 5 - Fecha de cierre
+        gbc.gridx = 0; gbc.gridy = 4; gbc.weightx = 0;
+        panelEstadisticas.add(new JLabel("Fecha de cierre:"), gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 4; gbc.weightx = 1.0;
+        lblFechaCierre = new JLabel("🔄 No cerrada");
+        lblFechaCierre.setFont(new Font("Arial", Font.BOLD, 12));
+        panelEstadisticas.add(lblFechaCierre, gbc);
+        
+        // Panel de botones
+        JPanel panelBotones = new JPanel(new FlowLayout());
+        panelBotones.setBorder(new TitledBorder("🔧 Acciones"));
+        
+        JButton btnActualizar = new JButton("🔄 Actualizar Estadísticas");
+        btnActualizar.setBackground(new Color(33, 150, 243));
+        btnActualizar.setForeground(Color.WHITE);
+        btnActualizar.setPreferredSize(new Dimension(200, 40));
+        
+        JButton btnCerrarJornada = new JButton("🔒 Cerrar Jornada Electoral");
+        btnCerrarJornada.setBackground(new Color(255, 152, 0));
+        btnCerrarJornada.setForeground(Color.WHITE);
+        btnCerrarJornada.setPreferredSize(new Dimension(200, 40));
+        
+        JButton btnGenerarReportes = new JButton("📄 Generar Reportes CSV");
+        btnGenerarReportes.setBackground(new Color(76, 175, 80));
+        btnGenerarReportes.setForeground(Color.WHITE);
+        btnGenerarReportes.setPreferredSize(new Dimension(200, 40));
+        
+        JButton btnCerrarYGenerar = new JButton("🚀 Cerrar y Generar Reportes");
+        btnCerrarYGenerar.setBackground(new Color(156, 39, 176));
+        btnCerrarYGenerar.setForeground(Color.WHITE);
+        btnCerrarYGenerar.setPreferredSize(new Dimension(200, 40));
+        
+        panelBotones.add(btnActualizar);
+        panelBotones.add(btnCerrarJornada);
+        panelBotones.add(btnGenerarReportes);
+        panelBotones.add(btnCerrarYGenerar);
+        
+        // Event listeners
+        btnActualizar.addActionListener(e -> actualizarEstadisticasReportes());
+        btnCerrarJornada.addActionListener(e -> cerrarJornadaElectoral());
+        btnGenerarReportes.addActionListener(e -> generarReportesCSV());
+        btnCerrarYGenerar.addActionListener(e -> cerrarJornadaYGenerarReportes());
+        
+        panel.add(panelEstadisticas, BorderLayout.NORTH);
+        panel.add(panelBotones, BorderLayout.CENTER);
         
         return panel;
     }
@@ -658,6 +769,297 @@ public class ServidorNacionalUI extends JFrame {
         };
         
         worker.execute();
+    }
+
+    /**
+     * Inicia las actualizaciones automáticas de estadísticas
+     */
+    private void iniciarActualizacionEstadisticas() {
+        // Actualizar estadísticas cada 30 segundos
+        schedulerUI.scheduleWithFixedDelay(() -> {
+            SwingUtilities.invokeLater(this::actualizarEstadisticasReportes);
+        }, 5, 30, TimeUnit.SECONDS);
+    }
+    
+    /**
+     * Actualiza las estadísticas de reportes
+     */
+    private void actualizarEstadisticasReportes() {
+        SwingWorker<ElectoralReportService.JornadaStats, Void> worker = new SwingWorker<ElectoralReportService.JornadaStats, Void>() {
+            @Override
+            protected ElectoralReportService.JornadaStats doInBackground() throws Exception {
+                return reportService.getJornadaStats();
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    ElectoralReportService.JornadaStats stats = get();
+                    
+                    // Actualizar labels
+                    lblEstadoJornada.setText(stats.jornadaCerrada ? "🔒 CERRADA" : "🔓 ABIERTA");
+                    lblEstadoJornada.setForeground(stats.jornadaCerrada ? Color.RED : Color.GREEN);
+                    
+                    lblTotalVotos.setText("🗳️ " + stats.totalVotos);
+                    lblTotalMesas.setText("🏛️ " + stats.totalMesas);
+                    lblTotalCandidatos.setText("👥 " + stats.totalCandidatos);
+                    
+                    if (stats.fechaCierre != null) {
+                        lblFechaCierre.setText("📅 " + stats.fechaCierre.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                        lblFechaCierre.setForeground(Color.RED);
+                    } else {
+                        lblFechaCierre.setText("❌ No cerrada");
+                        lblFechaCierre.setForeground(Color.GRAY);
+                    }
+                    
+                } catch (Exception e) {
+                    log("❌ Error actualizando estadísticas: " + e.getMessage());
+                }
+            }
+        };
+        worker.execute();
+    }
+    
+    /**
+     * Cierra la jornada electoral
+     */
+    private void cerrarJornadaElectoral() {
+        int confirmacion = JOptionPane.showConfirmDialog(
+            this,
+            "¿Está seguro de que desea cerrar la jornada electoral?\n\nEsta acción no se puede deshacer.",
+            "Confirmar Cierre de Jornada",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+        
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+                @Override
+                protected Boolean doInBackground() throws Exception {
+                    return reportService.cerrarJornada();
+                }
+                
+                @Override
+                protected void done() {
+                    try {
+                        boolean success = get();
+                        if (success) {
+                            JOptionPane.showMessageDialog(
+                                ServidorNacionalUI.this,
+                                "✅ Jornada electoral cerrada exitosamente",
+                                "Jornada Cerrada",
+                                JOptionPane.INFORMATION_MESSAGE
+                            );
+                            log("🔒 Jornada electoral cerrada");
+                            actualizarEstadisticasReportes();
+                        } else {
+                            JOptionPane.showMessageDialog(
+                                ServidorNacionalUI.this,
+                                "❌ No se pudo cerrar la jornada electoral",
+                                "Error",
+                                JOptionPane.ERROR_MESSAGE
+                            );
+                        }
+                    } catch (Exception e) {
+                        log("❌ Error cerrando jornada: " + e.getMessage());
+                        JOptionPane.showMessageDialog(
+                            ServidorNacionalUI.this,
+                            "❌ Error cerrando jornada: " + e.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                    }
+                }
+            };
+            worker.execute();
+        }
+    }
+    
+    /**
+     * Genera los reportes CSV
+     */
+    private void generarReportesCSV() {
+        SwingWorker<ElectoralReportService.ReportResult, Void> worker = new SwingWorker<ElectoralReportService.ReportResult, Void>() {
+            @Override
+            protected ElectoralReportService.ReportResult doInBackground() throws Exception {
+                return reportService.generateAllReports();
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    ElectoralReportService.ReportResult result = get();
+                    
+                    if (result.success) {
+                        String mensaje = String.format(
+                            "✅ Reportes generados exitosamente:\n\n" +
+                            "📁 Directorio: %s\n" +
+                            "📄 Archivos generados: %d\n\n" +
+                            "Archivos disponibles:\n" +
+                            "• resume.csv - Reporte general\n" +
+                            "• partial-{mesaId}.csv - Reportes por mesa",
+                            result.reportDirectory,
+                            result.filesGenerated
+                        );
+                        
+                        JOptionPane.showMessageDialog(
+                            ServidorNacionalUI.this,
+                            mensaje,
+                            "Reportes Generados",
+                            JOptionPane.INFORMATION_MESSAGE
+                        );
+                        
+                        log("📄 Reportes CSV generados: " + result.reportDirectory);
+                        
+                        // Preguntar si desea abrir el directorio
+                        int abrir = JOptionPane.showConfirmDialog(
+                            ServidorNacionalUI.this,
+                            "¿Desea abrir el directorio de reportes?",
+                            "Abrir Directorio",
+                            JOptionPane.YES_NO_OPTION
+                        );
+                        
+                        if (abrir == JOptionPane.YES_OPTION) {
+                            try {
+                                Desktop.getDesktop().open(new File(result.reportDirectory));
+                            } catch (Exception e) {
+                                log("❌ No se pudo abrir el directorio: " + e.getMessage());
+                            }
+                        }
+                        
+                    } else {
+                        JOptionPane.showMessageDialog(
+                            ServidorNacionalUI.this,
+                            "❌ Error generando reportes:\n" + result.message,
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                    }
+                    
+                } catch (Exception e) {
+                    log("❌ Error generando reportes: " + e.getMessage());
+                    JOptionPane.showMessageDialog(
+                        ServidorNacionalUI.this,
+                        "❌ Error generando reportes: " + e.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                    );
+                }
+            }
+        };
+        worker.execute();
+    }
+    
+    /**
+     * Cierra la jornada y genera reportes en una sola acción
+     */
+    private void cerrarJornadaYGenerarReportes() {
+        int confirmacion = JOptionPane.showConfirmDialog(
+            this,
+            "¿Está seguro de que desea cerrar la jornada electoral y generar los reportes?\n\n" +
+            "Esta acción:\n" +
+            "• Cerrará la jornada electoral (irreversible)\n" +
+            "• Generará todos los reportes CSV\n" +
+            "• Creará los archivos resume.csv y partial-{mesaId}.csv",
+            "Confirmar Cierre y Generación de Reportes",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+        
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            SwingWorker<ElectoralReportService.ReportResult, String> worker = new SwingWorker<ElectoralReportService.ReportResult, String>() {
+                @Override
+                protected ElectoralReportService.ReportResult doInBackground() throws Exception {
+                    // Primero cerrar la jornada si no está cerrada
+                    if (!reportService.isJornadaCerrada()) {
+                        publish("🔒 Cerrando jornada electoral...");
+                        boolean closed = reportService.cerrarJornada();
+                        if (!closed) {
+                            throw new Exception("No se pudo cerrar la jornada electoral");
+                        }
+                        publish("✅ Jornada cerrada exitosamente");
+                    }
+                    
+                    // Luego generar reportes
+                    publish("📄 Generando reportes CSV...");
+                    return reportService.generateAllReports();
+                }
+                
+                @Override
+                protected void process(java.util.List<String> chunks) {
+                    for (String mensaje : chunks) {
+                        log(mensaje);
+                    }
+                }
+                
+                @Override
+                protected void done() {
+                    try {
+                        ElectoralReportService.ReportResult result = get();
+                        
+                        if (result.success) {
+                            String mensaje = String.format(
+                                "🎉 ¡PROCESO COMPLETADO EXITOSAMENTE!\n\n" +
+                                "✅ Jornada electoral cerrada\n" +
+                                "✅ Reportes generados\n\n" +
+                                "📁 Directorio: %s\n" +
+                                "📄 Archivos generados: %d\n\n" +
+                                "Archivos disponibles:\n" +
+                                "• resume.csv - Reporte general con todos los resultados\n" +
+                                "• partial-{mesaId}.csv - Reportes individuales por mesa\n\n" +
+                                "Formato: candidateId,candidateName,totalVotes",
+                                result.reportDirectory,
+                                result.filesGenerated
+                            );
+                            
+                            JOptionPane.showMessageDialog(
+                                ServidorNacionalUI.this,
+                                mensaje,
+                                "Proceso Completado",
+                                JOptionPane.INFORMATION_MESSAGE
+                            );
+                            
+                            log("🎉 Proceso completado: Jornada cerrada y reportes generados");
+                            actualizarEstadisticasReportes();
+                            
+                            // Preguntar si desea abrir el directorio
+                            int abrir = JOptionPane.showConfirmDialog(
+                                ServidorNacionalUI.this,
+                                "¿Desea abrir el directorio de reportes?",
+                                "Abrir Directorio",
+                                JOptionPane.YES_NO_OPTION
+                            );
+                            
+                            if (abrir == JOptionPane.YES_OPTION) {
+                                try {
+                                    Desktop.getDesktop().open(new File(result.reportDirectory));
+                                } catch (Exception e) {
+                                    log("❌ No se pudo abrir el directorio: " + e.getMessage());
+                                }
+                            }
+                            
+                        } else {
+                            JOptionPane.showMessageDialog(
+                                ServidorNacionalUI.this,
+                                "❌ Error en el proceso:\n" + result.message,
+                                "Error",
+                                JOptionPane.ERROR_MESSAGE
+                            );
+                        }
+                        
+                    } catch (Exception e) {
+                        log("❌ Error en el proceso: " + e.getMessage());
+                        JOptionPane.showMessageDialog(
+                            ServidorNacionalUI.this,
+                            "❌ Error en el proceso: " + e.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                    }
+                }
+            };
+            worker.execute();
+        }
     }
 
     /**
