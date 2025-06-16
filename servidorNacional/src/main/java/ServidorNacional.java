@@ -4,6 +4,7 @@ import ConsultaMesa.ConsultaMesaImpl;
 import ConsultaCiudadanos.ConsultaCiudadanosImpl;
 import ConsultaCandidatos.ConsultaCandidatosImpl;
 import RegistroVotos.RegistroVotosImpl;
+import ReplicaInfo.ReplicaInfoImpl;
 import ServidorNacionalUI.ServidorNacionalUI;
 import Config.ConfigManager;
 import Services.ProcesadorLoteVotosImpl;
@@ -22,6 +23,7 @@ public class ServidorNacional {
     private static ConsultaCandidatosImpl consultaCandidatos;
     private static RegistroVotosImpl registroVotos;
     private static ProcesadorLoteVotosImpl procesadorLoteVotos;
+    private static ReplicaInfoImpl replicaInfo;
     private static Communicator communicator;
     private static ObjectAdapter adapter;
     private static ConfigManager configManager;
@@ -66,6 +68,9 @@ public class ServidorNacional {
             // Crear e inicializar ProcesadorLoteVotos
             procesadorLoteVotos = new ProcesadorLoteVotosImpl();
             
+            // Crear e inicializar ReplicaInfo
+            replicaInfo = new ReplicaInfoImpl(communicator.getProperties());
+            
             // Registrar el Broker como IAdministradorCandidatos (compatibilidad hacia atrás)
             Identity candidatosId = Util.stringToIdentity("AdministradorCandidatos");
             adapter.add(brokerNacional, candidatosId);
@@ -95,6 +100,10 @@ public class ServidorNacional {
             Identity procesadorLoteVotosId = Util.stringToIdentity("ProcesadorLoteVotos");
             adapter.add(procesadorLoteVotos, procesadorLoteVotosId);
             
+            // Registrar ReplicaInfo endpoint
+            Identity replicaInfoId = Util.stringToIdentity("ReplicaInfo");
+            adapter.add(replicaInfo, replicaInfoId);
+            
             // Activar adaptador
             adapter.activate();
             
@@ -114,6 +123,7 @@ public class ServidorNacional {
             System.out.println("   • ConsultaCandidatos (consulta candidatos electorales) 🗳️");
             System.out.println("   • RegistroVotos (registro de votos) 📝");
             System.out.println("   • ProcesadorLoteVotos (procesamiento de votos) 🗳️");
+            System.out.println("   • ReplicaInfo (información de ejecución de réplica) 📋");
             System.out.println("==========================================");
             
             if (useUI) {
@@ -250,6 +260,8 @@ public class ServidorNacional {
             if (procesadorLoteVotos != null) {
                 procesadorLoteVotos.shutdown();
             }
+            
+            // ReplicaInfo no necesita shutdown explícito
             
             // Desactivar adaptador
             if (adapter != null) {
