@@ -44,9 +44,53 @@ public class ServidorNacional {
             // Inicializar ICE
             communicator = Util.initialize(args);
             
+            // Configurar propiedades de réplica para ReplicaInfo
+            com.zeroc.Ice.Properties properties = communicator.getProperties();
+            
+            // Leer propiedades del sistema y configurarlas en ICE
+            String replicaId = System.getProperty("Replica.Id");
+            String replicaPort = System.getProperty("Replica.Port");
+            
+            if (replicaId != null && !replicaId.isEmpty()) {
+                properties.setProperty("Replica.Id", replicaId);
+                System.out.println("🔧 Réplica ID configurado: " + replicaId);
+            } else if (properties.getProperty("Replica.Id").isEmpty()) {
+                properties.setProperty("Replica.Id", "nacional-master");
+                System.out.println("🔧 Réplica ID por defecto: nacional-master");
+            }
+            
+            if (replicaPort != null && !replicaPort.isEmpty()) {
+                properties.setProperty("Replica.Port", replicaPort);
+                System.out.println("🔧 Puerto de réplica configurado: " + replicaPort);
+            } else if (properties.getProperty("Replica.Port").isEmpty()) {
+                properties.setProperty("Replica.Port", "9090");
+                System.out.println("🔧 Puerto de réplica por defecto: 9090");
+            }
+            
+            // Configurar otras propiedades del sistema en ICE
+            String[] systemProps = {
+                "ReliableQueue.BaseDir", "ReliableQueue.ProcessingInterval", "ReliableQueue.BatchSize",
+                "ReliableQueue.MaxRetries", "ReliableQueue.RetryDelay", "ReliableQueue.ProcessingThreads",
+                "ReliableQueue.SchedulerThreads", "ReliableQueue.PersistenceEnabled", "ReliableQueue.AutoCleanup",
+                "ReliableQueue.CleanupInterval", "ReliableQueue.MaxProcessedFiles", "ReliableQueue.LogLevel",
+                "ReliableQueue.LogStatistics", "ReliableQueue.StatisticsInterval", "VotosDB.ConnectionTimeout",
+                "VotosDB.MaxRetries", "VotosDB.RetryInterval"
+            };
+            
+            for (String prop : systemProps) {
+                String value = System.getProperty(prop);
+                if (value != null && !value.isEmpty()) {
+                    properties.setProperty(prop, value);
+                }
+            }
+            
+            // Determinar el puerto del adaptador basado en la configuración
+            String adapterPort = properties.getProperty("Replica.Port");
+            String adapterEndpoint = "tcp -h localhost -p " + adapterPort;
+            
             // Crear adaptador
             adapter = communicator.createObjectAdapterWithEndpoints(
-                "ServidorNacionalAdapter", "tcp -h localhost -p 9090"
+                "ServidorNacionalAdapter", adapterEndpoint
             );
             
             // Crear e inicializar el Broker Nacional
