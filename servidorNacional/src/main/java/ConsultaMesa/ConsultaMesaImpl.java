@@ -2,21 +2,24 @@ package ConsultaMesa;
 
 import Demo.*;
 import Config.ConfigManager;
-import Database.ConnectionPool;
+import Database.DatabaseManager;
+import Database.DatabaseConnection;
 import com.zeroc.Ice.Current;
 import java.sql.*;
 
 /**
  * Implementación mejorada del servicio ConsultaMesa
- * - Usa pool de conexiones persistentes
+ * - Usa conexión directa estable
  * - Implementa reintentos automáticos
  * - Maneja estados de servicio inactivo
  * - Configuración centralizada
+ * - Utiliza la base de datos de registraduría
  */
 public class ConsultaMesaImpl implements IConsultaMesa {
     
     private final ConfigManager config;
-    private final ConnectionPool connectionPool;
+    private final DatabaseManager dbManager;
+    private final DatabaseConnection dbConnection;
     
     // Query SQL para consultar mesa por documento
     private static final String QUERY_MESA_POR_DOCUMENTO = 
@@ -32,19 +35,21 @@ public class ConsultaMesaImpl implements IConsultaMesa {
         "WHERE c.documento = ?";
     
     public ConsultaMesaImpl() {
-        System.out.println("🔧 Inicializando ConsultaMesa con pool de conexiones...");
+        System.out.println("🔧 Inicializando ConsultaMesa con conexión directa...");
         
         // Cargar configuración
         this.config = ConfigManager.getInstance();
         
-        // Obtener pool de conexiones
-        this.connectionPool = ConnectionPool.getInstance("nacional");
+        // Obtener conexión de registraduría
+        this.dbManager = DatabaseManager.getInstance();
+        this.dbConnection = dbManager.getRegistraduriaConnection();
         
         // Mostrar configuración
         config.printConfiguration();
         
         System.out.println("✅ ConsultaMesa inicializado correctamente");
-        System.out.println("   " + connectionPool.getPoolStats());
+        System.out.println("   📊 Base de datos: registraduría");
+        System.out.println("   " + dbConnection.getConnectionInfo());
     }
     
     @Override
@@ -52,15 +57,16 @@ public class ConsultaMesaImpl implements IConsultaMesa {
         System.out.println("🔍 Consultando mesa para documento: " + documento);
         
         // Verificar si el servicio está activo
-        if (!connectionPool.isServiceActive()) {
+        if (!dbConnection.isServiceActive()) {
             System.err.println("🚫 Servicio de base de datos inactivo");
             return createServiceInactiveResponse();
         }
         
-        Connection conn = null;
-        try {
-            // Obtener conexión del pool (con reintentos automáticos)
-            conn = connectionPool.getConnection();
+        try (Connection conn = dbConnection.getConnection()) {
+            if (conn == null) {
+                System.err.println("❌ No se pudo obtener conexión a la base de datos");
+                return createServiceInactiveResponse();
+            }
             
             // Configurar timeout para la consulta
             try (PreparedStatement stmt = conn.prepareStatement(QUERY_MESA_POR_DOCUMENTO)) {
@@ -99,29 +105,24 @@ public class ConsultaMesaImpl implements IConsultaMesa {
             
             // Para otros errores SQL, devolver error específico
             return createErrorResponse("Error de consulta: " + e.getMessage());
-            
-        } finally {
-            // Devolver conexión al pool
-            if (conn != null) {
-                connectionPool.returnConnection(conn);
-            }
         }
     }
     
     @Override
     public boolean verificarConexionBD(Current current) {
         System.out.println("🔧 Verificando conexión a base de datos...");
-        System.out.println("   " + connectionPool.getPoolStats());
+        System.out.println("   " + dbConnection.getConnectionInfo());
         
-        if (!connectionPool.isServiceActive()) {
+        if (!dbConnection.isServiceActive()) {
             System.err.println("❌ Servicio marcado como inactivo");
             return false;
         }
         
-        Connection conn = null;
-        try {
-            // Intentar obtener conexión del pool
-            conn = connectionPool.getConnection();
+        try (Connection conn = dbConnection.getConnection()) {
+            if (conn == null) {
+                System.err.println("❌ No se pudo obtener conexión");
+                return false;
+            }
             
             // Ejecutar una consulta simple para verificar la conexión
             try (PreparedStatement stmt = conn.prepareStatement("SELECT 1 as test")) {
@@ -129,7 +130,7 @@ public class ConsultaMesaImpl implements IConsultaMesa {
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next() && rs.getInt("test") == 1) {
                         System.out.println("✅ Conexión a base de datos OK");
-                        System.out.println("   " + connectionPool.getPoolStats());
+                        System.out.println("   " + dbConnection.getConnectionInfo());
                         return true;
                     }
                 }
@@ -137,18 +138,7 @@ public class ConsultaMesaImpl implements IConsultaMesa {
             
         } catch (SQLException e) {
             System.err.println("❌ Error verificando conexión: " + e.getMessage());
-            
-            if ("SERVICIO_INACTIVO".equals(e.getMessage())) {
-                System.err.println("🚫 Servicio de base de datos inactivo");
-            }
-            
             return false;
-            
-        } finally {
-            // Devolver conexión al pool
-            if (conn != null) {
-                connectionPool.returnConnection(conn);
-            }
         }
         
         return false;
@@ -195,7 +185,7 @@ public class ConsultaMesaImpl implements IConsultaMesa {
      */
     public String getServiceStats() {
         return String.format("ConsultaMesa - %s, Timeout: %dms", 
-                           connectionPool.getPoolStats(),
+                           dbConnection.getConnectionInfo(),
                            config.getQueryTimeout());
     }
     
@@ -203,9 +193,6 @@ public class ConsultaMesaImpl implements IConsultaMesa {
      * Método para cerrar conexiones y limpiar recursos
      */
     public void shutdown() {
-        if (connectionPool != null) {
-            connectionPool.shutdown();
-            System.out.println("✅ Pool de conexiones cerrado correctamente");
-        }
+        System.out.println("✅ ConsultaMesa cerrado correctamente");
     }
 } 

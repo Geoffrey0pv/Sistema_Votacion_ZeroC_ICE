@@ -93,7 +93,7 @@ public class GestorReplicas implements IGestorReplicas {
             ObjectAdapter adapter = communicator.createObjectAdapterWithEndpoints(adapterName, endpoint);
             
             // Crear instancia de la réplica
-            ReplicaNacional replica = new ReplicaNacional(nodeId, communicator, balanceador);
+            ReplicaNacional replica = new ReplicaNacional(nodeId, communicator);
             
             // Registrar la réplica en el adapter
             Identity identity = new Identity();
@@ -182,7 +182,7 @@ public class GestorReplicas implements IGestorReplicas {
                 
                 // Obtener métricas actuales
                 try {
-                    replica.metricas = info.instancia.obtenerMetricas(null);
+                    replica.metricas = info.instancia.obtenerMetricas();
                 } catch (Exception e) {
                     // Crear métricas por defecto si hay error
                     replica.metricas = new MetricasRecursos();
@@ -234,7 +234,7 @@ public class GestorReplicas implements IGestorReplicas {
         
         if (info.instancia != null) {
             try {
-                replica.metricas = info.instancia.obtenerMetricas(null);
+                replica.metricas = info.instancia.obtenerMetricas();
             } catch (Exception e) {
                 replica.metricas = new MetricasRecursos();
                 replica.metricas.nodeId = nodeId;
@@ -271,7 +271,7 @@ public class GestorReplicas implements IGestorReplicas {
             .filter(info -> info.activa && info.instancia != null)
             .map(info -> CompletableFuture.runAsync(() -> {
                 try {
-                    info.instancia.sincronizarConMaster(candidatos, null);
+                    info.instancia.sincronizarCandidatos(candidatos);
                     System.out.printf("✅ Sincronizada réplica: %s%n", info.nodeId);
                 } catch (Exception e) {
                     System.err.printf("❌ Error sincronizando %s: %s%n", info.nodeId, e.getMessage());
@@ -290,7 +290,7 @@ public class GestorReplicas implements IGestorReplicas {
         for (ReplicaInfo info : replicasGestionadas.values()) {
             if (info.activa && info.instancia != null) {
                 try {
-                    boolean disponible = info.instancia.estaDisponible(null);
+                    boolean disponible = info.instancia.isServiceAvailable();
                     if (!disponible) {
                         System.err.printf("⚠️ Réplica %s no responde, desactivando...%n", info.nodeId);
                         desactivarReplica(info.nodeId, null);

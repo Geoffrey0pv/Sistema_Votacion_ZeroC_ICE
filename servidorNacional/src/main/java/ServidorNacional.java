@@ -1,10 +1,9 @@
 import Demo.*;
-import AdministradorCandidatos.AdministradorCandidatos;
 import Broker.BrokerNacional;
-import HelloWorld.HelloWorldImpl;
 import ConsultaMesa.ConsultaMesaImpl;
 import ConsultaCiudadanos.ConsultaCiudadanosImpl;
 import ConsultaCandidatos.ConsultaCandidatosImpl;
+import RegistroVotos.RegistroVotosImpl;
 import ServidorNacionalUI.ServidorNacionalUI;
 import Config.ConfigManager;
 import Services.ProcesadorLoteVotosImpl;
@@ -18,10 +17,10 @@ import javax.swing.SwingUtilities;
 
 public class ServidorNacional {
     private static BrokerNacional brokerNacional;
-    private static HelloWorldImpl helloWorld;
     private static ConsultaMesaImpl consultaMesa;
     private static ConsultaCiudadanosImpl consultaCiudadanos;
     private static ConsultaCandidatosImpl consultaCandidatos;
+    private static RegistroVotosImpl registroVotos;
     private static ProcesadorLoteVotosImpl procesadorLoteVotos;
     private static Communicator communicator;
     private static ObjectAdapter adapter;
@@ -51,8 +50,6 @@ public class ServidorNacional {
             // Crear e inicializar el Broker Nacional
             brokerNacional = new BrokerNacional(communicator);
             
-            // Crear e inicializar Hello World
-            helloWorld = new HelloWorldImpl("Servidor Nacional - Sistema de Votación", "1.0.0");
             
             // Crear e inicializar ConsultaMesa con configuración
             consultaMesa = new ConsultaMesaImpl();
@@ -62,6 +59,9 @@ public class ServidorNacional {
             
             // Crear e inicializar ConsultaCandidatos con configuración
             consultaCandidatos = new ConsultaCandidatosImpl();
+            
+            // Crear e inicializar RegistroVotos con configuración
+            registroVotos = new RegistroVotosImpl();
             
             // Crear e inicializar ProcesadorLoteVotos
             procesadorLoteVotos = new ProcesadorLoteVotosImpl();
@@ -74,9 +74,6 @@ public class ServidorNacional {
             Identity brokerId = Util.stringToIdentity("BrokerNacional");
             adapter.add(brokerNacional, brokerId);
             
-            // Registrar Hello World endpoint
-            Identity helloWorldId = Util.stringToIdentity("HelloWorld");
-            adapter.add(helloWorld, helloWorldId);
             
             // Registrar ConsultaMesa endpoint
             Identity consultaMesaId = Util.stringToIdentity("ConsultaMesa");
@@ -89,6 +86,10 @@ public class ServidorNacional {
             // Registrar ConsultaCandidatos endpoint
             Identity consultaCandidatosId = Util.stringToIdentity("ConsultaCandidatos");
             adapter.add(consultaCandidatos, consultaCandidatosId);
+            
+            // Registrar RegistroVotos endpoint
+            Identity registroVotosId = Util.stringToIdentity("RegistroVotos");
+            adapter.add(registroVotos, registroVotosId);
             
             // Registrar ProcesadorLoteVotos endpoint
             Identity procesadorLoteVotosId = Util.stringToIdentity("ProcesadorLoteVotos");
@@ -108,10 +109,10 @@ public class ServidorNacional {
             System.out.println("   🎮 Servicios disponibles:");
             System.out.println("   • AdministradorCandidatos (compatibilidad)");
             System.out.println("   • BrokerNacional (nueva funcionalidad)");
-            System.out.println("   • HelloWorld (endpoint de prueba) 🌍");
             System.out.println("   • ConsultaMesa (consulta por documento) 🔍");
             System.out.println("   • ConsultaCiudadanos (consulta por ciudadano) 🌍");
             System.out.println("   • ConsultaCandidatos (consulta candidatos electorales) 🗳️");
+            System.out.println("   • RegistroVotos (registro de votos) 📝");
             System.out.println("   • ProcesadorLoteVotos (procesamiento de votos) 🗳️");
             System.out.println("==========================================");
             
@@ -193,6 +194,13 @@ public class ServidorNacional {
             System.out.println("   Estado: " + (candidatosOk ? "✅ CONECTADO" : "❌ DESCONECTADO"));
         }
         
+        // Test RegistroVotos (debe usar BD de votos)
+        if (registroVotos != null) {
+            System.out.println("📝 Probando RegistroVotos...");
+            boolean registroOk = registroVotos.verificarConexionBD(null);
+            System.out.println("   Estado: " + (registroOk ? "✅ CONECTADO" : "❌ DESCONECTADO"));
+        }
+        
         // Test ProcesadorLoteVotos (debe usar BD de votos)
         if (procesadorLoteVotos != null) {
             System.out.println("🗳️  Probando ProcesadorLoteVotos...");
@@ -233,6 +241,11 @@ public class ServidorNacional {
                 consultaCandidatos.shutdown();
             }
             
+            // Cerrar servicio de registro de votos
+            if (registroVotos != null) {
+                registroVotos.shutdown();
+            }
+            
             // Cerrar procesador de lote de votos
             if (procesadorLoteVotos != null) {
                 procesadorLoteVotos.shutdown();
@@ -259,12 +272,7 @@ public class ServidorNacional {
     public static BrokerNacional getBroker() {
         return brokerNacional;
     }
-    
-    // Método para obtener Hello World (útil para testing)
-    public static HelloWorldImpl getHelloWorld() {
-        return helloWorld;
-    }
-    
+        
     // Método para obtener ConsultaMesa (útil para testing)
     public static ConsultaMesaImpl getConsultaMesa() {
         return consultaMesa;
@@ -278,6 +286,11 @@ public class ServidorNacional {
     // Método para obtener ConsultaCandidatos (útil para testing)
     public static ConsultaCandidatosImpl getConsultaCandidatos() {
         return consultaCandidatos;
+    }
+    
+    // Método para obtener RegistroVotos (útil para testing)
+    public static RegistroVotosImpl getRegistroVotos() {
+        return registroVotos;
     }
     
     // Método para obtener el communicator (útil para testing)

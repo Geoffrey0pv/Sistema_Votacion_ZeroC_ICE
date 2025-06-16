@@ -1,22 +1,26 @@
 package Broker;
 
 import Demo.*;
-import AdministradorCandidatos.AdministradorCandidatos;
+import Services.CandidatosService;
+import ConsultaCandidatos.ConsultaCandidatosImpl;
+import Models.CandidatoModel;
 import com.zeroc.Ice.Current;
 import com.zeroc.Ice.Communicator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
 
 public class BrokerNacional implements IBrokerNacional {
     
-    private final AdministradorCandidatos masterCandidatos;
     private final MonitorRecursos monitorMaster;
     private final BalanceadorCarga balanceador;
     private final GestorReplicas gestorReplicas;
     private final ScheduledExecutorService scheduler;
     private final Communicator communicator;
+    private final CandidatosService candidatosService;
+    private final ConsultaCandidatosImpl consultaCandidatos;
     
     // Configuración de escalado
     private static final double UMBRAL_ESCALADO = 50.0; // 50% como solicitado
@@ -32,7 +36,8 @@ public class BrokerNacional implements IBrokerNacional {
     
     public BrokerNacional(Communicator communicator) {
         this.communicator = communicator;
-        this.masterCandidatos = new AdministradorCandidatos(communicator);
+        this.candidatosService = new CandidatosService();
+        this.consultaCandidatos = new ConsultaCandidatosImpl();
         this.monitorMaster = new MonitorRecursos("master");
         this.balanceador = new BalanceadorCarga();
         this.gestorReplicas = new GestorReplicas(communicator, balanceador);
@@ -83,7 +88,7 @@ public class BrokerNacional implements IBrokerNacional {
                 
                 System.out.printf("🚀 Iniciando escalado automático (Carga: %.1f%% > %.1f%%)%n", 
                     cargaTotal, UMBRAL_ESCALADO);
-                escalarAutomaticamente();
+                escaladoAutomatico();
                 ultimoEscalado = tiempoActual;
             }
             // Decidir si reducir réplicas
@@ -104,9 +109,17 @@ public class BrokerNacional implements IBrokerNacional {
     
     private void sincronizarReplicas() {
         try {
-            Candidato[] candidatos = masterCandidatos.obtenerTodosCandidatos(null);
+            CandidatoElectoral[] candidatos = consultaCandidatos.obtenerTodosCandidatosElectorales(null);
             if (candidatos.length > 0) {
-                gestorReplicas.sincronizarTodasReplicas(candidatos);
+                // Convertir CandidatoElectoral[] a Candidato[] para sincronización
+                Candidato[] candidatosParaSincronizar = new Candidato[candidatos.length];
+                for (int i = 0; i < candidatos.length; i++) {
+                    candidatosParaSincronizar[i] = new Candidato();
+                    candidatosParaSincronizar[i].idCandidato = candidatos[i].id;
+                    candidatosParaSincronizar[i].nombre = candidatos[i].nombre;
+                    candidatosParaSincronizar[i].partido = candidatos[i].partido;
+                }
+                gestorReplicas.sincronizarTodasReplicas(candidatosParaSincronizar);
             }
         } catch (Exception e) {
             System.err.printf("❌ Error sincronizando réplicas: %s%n", e.getMessage());
@@ -139,24 +152,48 @@ public class BrokerNacional implements IBrokerNacional {
     public boolean cargarCandidatosDesdeCSV(String rutaArchivo, Current current) {
         monitorMaster.incrementarRequests();
         
-        boolean resultado = masterCandidatos.cargarCandidatosDesdeCSV(rutaArchivo, current);
-        if (resultado) {
-            // Sincronizar con réplicas de forma asíncrona
-            scheduler.execute(() -> sincronizarReplicas());
+        try {
+            java.io.File archivo = new java.io.File(rutaArchivo);
+            if (!archivo.exists()) {
+                System.err.println("❌ Archivo CSV no encontrado: " + rutaArchivo);
+                return false;
+            }
+            
+            List<CandidatoModel> candidatos = candidatosService.cargarCandidatosDesdeCSV(archivo);
+            boolean resultado = candidatosService.guardarCandidatos(candidatos) > 0;
+            
+            if (resultado) {
+                // Sincronizar con réplicas de forma asíncrona
+                scheduler.execute(() -> sincronizarReplicas());
+            }
+            return resultado;
+        } catch (Exception e) {
+            System.err.println("❌ Error cargando candidatos desde CSV: " + e.getMessage());
+            return false;
         }
-        return resultado;
     }
     
     @Override
     public boolean cargarCandidatosDesdeArray(Candidato[] candidatos, Current current) {
         monitorMaster.incrementarRequests();
         
-        boolean resultado = masterCandidatos.cargarCandidatosDesdeArray(candidatos, current);
-        if (resultado) {
-            // Sincronizar con réplicas de forma asíncrona
-            scheduler.execute(() -> sincronizarReplicas());
+        try {
+            // Convertir Candidato[] a CandidatoModel[]
+            java.util.List<CandidatoModel> candidatosModel = new java.util.ArrayList<>();
+            for (Candidato candidato : candidatos) {
+                candidatosModel.add(new CandidatoModel(candidato.idCandidato, candidato.nombre, candidato.partido));
+            }
+            
+            boolean resultado = candidatosService.guardarCandidatos(candidatosModel) > 0;
+            if (resultado) {
+                // Sincronizar con réplicas de forma asíncrona
+                scheduler.execute(() -> sincronizarReplicas());
+            }
+            return resultado;
+        } catch (Exception e) {
+            System.err.println("❌ Error cargando candidatos desde array: " + e.getMessage());
+            return false;
         }
-        return resultado;
     }
     
     @Override
@@ -169,7 +206,7 @@ public class BrokerNacional implements IBrokerNacional {
         }
         
         monitorMaster.incrementarRequests();
-        return masterCandidatos.obtenerCantidadCandidatos(current);
+        return (int) consultaCandidatos.contarCandidatos(current);
     }
     
     @Override
@@ -182,14 +219,25 @@ public class BrokerNacional implements IBrokerNacional {
         }
         
         monitorMaster.incrementarRequests();
-        return masterCandidatos.obtenerTodosCandidatos(current);
+        CandidatoElectoral[] candidatosElectorales = consultaCandidatos.obtenerTodosCandidatosElectorales(current);
+        
+        // Convertir CandidatoElectoral[] a Candidato[]
+        Candidato[] candidatos = new Candidato[candidatosElectorales.length];
+        for (int i = 0; i < candidatosElectorales.length; i++) {
+            candidatos[i] = new Candidato();
+            candidatos[i].idCandidato = candidatosElectorales[i].id;
+            candidatos[i].nombre = candidatosElectorales[i].nombre;
+            candidatos[i].partido = candidatosElectorales[i].partido;
+        }
+        
+        return candidatos;
     }
     
     @Override
     public boolean limpiarCandidatos(Current current) {
         monitorMaster.incrementarRequests();
         
-        boolean resultado = masterCandidatos.limpiarCandidatos(current);
+        boolean resultado = candidatosService.eliminarTodosLosCandidatos();
         if (resultado) {
             // Sincronizar con réplicas
             scheduler.execute(() -> sincronizarReplicas());
@@ -200,164 +248,237 @@ public class BrokerNacional implements IBrokerNacional {
     @Override
     public boolean enviarCandidatosARegional(String endpointRegional, Current current) {
         monitorMaster.incrementarRequests();
-        return masterCandidatos.enviarCandidatosARegional(endpointRegional, current);
+        
+        try {
+            // Obtener candidatos
+            Candidato[] candidatos = obtenerTodosCandidatos(current);
+            if (candidatos.length == 0) {
+                System.err.println("❌ No hay candidatos para enviar");
+                return false;
+            }
+            
+            // Crear proxy al servidor regional
+            com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(endpointRegional);
+            ICargarCandidatosPrx cargarCandidatos = ICargarCandidatosPrx.checkedCast(base);
+            
+            if (cargarCandidatos == null) {
+                System.err.println("❌ No se pudo conectar al servidor regional: " + endpointRegional);
+                return false;
+            }
+            
+            // Enviar candidatos
+            boolean resultado = cargarCandidatos.enviarCandidatosATodasMesas();
+            System.out.println(resultado ? "✅ Candidatos enviados al regional" : "❌ Error enviando candidatos al regional");
+            return resultado;
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error enviando candidatos a regional: " + e.getMessage());
+            return false;
+        }
     }
-    
+
     @Override
     public boolean enviarCandidatosATodosRegionales(Current current) {
         monitorMaster.incrementarRequests();
-        return masterCandidatos.enviarCandidatosATodosRegionales(current);
+        
+        // TODO: Implementar envío a todos los regionales conocidos
+        System.out.println("⚠️ enviarCandidatosATodosRegionales no implementado completamente");
+        return false;
     }
-    
+
     // ========== MÉTODOS DE IBrokerNacional ==========
     
+    /**
+     * Registra una nueva réplica en el sistema
+     */
     @Override
     public boolean registrarReplica(String nodeId, String endpoint, Current current) {
-        return gestorReplicas.crearReplica(nodeId, endpoint, current);
-    }
-    
-    @Override
-    public boolean desregistrarReplica(String nodeId, Current current) {
-        return gestorReplicas.eliminarReplica(nodeId, current);
-    }
-    
-    @Override
-    public MetricasRecursos obtenerMetricasGlobales(Current current) {
-        MetricasRecursos metricasGlobales = monitorMaster.obtenerMetricas(null);
-        
-        // Agregar información del cluster
-        InfoReplica[] replicas = balanceador.obtenerEstadoReplicas(null);
-        long totalRequests = metricasGlobales.requestCount;
-        double cpuPromedio = metricasGlobales.cpuUsage;
-        double memPromedio = metricasGlobales.memoryUsage;
-        
-        if (replicas.length > 0) {
-            for (InfoReplica replica : replicas) {
-                if (replica.activa) {
-                    totalRequests += replica.metricas.requestCount;
-                    cpuPromedio += replica.metricas.cpuUsage;
-                    memPromedio += replica.metricas.memoryUsage;
-                }
+        try {
+            System.out.printf("📝 Registrando réplica: %s -> %s%n", nodeId, endpoint);
+            
+            // Crear la réplica usando el gestor
+            boolean creada = gestorReplicas.crearReplica(nodeId, endpoint, current);
+            
+            if (creada) {
+                System.out.printf("✅ Réplica registrada exitosamente: %s%n", nodeId);
+                mostrarEstadoBroker();
+                return true;
+            } else {
+                System.err.printf("❌ Error registrando réplica: %s%n", nodeId);
+                return false;
             }
             
-            int nodos = replicas.length + 1; // +1 por el master
-            cpuPromedio /= nodos;
-            memPromedio /= nodos;
+        } catch (Exception e) {
+            System.err.printf("❌ Error en registro de réplica %s: %s%n", nodeId, e.getMessage());
+            return false;
         }
-        
-        MetricasRecursos globales = new MetricasRecursos();
-        globales.nodeId = "cluster-global";
-        globales.cpuUsage = cpuPromedio;
-        globales.memoryUsage = memPromedio;
-        globales.networkUsage = balanceador.getCargaPromedioCluster();
-        globales.requestCount = totalRequests;
-        globales.timestamp = System.currentTimeMillis();
-        
-        return globales;
     }
     
+    /**
+     * Desregistra una réplica del sistema
+     */
+    @Override
+    public boolean desregistrarReplica(String nodeId, Current current) {
+        try {
+            System.out.printf("🗑️ Desregistrando réplica: %s%n", nodeId);
+            
+            boolean eliminada = gestorReplicas.eliminarReplica(nodeId, current);
+            
+            if (eliminada) {
+                System.out.printf("✅ Réplica desregistrada: %s%n", nodeId);
+                mostrarEstadoBroker();
+                return true;
+            } else {
+                System.err.printf("⚠️ Réplica no encontrada para desregistrar: %s%n", nodeId);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            System.err.printf("❌ Error desregistrando réplica %s: %s%n", nodeId, e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Obtiene métricas globales del broker
+     */
+    @Override
+    public MetricasRecursos obtenerMetricasGlobales(Current current) {
+        return monitorMaster.obtenerMetricas(current);
+    }
+    
+    /**
+     * Obtiene la lista de réplicas disponibles
+     */
     @Override
     public InfoReplica[] obtenerReplicasDisponibles(Current current) {
-        return gestorReplicas.obtenerReplicasActivas(current);
+        try {
+            return gestorReplicas.obtenerReplicasActivas(current);
+        } catch (Exception e) {
+            System.err.printf("❌ Error obteniendo réplicas disponibles: %s%n", e.getMessage());
+            return new InfoReplica[0];
+        }
     }
     
+    /**
+     * Obtiene el endpoint óptimo para balanceo de carga
+     */
     @Override
     public String obtenerEndpointOptimo(Current current) {
         return balanceador.obtenerMejorReplica(current);
     }
     
+    /**
+     * Ejecuta escalado automático
+     */
     @Override
     public boolean escalarAutomaticamente(Current current) {
-        return escalarAutomaticamente();
+        return escaladoAutomatico();
     }
     
+    /**
+     * Reduce el número de réplicas
+     */
     @Override
     public boolean reducirReplicas(Current current) {
-        return reducirReplicas();
-    }
-    
-    // ========== MÉTODOS PÚBLICOS ADICIONALES ==========
-    
-    public boolean escalarAutomaticamente() {
-        if (!escaladoEnProceso.compareAndSet(false, true)) {
-            System.out.println("⚠️ Escalado ya en proceso, omitiendo...");
-            return false;
-        }
-        
         try {
-            if (!gestorReplicas.puedeCrearMasReplicas()) {
-                System.out.printf("⚠️ Límite máximo de réplicas alcanzado (%d)%n", MAX_REPLICAS);
+            InfoReplica[] replicas = gestorReplicas.obtenerReplicasActivas(current);
+            if (replicas.length <= 1) {
+                System.out.println("⚠️ No se pueden reducir más réplicas (mínimo 1)");
                 return false;
             }
             
-            boolean resultado = gestorReplicas.crearReplicaAutomatica();
+            // Eliminar la réplica menos cargada
+            eliminarReplicaMenosUsada();
+            return true;
             
-            if (resultado) {
-                System.out.println("✅ Escalado automático completado");
+        } catch (Exception e) {
+            System.err.printf("❌ Error reduciendo réplicas: %s%n", e.getMessage());
+            return false;
+        }
+    }
+    
+    // Métodos internos de escalado
+    public boolean escaladoAutomatico() {
+        if (escaladoEnProceso.compareAndSet(false, true)) {
+            try {
+                System.out.println("🚀 Iniciando escalado automático...");
                 
-                // Sincronizar la nueva réplica
-                scheduler.schedule(() -> sincronizarReplicas(), 5, TimeUnit.SECONDS);
-            } else {
-                System.err.println("❌ Error en escalado automático");
+                // Determinar cuántas réplicas crear
+                int replicasActuales = gestorReplicas.getCantidadReplicasActivas();
+                int nuevasReplicas = Math.min(2, MAX_REPLICAS - replicasActuales); // Crear máximo 2 réplicas por vez
+                
+                if (nuevasReplicas <= 0) {
+                    System.out.println("⚠️ No se pueden crear más réplicas (límite alcanzado)");
+                    return false;
+                }
+                
+                boolean exito = true;
+                for (int i = 0; i < nuevasReplicas; i++) {
+                    String nodeId = "replica-auto-" + System.currentTimeMillis() + "-" + i;
+                    if (!gestorReplicas.crearReplica(nodeId, null, null)) {
+                        System.err.println("❌ Error creando réplica: " + nodeId);
+                        exito = false;
+                    } else {
+                        System.out.println("✅ Réplica creada: " + nodeId);
+                    }
+                }
+                
+                if (exito) {
+                    // Sincronizar datos con las nuevas réplicas
+                    scheduler.schedule(() -> sincronizarReplicas(), 5, TimeUnit.SECONDS);
+                }
+                
+                System.out.printf("🎯 Escalado completado: %d réplicas creadas%n", nuevasReplicas);
+                return exito;
+                
+            } finally {
+                escaladoEnProceso.set(false);
             }
-            
-            return resultado;
-            
-        } finally {
-            escaladoEnProceso.set(false);
+        } else {
+            System.out.println("⚠️ Escalado ya en proceso, ignorando solicitud");
+            return false;
         }
     }
     
     public boolean reducirReplicas() {
-        if (!escaladoEnProceso.compareAndSet(false, true)) {
-            System.out.println("⚠️ Operación de escalado ya en proceso, omitiendo reducción...");
-            return false;
-        }
-        
-        try {
-            InfoReplica[] replicas = gestorReplicas.obtenerReplicasActivas(null);
-            
-            if (replicas.length <= MIN_REPLICAS) {
-                System.out.printf("⚠️ Número mínimo de réplicas alcanzado (%d)%n", MIN_REPLICAS);
-                return false;
-            }
-            
-            // Encontrar la réplica con menor carga para eliminar
-            InfoReplica replicaAEliminar = null;
-            double menorCarga = Double.MAX_VALUE;
-            
-            for (InfoReplica replica : replicas) {
-                if (replica.activa) {
-                    double carga = (replica.metricas.cpuUsage + replica.metricas.memoryUsage) / 2.0;
-                    if (carga < menorCarga) {
-                        menorCarga = carga;
-                        replicaAEliminar = replica;
-                    }
-                }
-            }
-            
-            if (replicaAEliminar != null) {
-                boolean resultado = gestorReplicas.eliminarReplica(replicaAEliminar.nodeId, null);
+        if (escaladoEnProceso.compareAndSet(false, true)) {
+            try {
+                System.out.println("📉 Iniciando reducción de réplicas...");
                 
-                if (resultado) {
-                    System.out.printf("✅ Réplica eliminada: %s (Carga: %.1f%%)%n", 
-                        replicaAEliminar.nodeId, menorCarga);
-                } else {
-                    System.err.printf("❌ Error eliminando réplica: %s%n", replicaAEliminar.nodeId);
+                int replicasActuales = gestorReplicas.getCantidadReplicasActivas();
+                int replicasAEliminar = Math.min(1, replicasActuales - MIN_REPLICAS); // Eliminar máximo 1 por vez
+                
+                if (replicasAEliminar <= 0) {
+                    System.out.println("⚠️ No se pueden eliminar más réplicas (mínimo alcanzado)");
+                    return false;
                 }
                 
-                return resultado;
+                // Eliminar réplicas una por una
+                boolean exito = true;
+                for (int i = 0; i < replicasAEliminar; i++) {
+                    eliminarReplicaMenosUsada();
+                }
+                
+                System.out.printf("🎯 Reducción completada: %d réplicas eliminadas%n", replicasAEliminar);
+                return exito;
+                
+            } finally {
+                escaladoEnProceso.set(false);
             }
-            
+        } else {
+            System.out.println("⚠️ Escalado en proceso, ignorando solicitud de reducción");
             return false;
-            
-        } finally {
-            escaladoEnProceso.set(false);
         }
     }
     
-    public AdministradorCandidatos getMasterCandidatos() {
-        return masterCandidatos;
+    // Getters para acceso a componentes internos
+    public CandidatosService getCandidatosService() {
+        return candidatosService;
+    }
+    
+    public ConsultaCandidatosImpl getConsultaCandidatos() {
+        return consultaCandidatos;
     }
     
     public BalanceadorCarga getBalanceador() {
@@ -373,9 +494,8 @@ public class BrokerNacional implements IBrokerNacional {
     }
     
     public void shutdown() {
-        System.out.println("🎯 Deteniendo Broker Nacional...");
+        System.out.println("🛑 Cerrando Broker Nacional...");
         
-        // Detener scheduler
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.shutdown();
             try {
@@ -384,23 +504,113 @@ public class BrokerNacional implements IBrokerNacional {
                 }
             } catch (InterruptedException e) {
                 scheduler.shutdownNow();
-                Thread.currentThread().interrupt();
             }
         }
         
-        // Detener componentes
         if (gestorReplicas != null) {
             gestorReplicas.shutdown();
         }
         
-        if (balanceador != null) {
-            balanceador.shutdown();
+        if (candidatosService != null) {
+            // CandidatosService no tiene método shutdown, pero podríamos agregarlo si es necesario
         }
         
-        if (monitorMaster != null) {
-            monitorMaster.shutdown();
+        if (consultaCandidatos != null) {
+            consultaCandidatos.shutdown();
         }
         
-        System.out.println("✅ Broker Nacional detenido");
+        System.out.println("✅ Broker Nacional cerrado");
+    }
+
+    /**
+     * Crea una nueva réplica automáticamente
+     */
+    private boolean crearReplica() {
+        try {
+            if (!gestorReplicas.puedeCrearMasReplicas()) {
+                System.err.println("❌ No se pueden crear más réplicas (límite alcanzado)");
+                return false;
+            }
+            
+            boolean creada = gestorReplicas.crearReplicaAutomatica();
+            
+            if (creada) {
+                System.out.println("✅ Nueva réplica creada automáticamente");
+                mostrarEstadoBroker();
+                return true;
+            } else {
+                System.err.println("❌ Error creando réplica automática");
+                return false;
+            }
+            
+        } catch (Exception e) {
+            System.err.printf("❌ Error en creación automática de réplica: %s%n", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Elimina la réplica menos utilizada
+     */
+    private void eliminarReplicaMenosUsada() {
+        try {
+            InfoReplica[] replicas = gestorReplicas.obtenerReplicasActivas(null);
+            
+            if (replicas.length <= 1) {
+                System.out.println("⚠️ No se puede eliminar más réplicas (mínimo 1)");
+                return;
+            }
+            
+            // Encontrar la réplica con menor carga
+            InfoReplica menosUsada = replicas[0];
+            double menorCarga = Double.MAX_VALUE;
+            
+            for (InfoReplica replica : replicas) {
+                if (replica.metricas != null) {
+                    double carga = replica.metricas.cpuUsage + replica.metricas.memoryUsage;
+                    if (carga < menorCarga) {
+                        menorCarga = carga;
+                        menosUsada = replica;
+                    }
+                }
+            }
+            
+            if (gestorReplicas.eliminarReplica(menosUsada.nodeId, null)) {
+                System.out.printf("🗑️ Réplica menos usada eliminada: %s (carga: %.1f%%)%n", 
+                    menosUsada.nodeId, menorCarga);
+                mostrarEstadoBroker();
+            }
+            
+        } catch (Exception e) {
+            System.err.printf("❌ Error eliminando réplica menos usada: %s%n", e.getMessage());
+        }
+    }
+    
+    /**
+     * Muestra el estado actual del broker
+     */
+    private void mostrarEstadoBroker() {
+        try {
+            System.out.println("\n🏢 Estado del Broker Nacional:");
+            
+            // Métricas generales
+            MetricasRecursos metricas = monitorMaster.obtenerMetricas(null);
+            System.out.printf("   CPU: %.1f%% | Memoria: %.1f%% | Requests: %d%n",
+                metricas.cpuUsage, metricas.memoryUsage, metricas.requestCount);
+            
+            // Estado de réplicas
+            InfoReplica[] replicas = gestorReplicas.obtenerReplicasActivas(null);
+            System.out.printf("   Réplicas activas: %d | Total gestionadas: %d%n",
+                replicas.length, gestorReplicas.getCantidadReplicas());
+            
+            // Endpoint óptimo
+            String endpointOptimo = balanceador.obtenerMejorReplica(null);
+            System.out.printf("   Endpoint óptimo: %s%n", endpointOptimo);
+            
+            System.out.println();
+            
+        } catch (Exception e) {
+            System.err.printf("❌ Error mostrando estado del broker: %s%n", e.getMessage());
+        }
     }
 } 

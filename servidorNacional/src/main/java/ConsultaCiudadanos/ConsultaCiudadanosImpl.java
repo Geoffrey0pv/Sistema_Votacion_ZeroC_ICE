@@ -1,6 +1,7 @@
 package ConsultaCiudadanos;
 
 import Demo.*;
+import Database.DatabaseManager;
 import Database.DatabaseConnection;
 import com.zeroc.Ice.Current;
 
@@ -18,9 +19,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * SERVICIO SÚPER OPTIMIZADO de consulta de ciudadanos por departamentos
  * Diseñado para ser una MÁQUINA DE PROCESAMIENTO SÚPER VELOZ
  * Optimizado para resistir miles de peticiones simultáneas
+ * Utiliza la base de datos de registraduría
  */
 public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
     
+    private final DatabaseManager dbManager;
     private final DatabaseConnection dbConnection;
     
     // CONFIGURACIÓN SÚPER AGRESIVA PARA ALTO RENDIMIENTO
@@ -40,7 +43,8 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
     private final AtomicLong consultasMasLenta;
     
     public ConsultaCiudadanosImpl() {
-        this.dbConnection = new DatabaseConnection("nacional");
+        this.dbManager = DatabaseManager.getInstance();
+        this.dbConnection = dbManager.getRegistraduriaConnection();
         this.queryCache = new ConcurrentHashMap<>();
         
         // Inicializar métricas
@@ -55,6 +59,7 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
         precargarQueriesEnCache();
         
         System.out.println("🚀 ConsultaCiudadanos iniciado:");
+        System.out.println("   📊 Base de datos: registraduría");
         System.out.println("   ⚡ Límite por defecto: " + LIMITE_POR_DEFECTO);
         System.out.println("   📄 Tamaño página: " + TAMAÑO_PAGINA_DEFECTO);
         System.out.println("   🔥 Fetch size: " + FETCH_SIZE_OPTIMIZADO);
@@ -160,13 +165,8 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
         }
         
         List<CiudadanoInfo> ciudadanos = new ArrayList<>(limite); // Pre-dimensionar para eficiencia
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
         
-        try {
-            conn = dbConnection.getConnection();
-            
+        try (Connection conn = dbConnection.getConnection()) {
             if (conn == null) {
                 System.err.println("❌ No se pudo establecer conexión con la base de datos");
                 return crearRespuestaError("SERVICIO_INACTIVO", "Base de datos no disponible");
@@ -187,50 +187,52 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
             String sql = sqlBuilder.toString();
             System.out.println("📋 [SÚPER RÁPIDO] Ejecutando consulta SQL optimizada con límite: " + limite);
             
-            stmt = conn.prepareStatement(sql);
-            
-            // OPTIMIZACIONES DE RENDIMIENTO A NIVEL DE STATEMENT
-            stmt.setFetchSize(FETCH_SIZE_OPTIMIZADO); // Fetch size optimizado
-            stmt.setQueryTimeout(30); // Timeout de 30 segundos
-            
-            // Establecer los parámetros
-            for (int i = 0; i < departamentos.length; i++) {
-                stmt.setString(i + 1, departamentos[i].trim().toUpperCase());
-            }
-            stmt.setInt(departamentos.length + 1, limite);
-            
-            long startTime = System.currentTimeMillis();
-            rs = stmt.executeQuery();
-            long queryTime = System.currentTimeMillis() - startTime;
-            
-            // PROCESAMIENTO SÚPER OPTIMIZADO DE RESULTADOS
-            int count = 0;
-            while (rs.next() && count < limite) {
-                CiudadanoInfo ciudadano = new CiudadanoInfo();
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                // OPTIMIZACIONES DE RENDIMIENTO A NIVEL DE STATEMENT
+                stmt.setFetchSize(FETCH_SIZE_OPTIMIZADO); // Fetch size optimizado
+                stmt.setQueryTimeout(30); // Timeout de 30 segundos
                 
-                // Acceso optimizado a columnas por índice (más rápido que por nombre)
-                ciudadano.id = rs.getLong(1);
-                ciudadano.documento = rs.getString(2);
-                ciudadano.nombre = rs.getString(3);
-                ciudadano.apellido = rs.getString(4);
-                ciudadano.mesa = rs.getString(5);
-                ciudadano.puesto = rs.getString(6);
-                ciudadano.municipio = rs.getString(7);
-                ciudadano.departamento = rs.getString(8);
+                // Establecer los parámetros
+                for (int i = 0; i < departamentos.length; i++) {
+                    stmt.setString(i + 1, departamentos[i].trim().toUpperCase());
+                }
+                stmt.setInt(departamentos.length + 1, limite);
                 
-                ciudadanos.add(ciudadano);
-                count++;
-            }
-            
-            // Actualizar métricas
-            totalCiudadanosRetornados.addAndGet(count);
-            
-            System.out.printf("✅ [SÚPER RÁPIDO] Consulta exitosa: %d ciudadanos encontrados en %dms (límite: %d)%n", 
-                count, queryTime, limite);
-            
-            if (count == limite) {
-                System.out.println("⚠️ ADVERTENCIA: Se alcanzó el límite. Puede haber más registros disponibles.");
-                System.out.println("   Use consultarCiudadanosPaginado() para obtener todos los resultados.");
+                long startTime = System.currentTimeMillis();
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    long queryTime = System.currentTimeMillis() - startTime;
+                    
+                    // PROCESAMIENTO SÚPER OPTIMIZADO DE RESULTADOS
+                    int count = 0;
+                    while (rs.next() && count < limite) {
+                        CiudadanoInfo ciudadano = new CiudadanoInfo();
+                        
+                        // Acceso optimizado a columnas por índice (más rápido que por nombre)
+                        ciudadano.id = rs.getLong(1);
+                        ciudadano.documento = rs.getString(2);
+                        ciudadano.nombre = rs.getString(3);
+                        ciudadano.apellido = rs.getString(4);
+                        ciudadano.mesa = rs.getString(5);
+                        ciudadano.puesto = rs.getString(6);
+                        ciudadano.municipio = rs.getString(7);
+                        ciudadano.departamento = rs.getString(8);
+                        
+                        ciudadanos.add(ciudadano);
+                        count++;
+                    }
+                    
+                    // Actualizar métricas
+                    totalCiudadanosRetornados.addAndGet(count);
+                    
+                    System.out.printf("✅ [SÚPER RÁPIDO] Consulta exitosa: %d ciudadanos encontrados en %dms (límite: %d)%n", 
+                        count, queryTime, limite);
+                    
+                    if (count == limite) {
+                        System.out.println("⚠️ ADVERTENCIA: Se alcanzó el límite. Puede haber más registros disponibles.");
+                        System.out.println("   Use consultarCiudadanosPaginado() para obtener todos los resultados.");
+                    }
+                }
             }
             
         } catch (SQLException e) {
@@ -240,9 +242,6 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
         } catch (Exception e) {
             System.err.printf("❌ Error general consultando ciudadanos: %s%n", e.getMessage());
             return crearRespuestaError("ERROR_GENERAL", "Error interno: " + e.getMessage());
-            
-        } finally {
-            cerrarRecursos(rs, stmt, conn);
         }
         
         return ciudadanos.toArray(new CiudadanoInfo[0]);
@@ -272,11 +271,7 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
                 return crearResultadoPaginadoVacio();
             }
             
-            Connection conn = null;
-            
-            try {
-                conn = dbConnection.getConnection();
-                
+            try (Connection conn = dbConnection.getConnection()) {
                 if (conn == null) {
                     System.err.println("❌ No se pudo establecer conexión con la base de datos");
                     return crearResultadoPaginadoVacio();
@@ -325,11 +320,6 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
             } catch (Exception e) {
                 System.err.printf("❌ Error general en consulta paginada: %s%n", e.getMessage());
                 return crearResultadoPaginadoVacio();
-                
-            } finally {
-                if (conn != null) {
-                    dbConnection.returnConnection(conn);
-                }
             }
             
         } finally {
@@ -352,28 +342,21 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
                 return 0;
             }
             
-            Connection conn = null;
-            
-            try {
-                conn = dbConnection.getConnection();
-                // ip de la base de datos
-                System.out.println("IP de la base de datos: " + dbConnection.getConnection().getMetaData().getURL());
-                System.out.println(dbConnection.getPoolStats());
+            try (Connection conn = dbConnection.getConnection()) {
                 if (conn == null) {
                     System.err.println("❌ No se pudo establecer conexión con la base de datos");
                     return -1;
                 }
+                
+                // Mostrar información de conexión
+                System.out.println("IP de la base de datos: " + conn.getMetaData().getURL());
+                System.out.println(dbConnection.getConnectionInfo());
                 
                 return contarCiudadanosPorDepartamentosOptimizado(conn, departamentos);
                 
             } catch (Exception e) {
                 System.err.printf("❌ Error contando ciudadanos: %s%n", e.getMessage());
                 return -1;
-                
-            } finally {
-                if (conn != null) {
-                    dbConnection.returnConnection(conn);
-                }
             }
             
         } finally {
@@ -496,33 +479,16 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
         return resultado;
     }
     
-    private void cerrarRecursos(ResultSet rs, PreparedStatement stmt, Connection conn) {
-        try {
-            if (rs != null) rs.close();
-            if (stmt != null) stmt.close();
-            if (conn != null) {
-                dbConnection.returnConnection(conn);
-            }
-        } catch (SQLException e) {
-            System.err.println("⚠️ Error cerrando recursos: " + e.getMessage());
-            if (conn != null) {
-                dbConnection.closeConnection(conn);
-            }
-        }
-    }
-    
     @Override
     public boolean verificarConexionBD(Current current) {
         System.out.println("🔧 [SÚPER VERIFICADOR] Verificando conexión a base de datos...");
         
-        // Usar el método del pool para verificar estado
+        // Usar el método del connection para verificar estado
         boolean activo = dbConnection.isServiceActive();
         
         if (activo) {
             // Hacer una prueba adicional con una consulta simple
-            Connection conn = null;
-            try {
-                conn = dbConnection.getConnection();
+            try (Connection conn = dbConnection.getConnection()) {
                 if (conn != null && !conn.isClosed()) {
                     // Ejecutar una consulta simple para verificar conectividad real
                     try (PreparedStatement stmt = conn.prepareStatement("SELECT 1")) {
@@ -537,10 +503,6 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
             } catch (SQLException e) {
                 System.err.printf("❌ Error verificando conexión BD: %s%n", e.getMessage());
                 return false;
-            } finally {
-                if (conn != null) {
-                    dbConnection.returnConnection(conn);
-                }
             }
         } else {
             System.err.println("❌ Servicio de BD marcado como inactivo");
@@ -586,7 +548,7 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
         System.out.println("   📊 Tiempo promedio por consulta: " + String.format("%.2f", promedioMs) + "ms");
         System.out.println("   🚀 Ciudadanos por segundo: " + String.format("%.0f", ciudadanosPorSegundo));
         System.out.println("   🗃️ Base de datos: " + (verificarConexionBD(null) ? "✅ SÚPER ACTIVA" : "❌ INACTIVA"));
-        System.out.println("   📊 Pool stats: " + dbConnection.getPoolStats());
+        System.out.println("   📊 Connection info: " + dbConnection.getConnectionInfo());
         System.out.println("===============================================\n");
     }
     
@@ -596,6 +558,5 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
     public void shutdown() {
         System.out.println("🛑 Cerrando servicio SÚPER OPTIMIZADO ConsultaCiudadanos...");
         mostrarEstadisticasSuperDetalladas();
-        // El pool se encarga de cerrar las conexiones
     }
 } 

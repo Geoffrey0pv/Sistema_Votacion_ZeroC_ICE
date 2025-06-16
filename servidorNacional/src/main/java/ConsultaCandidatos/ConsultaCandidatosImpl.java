@@ -2,7 +2,8 @@ package ConsultaCandidatos;
 
 import Demo.*;
 import com.zeroc.Ice.Current;
-import Database.DatabaseConnection;
+import Database.DatabaseManager;
+import Database.VotosDatabaseConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -10,17 +11,19 @@ import java.util.List;
 
 /**
  * Implementación del servicio de consulta de candidatos electorales
- * Utiliza la base de datos nacional configurada
+ * Utiliza la base de datos de votos
  */
 public class ConsultaCandidatosImpl implements IConsultaCandidatos {
     
-    private final DatabaseConnection dbConnection;
+    private final DatabaseManager dbManager;
+    private final VotosDatabaseConnection dbConnection;
     
     public ConsultaCandidatosImpl() {
-        this.dbConnection = new DatabaseConnection("nacional");
+        this.dbManager = DatabaseManager.getInstance();
+        this.dbConnection = dbManager.getVotosConnection();
         
         System.out.println("🗳️  ConsultaCandidatos inicializado");
-        System.out.println("   📊 Base de datos: nacional");
+        System.out.println("   📊 Base de datos: votos");
         
         // Verificar conexión inicial
         if (verificarConexionBD(null)) {
@@ -34,46 +37,7 @@ public class ConsultaCandidatosImpl implements IConsultaCandidatos {
     public CandidatoElectoral[] obtenerTodosCandidatosElectorales(Current current) {
         System.out.println("🔍 Consultando todos los candidatos electorales...");
         
-        String sql = "SELECT id, nombre, partido, fecha_creacion, activo FROM candidato ORDER BY id";
-        List<CandidatoElectoral> candidatos = new ArrayList<>();
-        
-        long startTime = System.currentTimeMillis();
-        
-        try (Connection conn = dbConnection.getConnection()) {
-            if (conn == null) {
-                System.err.println("❌ No se pudo obtener conexión a la base de datos");
-                return new CandidatoElectoral[0];
-            }
-            
-            try (PreparedStatement stmt = conn.prepareStatement(sql);
-                 ResultSet rs = stmt.executeQuery()) {
-                
-                while (rs.next()) {
-                    CandidatoElectoral candidato = new CandidatoElectoral();
-                    candidato.id = rs.getLong("id");
-                    candidato.nombre = rs.getString("nombre");
-                    candidato.partido = rs.getString("partido");
-                    
-                    // Manejar fecha_creacion que puede ser null
-                    Timestamp fechaCreacion = rs.getTimestamp("fecha_creacion");
-                    candidato.fechaCreacion = fechaCreacion != null ? fechaCreacion.toString() : "N/A";
-                    
-                    candidato.activo = rs.getBoolean("activo");
-                    
-                    candidatos.add(candidato);
-                }
-                
-                long endTime = System.currentTimeMillis();
-                System.out.println("✅ Candidatos consultados: " + candidatos.size() + 
-                                 " en " + (endTime - startTime) + "ms");
-                
-            }
-            
-        } catch (SQLException e) {
-            long endTime = System.currentTimeMillis();
-            System.err.println("❌ Error consultando candidatos (" + (endTime - startTime) + "ms): " + e.getMessage());
-            e.printStackTrace();
-        }
+        List<CandidatoElectoral> candidatos = obtenerTodosCandidatosElectorales();
         
         return candidatos.toArray(new CandidatoElectoral[0]);
     }
@@ -87,47 +51,7 @@ public class ConsultaCandidatosImpl implements IConsultaCandidatos {
             return new CandidatoElectoral[0];
         }
         
-        String sql = "SELECT id, nombre, partido, fecha_creacion, activo FROM candidato " +
-                    "WHERE LOWER(partido) LIKE LOWER(?) ORDER BY id";
-        List<CandidatoElectoral> candidatos = new ArrayList<>();
-        
-        long startTime = System.currentTimeMillis();
-        
-        try (Connection conn = dbConnection.getConnection()) {
-            if (conn == null) {
-                System.err.println("❌ No se pudo obtener conexión a la base de datos");
-                return new CandidatoElectoral[0];
-            }
-            
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, "%" + partido.trim() + "%");
-                
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        CandidatoElectoral candidato = new CandidatoElectoral();
-                        candidato.id = rs.getLong("id");
-                        candidato.nombre = rs.getString("nombre");
-                        candidato.partido = rs.getString("partido");
-                        
-                        Timestamp fechaCreacion = rs.getTimestamp("fecha_creacion");
-                        candidato.fechaCreacion = fechaCreacion != null ? fechaCreacion.toString() : "N/A";
-                        
-                        candidato.activo = rs.getBoolean("activo");
-                        
-                        candidatos.add(candidato);
-                    }
-                    
-                    long endTime = System.currentTimeMillis();
-                    System.out.println("✅ Candidatos del partido '" + partido + "': " + candidatos.size() + 
-                                     " en " + (endTime - startTime) + "ms");
-                }
-            }
-            
-        } catch (SQLException e) {
-            long endTime = System.currentTimeMillis();
-            System.err.println("❌ Error consultando candidatos por partido (" + (endTime - startTime) + "ms): " + e.getMessage());
-            e.printStackTrace();
-        }
+        List<CandidatoElectoral> candidatos = obtenerCandidatosPorPartido(partido);
         
         return candidatos.toArray(new CandidatoElectoral[0]);
     }
@@ -136,35 +60,7 @@ public class ConsultaCandidatosImpl implements IConsultaCandidatos {
     public long contarCandidatos(Current current) {
         System.out.println("🔢 Contando total de candidatos...");
         
-        String sql = "SELECT COUNT(*) as total FROM candidato WHERE activo = true";
-        long total = 0;
-        
-        long startTime = System.currentTimeMillis();
-        
-        try (Connection conn = dbConnection.getConnection()) {
-            if (conn == null) {
-                System.err.println("❌ No se pudo obtener conexión a la base de datos");
-                return 0;
-            }
-            
-            try (PreparedStatement stmt = conn.prepareStatement(sql);
-                 ResultSet rs = stmt.executeQuery()) {
-                
-                if (rs.next()) {
-                    total = rs.getLong("total");
-                }
-                
-                long endTime = System.currentTimeMillis();
-                System.out.println("✅ Total de candidatos activos: " + total + 
-                                 " en " + (endTime - startTime) + "ms");
-                
-            }
-            
-        } catch (SQLException e) {
-            long endTime = System.currentTimeMillis();
-            System.err.println("❌ Error contando candidatos (" + (endTime - startTime) + "ms): " + e.getMessage());
-            e.printStackTrace();
-        }
+        int total = obtenerTotalCandidatos();
         
         return total;
     }
@@ -193,7 +89,7 @@ public class ConsultaCandidatosImpl implements IConsultaCandidatos {
      * Método de utilidad para obtener información de la base de datos
      */
     public String obtenerInfoBaseDatos() {
-        return "BD Candidatos: " + dbConnection.getPoolStats();
+        return "BD Candidatos: " + dbConnection.getConnectionInfo();
     }
     
     /**
@@ -201,7 +97,101 @@ public class ConsultaCandidatosImpl implements IConsultaCandidatos {
      */
     public void shutdown() {
         System.out.println("🛑 ConsultaCandidatos: Cerrando servicio...");
-        // DatabaseConnection no tiene método close(), el pool se maneja automáticamente
         System.out.println("✅ ConsultaCandidatos: Servicio cerrado");
+    }
+    
+    public List<CandidatoElectoral> obtenerTodosCandidatosElectorales() {
+        List<CandidatoElectoral> candidatos = new ArrayList<>();
+        
+        // SQL para el schema corregido: id BIGINT, nombre, partido
+        String sql = "SELECT id, nombre, partido FROM candidato ORDER BY id";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                CandidatoElectoral candidato = new CandidatoElectoral();
+                // Ahora el ID es BIGINT, no necesita conversión
+                candidato.id = rs.getLong("id");
+                candidato.nombre = rs.getString("nombre");
+                candidato.partido = rs.getString("partido");
+                
+                // Valores por defecto para campos que no existen en el schema real
+                candidato.fechaCreacion = "N/A"; // Campo requerido por ICE pero no existe en DB
+                candidato.activo = true; // Asumimos que todos están activos
+                
+                candidatos.add(candidato);
+            }
+            
+            System.out.println("✅ Candidatos obtenidos: " + candidatos.size());
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error consultando candidatos: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return candidatos;
+    }
+    
+    public List<CandidatoElectoral> obtenerCandidatosPorPartido(String partido) {
+        List<CandidatoElectoral> candidatos = new ArrayList<>();
+        
+        // SQL para el schema corregido
+        String sql = "SELECT id, nombre, partido FROM candidato " +
+                    "WHERE LOWER(partido) LIKE LOWER(?) ORDER BY id";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, "%" + partido + "%");
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    CandidatoElectoral candidato = new CandidatoElectoral();
+                    // Ahora el ID es BIGINT, no necesita conversión
+                    candidato.id = rs.getLong("id");
+                    candidato.nombre = rs.getString("nombre");
+                    candidato.partido = rs.getString("partido");
+                    
+                    // Valores por defecto para campos que no existen en el schema real
+                    candidato.fechaCreacion = "N/A";
+                    candidato.activo = true;
+                    
+                    candidatos.add(candidato);
+                }
+            }
+            
+            System.out.println("✅ Candidatos por partido '" + partido + "': " + candidatos.size());
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error consultando candidatos por partido: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return candidatos;
+    }
+    
+    public int obtenerTotalCandidatos() {
+        // SQL corregido para el schema real - contar todos los candidatos
+        String sql = "SELECT COUNT(*) as total FROM candidato";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            if (rs.next()) {
+                int total = rs.getInt("total");
+                System.out.println("✅ Total de candidatos: " + total +
+                    " (consultado en " + (System.currentTimeMillis() - System.currentTimeMillis()) + "ms)");
+                return total;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error obteniendo total de candidatos: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return 0;
     }
 } 
