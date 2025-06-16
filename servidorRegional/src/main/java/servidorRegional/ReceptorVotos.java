@@ -22,10 +22,16 @@ public class ReceptorVotos implements IRegistrarVoto {
     @Override
     public void enviarVoto(Voto voto, IConfirmacionVotoPrx callback, Current current) {
         try {
-            System.out.println("Recibiendo voto en región " + nombreRegion +
-                    " - ID: " + voto.idVoto +
-                    " - Mesa: " + voto.idMesa +
-                    " - Candidato: " + voto.idCandidato);
+            System.out.println("\n" + "=".repeat(55));
+            System.out.println("==        VOTO RECIBIDO EN SERVIDOR REGIONAL        ==");
+            System.out.println("=".repeat(55));
+            System.out.println("  Región:       " + this.nombreRegion);
+            System.out.println("  Mesa Origen:  " + voto.idMesa);
+            System.out.println("  ID Voto:      " + voto.idVoto);
+            System.out.println("  ID Candidato: " + voto.idCandidato);
+            System.out.println("  Hash Elector: " + voto.idElectorHash);
+            System.out.println("  Emitido:      " + new java.util.Date(voto.tsEmitido));
+            System.out.println("-".repeat(55));
 
             // Validar voto
             if (validarVoto(voto)) {
@@ -44,21 +50,23 @@ public class ReceptorVotos implements IRegistrarVoto {
                     callback.recibirAck(ack);
                 }
 
-                System.out.println("Voto " + voto.idVoto + " procesado exitosamente");
+                System.out.println("  RESULTADO: Voto " + voto.idVoto + " ACEPTADO y almacenado.");
 
             } else {
                 // Crear acknowledgment de error
                 Ack ack = new Ack();
                 ack.idVoto = voto.idVoto;
                 ack.registrado = false;
-                ack.mensaje = "Voto inválido - no se pudo registrar";
+                ack.mensaje = "Voto inválido - no se pudo registrar. Verifique los logs del servidor regional.";
 
                 if (callback != null) {
                     callback.recibirAck(ack);
                 }
 
-                System.err.println("Voto " + voto.idVoto + " rechazado por validación");
+                System.out.println("  RESULTADO: Voto " + voto.idVoto + " RECHAZADO.");
+                System.out.println("  (Consulte los mensajes de error de validación para más detalles)");
             }
+            System.out.println("=".repeat(55) + "\n");
 
         } catch (Exception e) {
             System.err.println("Error procesando voto " + voto.idVoto + ": " + e.getMessage());

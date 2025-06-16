@@ -4,22 +4,24 @@
 
     <!-- Nodo para Servidor Regional -->
     <node name="nodeRegional">
-      <server id="RegionalServer" exe="java" activation="always">
+      <server id="RegionalServer" exe="java" activation="on-demand">
         <option>-jar</option>
         <option>../servidorRegional/build/libs/servidorRegional.jar</option>
         <adapter name="RegionalAdapter" endpoints="tcp -h localhost -p 10000">
           <object identity="receptorVotos" type="::Demo::IRegistrarVoto"/>
           <object identity="gestionCandidatos" type="::Demo::ICargarCandidatos"/>
         </adapter>
+        <properties>
+          <property name="Ice.Default.Locator" value="${ice.default.locator}"/>
+        </properties>
       </server>
     </node>
 
     <!-- Nodo para Servidor Nacional (Broker) -->
     <node name="nodeNacional">
-      <server id="ServidorNacional" exe="java" activation="always">
-        <option>-cp</option>
-        <option>../servidorNacional/build/classes/java/main:../servidorNacional/build/generated-src:../servidorNacional/build/libs/*</option>
-        <option>ServidorNacional</option>
+      <server id="ServidorNacional" exe="java" activation="on-demand">
+        <option>-jar</option>
+        <option>../servidorNacional/build/libs/servidorNacional.jar</option>
         <adapter name="ServidorNacionalAdapter" endpoints="tcp -h localhost -p 9090">
           <object identity="administradorCandidatos" type="::Demo::IAdministradorCandidatos"/>
           <object identity="consultaCandidatos" type="::Demo::IConsultaCandidatos"/>

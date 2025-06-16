@@ -4,6 +4,7 @@ import ConsultaMesa.ConsultaMesaImpl;
 import ConsultaCiudadanos.ConsultaCiudadanosImpl;
 import ConsultaCandidatos.ConsultaCandidatosImpl;
 import RegistroVotos.RegistroVotosImpl;
+import ReplicaInfo.ReplicaInfoImpl;
 import ServidorNacionalUI.ServidorNacionalUI;
 import Config.ConfigManager;
 import Services.ProcesadorLoteVotosImpl;
@@ -22,6 +23,7 @@ public class ServidorNacional {
     private static ConsultaCandidatosImpl consultaCandidatos;
     private static RegistroVotosImpl registroVotos;
     private static ProcesadorLoteVotosImpl procesadorLoteVotos;
+    private static ReplicaInfoImpl replicaInfo;
     private static Communicator communicator;
     private static ObjectAdapter adapter;
     private static ConfigManager configManager;
@@ -42,9 +44,53 @@ public class ServidorNacional {
             // Inicializar ICE
             communicator = Util.initialize(args);
             
+            // Configurar propiedades de réplica para ReplicaInfo
+            com.zeroc.Ice.Properties properties = communicator.getProperties();
+            
+            // Leer propiedades del sistema y configurarlas en ICE
+            String replicaId = System.getProperty("Replica.Id");
+            String replicaPort = System.getProperty("Replica.Port");
+            
+            if (replicaId != null && !replicaId.isEmpty()) {
+                properties.setProperty("Replica.Id", replicaId);
+                System.out.println("🔧 Réplica ID configurado: " + replicaId);
+            } else if (properties.getProperty("Replica.Id").isEmpty()) {
+                properties.setProperty("Replica.Id", "nacional-master");
+                System.out.println("🔧 Réplica ID por defecto: nacional-master");
+            }
+            
+            if (replicaPort != null && !replicaPort.isEmpty()) {
+                properties.setProperty("Replica.Port", replicaPort);
+                System.out.println("🔧 Puerto de réplica configurado: " + replicaPort);
+            } else if (properties.getProperty("Replica.Port").isEmpty()) {
+                properties.setProperty("Replica.Port", "9090");
+                System.out.println("🔧 Puerto de réplica por defecto: 9090");
+            }
+            
+            // Configurar otras propiedades del sistema en ICE
+            String[] systemProps = {
+                "ReliableQueue.BaseDir", "ReliableQueue.ProcessingInterval", "ReliableQueue.BatchSize",
+                "ReliableQueue.MaxRetries", "ReliableQueue.RetryDelay", "ReliableQueue.ProcessingThreads",
+                "ReliableQueue.SchedulerThreads", "ReliableQueue.PersistenceEnabled", "ReliableQueue.AutoCleanup",
+                "ReliableQueue.CleanupInterval", "ReliableQueue.MaxProcessedFiles", "ReliableQueue.LogLevel",
+                "ReliableQueue.LogStatistics", "ReliableQueue.StatisticsInterval", "VotosDB.ConnectionTimeout",
+                "VotosDB.MaxRetries", "VotosDB.RetryInterval"
+            };
+            
+            for (String prop : systemProps) {
+                String value = System.getProperty(prop);
+                if (value != null && !value.isEmpty()) {
+                    properties.setProperty(prop, value);
+                }
+            }
+            
+            // Determinar el puerto del adaptador basado en la configuración
+            String adapterPort = properties.getProperty("Replica.Port");
+            String adapterEndpoint = "tcp -h localhost -p " + adapterPort;
+            
             // Crear adaptador
             adapter = communicator.createObjectAdapterWithEndpoints(
-                "ServidorNacionalAdapter", "tcp -h localhost -p 9090"
+                "ServidorNacionalAdapter", adapterEndpoint
             );
             
             // Crear e inicializar el Broker Nacional
@@ -65,6 +111,9 @@ public class ServidorNacional {
             
             // Crear e inicializar ProcesadorLoteVotos
             procesadorLoteVotos = new ProcesadorLoteVotosImpl();
+            
+            // Crear e inicializar ReplicaInfo
+            replicaInfo = new ReplicaInfoImpl(communicator.getProperties());
             
             // Registrar el Broker como IAdministradorCandidatos (compatibilidad hacia atrás)
             Identity candidatosId = Util.stringToIdentity("AdministradorCandidatos");
@@ -95,6 +144,10 @@ public class ServidorNacional {
             Identity procesadorLoteVotosId = Util.stringToIdentity("ProcesadorLoteVotos");
             adapter.add(procesadorLoteVotos, procesadorLoteVotosId);
             
+            // Registrar ReplicaInfo endpoint
+            Identity replicaInfoId = Util.stringToIdentity("ReplicaInfo");
+            adapter.add(replicaInfo, replicaInfoId);
+            
             // Activar adaptador
             adapter.activate();
             
@@ -114,6 +167,7 @@ public class ServidorNacional {
             System.out.println("   • ConsultaCandidatos (consulta candidatos electorales) 🗳️");
             System.out.println("   • RegistroVotos (registro de votos) 📝");
             System.out.println("   • ProcesadorLoteVotos (procesamiento de votos) 🗳️");
+            System.out.println("   • ReplicaInfo (información de ejecución de réplica) 📋");
             System.out.println("==========================================");
             
             if (useUI) {
@@ -250,6 +304,8 @@ public class ServidorNacional {
             if (procesadorLoteVotos != null) {
                 procesadorLoteVotos.shutdown();
             }
+            
+            // ReplicaInfo no necesita shutdown explícito
             
             // Desactivar adaptador
             if (adapter != null) {

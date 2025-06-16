@@ -132,6 +132,43 @@ module Demo
         string obtenerNodeId();
     };
 
+    // ========== INTERFAZ INFORMACIÓN DE RÉPLICAS ==========
+    
+    struct InfoEjecucionReplica
+    {
+        string replicaId;
+        string nodeId;
+        int puerto;
+        string host;
+        string endpoint;
+        bool activa;
+        long tiempoInicio;
+        MetricasRecursos metricas;
+    };
+
+    sequence<InfoEjecucionReplica> SeqInfoReplicas;
+
+    interface IReplicaInfo
+    {
+        // Obtener información de la réplica actual
+        InfoEjecucionReplica obtenerInfoReplica();
+        
+        // Obtener puerto de ejecución
+        int obtenerPuertoEjecucion();
+        
+        // Obtener endpoint completo
+        string obtenerEndpoint();
+        
+        // Obtener ID de la réplica
+        string obtenerReplicaId();
+        
+        // Verificar si la réplica está activa
+        bool estaActiva();
+        
+        // Obtener tiempo de actividad
+        long obtenerTiempoActividad();
+    };
+
     // ========== INTERFAZ HELLO WORLD ==========
     
     interface IHelloWorld
