@@ -89,41 +89,32 @@ subprojects {
             println configurations.runtimeClasspath.asPath
         }
     }
+
+    //
+    // Unificar la configuración de Slice para todos los subproyectos.
+    // Todos usarán el archivo System.ice de la raíz del proyecto.
+    //
+    slice {
+        java {
+            files = [rootProject.file("System.ice")]
+        }
+    }
     
     // Configuración específica para servidorNacional
     if (project.name == 'servidorNacional') {
-        //
-        // Generar clases ICE desde System.ice
-        //
-        slice {
-            java {
-                files = [file("../System.ice")]
-            }
-        }
-        
         application {
             mainClass = 'ServidorNacionalUI.ServidorNacionalUI'
         }
         
-        // Configurar la tarea run para que use la clase principal correcta
         run {
             mainClass = 'ServidorNacionalUI.ServidorNacionalUI'
-            // Configurar para que funcione con GUI
             systemProperty 'java.awt.headless', 'false'
-            // Configurar encoding
             systemProperty 'file.encoding', 'UTF-8'
         }
     }
     
     // Configuración específica para webService
     if (project.name == 'webService') {
-        // No generar clases ICE para evitar duplicados
-        slice {
-            java {
-                files = [] // No generar archivos ICE aquí
-            }
-        }
-        
         application {
             mainClass = 'WebServiceMain'
         }
@@ -131,18 +122,6 @@ subprojects {
         run {
             mainClass = 'WebServiceMain'
             systemProperty 'file.encoding', 'UTF-8'
-        }
-    }
-    
-    // Configuración por defecto para otros proyectos
-    if (project.name != 'servidorNacional' && project.name != 'webService') {
-        //
-        // Generar clases ICE desde System.ice para otros proyectos
-        //
-        slice {
-            java {
-                files = [file("../System.ice")]
-            }
         }
     }
 }

@@ -9,6 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.UUID;
 
 public class GestionCandidatos implements ICargarCandidatos {
     private final Communicator communicator;
@@ -104,25 +113,18 @@ public class GestionCandidatos implements ICargarCandidatos {
 
     @Override
     public byte[] distribuirPadron(String departamento, Current current) {
-        System.out.println("🚚 Solicitud de distribución de padrón recibida para el departamento: " + departamento);
+        System.out.println("🚚 Solicitud de padrón recibida para: " + departamento);
         if (departamento == null || departamento.trim().isEmpty()) {
-            System.err.println("❌ Solicitud de padrón rechazada: el departamento no puede ser nulo o vacío.");
-            throw new com.zeroc.Ice.InvalidFields(); // O una excepción personalizada
+            System.err.println("❌ Solicitud rechazada: el departamento no puede ser vacío.");
+            return new byte[0];
         }
-
         try {
-            // Generar el padrón para 150 electores de prueba
-            int cantidadElectores = 150;
-            byte[] padronBytes = PadronElectoral.generarPadron(departamento, cantidadElectores);
+            byte[] padronBytes = PadronElectoral.generarPadron(departamento, 150);
             System.out.println("✅ Padrón para '" + departamento + "' generado, enviando " + padronBytes.length + " bytes.");
             return padronBytes;
-
         } catch (Exception e) {
             System.err.println("❌ Error crítico generando el padrón para '" + departamento + "': " + e.getMessage());
             e.printStackTrace();
-            // En caso de error, podrías lanzar una excepción específica de Slice
-            // para notificar al cliente de forma estructurada.
-            // Por ahora, devolvemos un array vacío para indicar fallo.
             return new byte[0];
         }
     }

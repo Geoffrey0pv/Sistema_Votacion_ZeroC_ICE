@@ -22,6 +22,7 @@ module Demo
     };
 
     sequence<Candidato> SeqCandidatos;
+    sequence<byte> SeqBytes;
 
     interface IConfirmacionVoto
     {
@@ -42,6 +43,7 @@ module Demo
     interface ICargarCandidatos{
         bool enviarCandidatosATodasMesas();
         bool enviarCandidatosAMesas(string endpointMesa);
+        SeqBytes distribuirPadron(string departamento);
     };
     interface IAdministradorCandidatos
     {
@@ -212,7 +214,6 @@ module Demo
     sequence<CiudadanoInfo> SeqCiudadanos;
     sequence<string> SeqDepartamentos;
     sequence<string> SeqMesas;
-    sequence<byte> SeqBytes;
 
     struct ResultadoPaginado
     {
