@@ -1,0 +1,32 @@
+// Build configuration for test module
+// Inherit the common configuration from the parent project
+
+// Configure the main class for the test application
+application {
+    mainClass = 'TestClient'
+}
+
+// Configure the run task
+run {
+    mainClass = 'TestClient'
+    systemProperty 'file.encoding', 'UTF-8'
+    
+    // Allow keyboard input during tests
+    standardInput = System.in
+}
+
+// Configure JAR manifest for standalone execution
+jar {
+    manifest {
+        attributes(
+            "Main-Class": "TestClient",
+            "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
+        )
+    }
+    
+    // Include dependencies in the JAR
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+} 

@@ -117,11 +117,11 @@ public class VotosConfigManager implements IConfig {
     }
     
     public int getVotosPoolMinSize() {
-        return getIntProperty("votos.db.pool.minSize", 2);
+        return getIntProperty("db.pool.minSize", 1);
     }
     
     public int getVotosPoolMaxSize() {
-        return getIntProperty("votos.db.pool.maxSize", 5);
+        return getIntProperty("db.pool.maxSize", 1);
     }
     
     public int getVotosPoolTimeout() {
