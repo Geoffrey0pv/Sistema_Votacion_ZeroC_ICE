@@ -1,0 +1,11 @@
+server:
+  port: 8080              # mismo puerto que usas ahora
+  tomcat:
+    max-threads: 400      # hilos para atender peticiones
+    accept-count: 1000    # cola de espera antes de rechazar conexiones
+    keep-alive-timeout: 30s
+
+spring:
+  datasource:
+    hikari:
+      maximumPoolSize: 200    # sube el pool JDBC (si el webService toca BD)
