@@ -318,7 +318,7 @@ public class RegistroVotosImpl implements IRegistroVotos {
             }
             
             // Verificar que la tabla voto existe
-            String sql = "SELECT COUNT(*) FROM voto_presidencial LIMIT 1";
+            String sql = "SELECT COUNT(*) FROM votos LIMIT 1";
             try (PreparedStatement stmt = conn.prepareStatement(sql);
                  ResultSet rs = stmt.executeQuery()) {
                 return true;
