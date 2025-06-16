@@ -22,6 +22,7 @@
         <option>ServidorNacional</option>
         <adapter name="ServidorNacionalAdapter" endpoints="tcp -h localhost -p 9090">
           <object identity="administradorCandidatos" type="::Demo::IAdministradorCandidatos"/>
+          <object identity="consultaCandidatos" type="::Demo::IConsultaCandidatos"/>
           <object identity="brokerNacional" type="::Demo::IBrokerNacional"/>
         </adapter>
         <properties>

@@ -12,17 +12,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GestionCandidatos implements ICargarCandidatos {
     private final Communicator communicator;
-    private final List<Candidato> candidatos;
-    private final List<String> endpointsMesas;
-    private IAdministradorCandidatosPrx adminCandidatosNacional;
+    private final List<CandidatoElectoral> candidatosElectorales;
+    private IConsultaCandidatosPrx consultaCandidatosNacional;
     private ObjectAdapter callbackAdapter;
     private Properties config;
     private final AtomicBoolean actualizandoCandidatos = new AtomicBoolean(false);
 
     public GestionCandidatos(Communicator communicator) {
         this.communicator = communicator;
-        this.candidatos = new CopyOnWriteArrayList<>();
-        this.endpointsMesas = new CopyOnWriteArrayList<>();
+        this.candidatosElectorales = new CopyOnWriteArrayList<>();
         cargarConfiguracion();
 
         // Crear adaptador para callbacks una sola vez
@@ -33,10 +31,7 @@ public class GestionCandidatos implements ICargarCandidatos {
             System.err.println("❌ Error creando adaptador para callbacks: " + e.getMessage());
         }
 
-        conectarYNuevoIntento();
-
-        // Cargar endpoints conocidos de las mesas (esto podría venir de configuración)
-        cargarEndpointsMesas();
+        conectarAServidorNacional();
     }
 
     private void cargarConfiguracion() {
@@ -53,26 +48,28 @@ public class GestionCandidatos implements ICargarCandidatos {
         }
     }
 
-    private void conectarYNuevoIntento() {
+    private void conectarAServidorNacional() {
         new Thread(() -> {
             try {
-                ObjectPrx base = communicator.stringToProxy("AdministradorCandidatosNacional@ServidorNacionalAdapter");
-                adminCandidatosNacional = IAdministradorCandidatosPrx.checkedCast(base);
-                
-                if (adminCandidatosNacional == null) {
-                    throw new Error("Proxy nulo para Administrador de Candidatos Nacional");
+                System.out.println("🔄 Conectando con Servidor Nacional...");
+
+                // Proxy para IConsultaCandidatos
+                ObjectPrx consultaBase = communicator.stringToProxy("ConsultaCandidatos@ServidorNacionalAdapter");
+                consultaCandidatosNacional = IConsultaCandidatosPrx.checkedCast(consultaBase);
+                if (consultaCandidatosNacional == null) {
+                    throw new Error("Proxy nulo para IConsultaCandidatos");
                 }
                 
-                System.out.println("✅ Conexión establecida con el Administrador de Candidatos Nacional");
-                actualizarCandidatosDesdeNacional();
+                System.out.println("✅ Conexión establecida con el servicio de Consulta de Candidatos");
+                actualizarCandidatosElectoralesDesdeNacional();
                 
             } catch (Exception e) {
                 System.err.println("❌ Error conectando con el Servidor Nacional: " + e.getMessage());
                 
                 try {
-                    System.out.println("🔄 Reintentando conexión con Servidor Nacional en 5 segundos...");
+                    System.out.println("🔄 Reintentando conexión en 5 segundos...");
                     Thread.sleep(5000);
-                    conectarYNuevoIntento();
+                    conectarAServidorNacional();
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }
@@ -80,46 +77,31 @@ public class GestionCandidatos implements ICargarCandidatos {
         }).start();
     }
 
-    private void actualizarCandidatosDesdeNacional() {
-        if (!actualizandoCandidatos.compareAndSet(false, true)) {
-            System.out.println("🔄 Actualización de candidatos ya en progreso.");
-            return;
-        }
-
+    private void actualizarCandidatosElectoralesDesdeNacional() {
         try {
-            if (adminCandidatosNacional != null) {
-                System.out.println("🔄 Solicitando candidatos al Servidor Nacional...");
-                Candidato[] candidatosNacionales = adminCandidatosNacional.obtenerTodosCandidatos();
-                if (candidatosNacionales != null && candidatosNacionales.length > 0) {
-                    this.candidatos.clear();
-                    for (Candidato c : candidatosNacionales) {
-                        this.candidatos.add(c);
+            if (consultaCandidatosNacional != null) {
+                System.out.println("🗳️  Solicitando candidatos electorales al Servidor Nacional...");
+                CandidatoElectoral[] resultado = consultaCandidatosNacional.obtenerTodosCandidatosElectorales();
+                if (resultado != null && resultado.length > 0) {
+                    this.candidatosElectorales.clear();
+                    for (CandidatoElectoral c : resultado) {
+                        this.candidatosElectorales.add(c);
                     }
-                    System.out.println("✅ Candidatos actualizados desde el Servidor Nacional: " + this.candidatos.size());
+                    System.out.println("✅ Candidatos Electorales actualizados: " + this.candidatosElectorales.size());
                 } else {
-                    System.err.println("⚠️ No se obtuvieron candidatos del Servidor Nacional (lista vacía).");
+                     System.err.println("⚠️ No se obtuvieron candidatos electorales (lista vacía).");
                 }
             }
-        } catch (Exception e) {
-            System.err.println("❌ Error obteniendo candidatos del Servidor Nacional: " + e.getMessage());
-        } finally {
-            actualizandoCandidatos.set(false);
+        } catch(Exception e) {
+            System.err.println("❌ Error al obtener candidatos electorales: " + e.getMessage());
         }
-    }
-
-    private void cargarEndpointsMesas() {
-        // Aquí cargarías los endpoints desde configuración o registro
-        // Por ejemplo:
-        endpointsMesas.add("Mesa1:tcp -h 192.168.1.10 -p 10001");
-        endpointsMesas.add("Mesa2:tcp -h 192.168.1.11 -p 10001");
-        endpointsMesas.add("Mesa3:tcp -h 192.168.1.12 -p 10001");
     }
 
     @Override
     public boolean enviarCandidatosATodasMesas(Current current) {
-        if (candidatos.isEmpty()) {
+        if (candidatosElectorales.isEmpty()) {
             System.err.println("⚠️ No hay candidatos para enviar, intentando actualizar desde el nacional...");
-            actualizarCandidatosDesdeNacional();
+            actualizarCandidatosElectoralesDesdeNacional();
             return false;
         }
         
@@ -129,26 +111,40 @@ public class GestionCandidatos implements ICargarCandidatos {
 
     @Override
     public boolean enviarCandidatosAMesas(String endpointMesa, Current current) {
-        System.out.println("Enviando candidatos a mesa específica: " + endpointMesa);
+        System.out.println("DEBUG: Solicitud recibida de la mesa: " + endpointMesa);
 
-        if (candidatos.isEmpty()) {
-            System.err.println("⚠️ No hay candidatos locales, solicitando al servidor nacional antes de continuar...");
-            actualizarCandidatosDesdeNacional();
+        if (candidatosElectorales.isEmpty()) {
+            System.err.println("DEBUG: ⚠️ Lista de candidatos electorales vacía. Intentando actualizar...");
+            actualizarCandidatosElectoralesDesdeNacional();
             
             try {
-                // Damos un momento para que la actualización asíncrona termine
                 Thread.sleep(3000); 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
 
-            if (candidatos.isEmpty()) {
-                System.err.println("❌ Fallo definitivo: No se pudieron obtener candidatos del servidor nacional.");
+            if (candidatosElectorales.isEmpty()) {
+                System.err.println("DEBUG: ❌ Fallo definitivo. No se pudieron obtener candidatos.");
                 return false;
             }
         }
 
-        Candidato[] arrayCandidatos = candidatos.toArray(new Candidato[0]);
+        // Convertir la lista de 'CandidatoElectoral' al formato 'Candidato' que espera la mesa.
+        List<Candidato> candidatosParaEnviar = new ArrayList<>();
+        for (CandidatoElectoral ce : this.candidatosElectorales) {
+            // Asumiendo que solo los candidatos activos deben ser enviados
+            if (ce.activo) {
+                candidatosParaEnviar.add(new Candidato(ce.id, ce.nombre, ce.partido));
+            }
+        }
+        
+        Candidato[] arrayCandidatos = candidatosParaEnviar.toArray(new Candidato[0]);
+
+        System.out.println("DEBUG: Preparando para enviar " + arrayCandidatos.length + " candidatos a la mesa.");
+        if (arrayCandidatos.length > 0) {
+            System.out.println("DEBUG: Primer candidato a enviar: " + arrayCandidatos[0].nombre);
+        }
+
         return enviarCandidatosAMesa(endpointMesa, arrayCandidatos);
     }
 
@@ -182,31 +178,24 @@ public class GestionCandidatos implements ICargarCandidatos {
 
     // Métodos para gestionar la lista de candidatos
     public void actualizarCandidatos(Candidato[] nuevosCandidatos) {
-        candidatos.clear();
-        for (Candidato candidato : nuevosCandidatos) {
-            candidatos.add(candidato);
-        }
-        System.out.println("Lista de candidatos actualizada. Total: " + candidatos.size());
+        // Implementa la lógica para actualizar la lista de candidatos
     }
 
     public void agregarEndpointMesa(String endpoint) {
-        if (!endpointsMesas.contains(endpoint)) {
-            endpointsMesas.add(endpoint);
-            System.out.println("Nuevo endpoint de mesa agregado: " + endpoint);
-        }
+        // Implementa la lógica para agregar un nuevo endpoint de mesa
     }
 
     public void removerEndpointMesa(String endpoint) {
-        endpointsMesas.remove(endpoint);
-        System.out.println("Endpoint de mesa removido: " + endpoint);
+        // Implementa la lógica para remover un endpoint de mesa
     }
 
     public List<String> obtenerEndpointsMesas() {
-        return new ArrayList<>(endpointsMesas);
+        // Implementa la lógica para obtener la lista de endpoints de mesas
+        return new ArrayList<>();
     }
 
     public int obtenerCantidadCandidatos() {
-        return candidatos.size();
+        return candidatosElectorales.size();
     }
 
     // Clase interna para manejar callbacks de confirmación
