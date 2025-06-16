@@ -70,8 +70,6 @@ public class ServidorRegional {
                 
                 System.out.println("✅ Servidor Regional iniciado correctamente");
                 System.out.println("📊 Componentes disponibles:");
-                System.out.println("   • ReceptorVotos: " + idReceptor.name + " y " + idReceptorTipo.name);
-                System.out.println("   • GestionCandidatos: " + idGestion.name + " y " + idGestionTipo.name);
                 System.out.println("   • ConsultorVotantesRegional: Consulta de votantes del servidor nacional");
                 System.out.println("   • DistribuidorMesas: Distribución de votantes por mesas");
                 System.out.println("Servidor Regional iniciado correctamente");

@@ -1,5 +1,5 @@
 <state>
-  <timestamp value='1750063214181' />
+  <timestamp value='1750064741800' />
   <sourceSet name='default'>
     <source name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/System.ice'>
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/Voto.java' />
@@ -40,12 +40,21 @@
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/ReportResult.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/ReportException.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IElectoralReports.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/DistribucionMesa.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/ResultadoDistribucion.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/EstadisticasMesa.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IConfirmacionDistribucion.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IDistribuidorMesas.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IMesaVotacion.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IRegistroMesas.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/SeqCandidatosHelper.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/SeqReplicasHelper.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/SeqInfoReplicasHelper.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/SeqCiudadanosHelper.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/SeqCandidatosElectoralesHelper.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/SeqVotosCompletosHelper.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/SeqDistribucionMesasHelper.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/SeqEstadisticasMesasHelper.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IConfirmacionVotoPrx.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/_IConfirmacionVotoPrxI.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IConfirmacionCandidatosPrx.java' />
@@ -88,6 +97,14 @@
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/_IProcesadorLoteVotosPrxI.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IElectoralReportsPrx.java' />
       <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/_IElectoralReportsPrxI.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IConfirmacionDistribucionPrx.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/_IConfirmacionDistribucionPrxI.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IDistribuidorMesasPrx.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/_IDistribuidorMesasPrxI.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IMesaVotacionPrx.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/_IMesaVotacionPrxI.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/IRegistroMesasPrx.java' />
+      <file name='/home/sebastian411/personal/ingsoft4/wtf proyecto/Sistema_Votacion_ZeroC_ICE/test/build/generated-src/Demo/_IRegistroMesasPrxI.java' />
     </source>
     <arg value='/usr/bin/slice2java' />
     <arg value='-I/usr/share/ice/slice' />
