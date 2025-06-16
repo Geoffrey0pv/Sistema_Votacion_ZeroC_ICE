@@ -26,7 +26,7 @@ public class ServidorRegional {
             configurarPropiedades(args);
             com.zeroc.Ice.Communicator communicator = com.zeroc.Ice.Util.initialize(args, extraArgs);
             scanner = new Scanner(System.in);
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> communicator.destroy()));
+            //Runtime.getRuntime().addShutdownHook(new Thread(() -> communicator.destroy()));
 
             if(!extraArgs.isEmpty()) {
                 System.err.println("too many arguments");
