@@ -12,11 +12,38 @@ public class ReceptorVotos implements IRegistrarVoto {
     private final String nombreRegion;
     private final ConcurrentHashMap<Long, Voto> votosRecibidos;
     private final AtomicLong contadorVotos;
+    private final com.zeroc.Ice.Communicator communicator;
+    private IRegistroVotosPrx registroVotosProxy;
 
-    public ReceptorVotos(String nombreRegion) {
+    public ReceptorVotos(String nombreRegion, com.zeroc.Ice.Communicator communicator) {
         this.nombreRegion = nombreRegion != null ? nombreRegion : "RegionDesconocida";
         this.votosRecibidos = new ConcurrentHashMap<>();
         this.contadorVotos = new AtomicLong(0);
+        this.communicator = communicator;
+        conectarAServidorNacional();
+    }
+
+    private void conectarAServidorNacional() {
+        try {
+            System.out.println("Intentando conectar con el Servidor Nacional para registro de votos...");
+            // Se asume que el servidor nacional expone el servicio con esta identidad.
+            // Si falla, verificar la configuración en ServidorNacional.java.
+            String proxyString = "registroVotos@ServidorNacionalAdapter";
+            com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(proxyString);
+            this.registroVotosProxy = IRegistroVotosPrx.checkedCast(base);
+
+            if (this.registroVotosProxy == null) {
+                System.err.println("❌ Error: El proxy para IRegistroVotos es inválido. No se podrán enviar votos al servidor nacional.");
+            } else {
+                // Hacemos un ping para verificar la conexión de inmediato
+                this.registroVotosProxy.ice_ping();
+                System.out.println("✅ Conexión con Servidor Nacional (RegistroVotos) establecida correctamente.");
+            }
+        } catch (com.zeroc.Ice.Exception e) {
+            System.err.println("❌ Error crítico al conectar con el Servidor Nacional: " + e.getMessage());
+            System.err.println("   Los votos serán almacenados localmente pero no se enviarán al nacional hasta que se reinicie el servicio.");
+            this.registroVotosProxy = null;
+        }
     }
 
     @Override
@@ -50,7 +77,10 @@ public class ReceptorVotos implements IRegistrarVoto {
                     callback.recibirAck(ack);
                 }
 
-                System.out.println("  RESULTADO: Voto " + voto.idVoto + " ACEPTADO y almacenado.");
+                System.out.println("  RESULTADO: Voto " + voto.idVoto + " ACEPTADO y almacenado localmente.");
+
+                // Reenviar al servidor nacional
+                enviarVotoANacional(voto);
 
             } else {
                 // Crear acknowledgment de error
@@ -83,6 +113,44 @@ public class ReceptorVotos implements IRegistrarVoto {
             } catch (Exception callbackException) {
                 System.err.println("Error enviando callback: " + callbackException.getMessage());
             }
+        }
+    }
+
+    private void enviarVotoANacional(Voto voto) {
+        if (registroVotosProxy == null) {
+            System.err.println("⚠️  No se puede enviar voto " + voto.idVoto + " al Servidor Nacional, el proxy no está disponible.");
+            return;
+        }
+
+        try {
+            System.out.println("  -> Reenviando voto " + voto.idVoto + " al Servidor Nacional...");
+
+            VotoCompleto votoCompleto = new VotoCompleto();
+            votoCompleto.id = voto.idVoto;
+            votoCompleto.mesaId = voto.idMesa;
+            votoCompleto.timestamp = voto.tsEmitido;
+            votoCompleto.candidatoId = voto.idCandidato;
+            votoCompleto.hashVerificacion = voto.idElectorHash;
+            // Se usa el nombre de la región para municipio y departamento
+            votoCompleto.municipio = this.nombreRegion;
+            votoCompleto.departamento = this.nombreRegion;
+
+            // Llamada asíncrona para no bloquear el servidor regional
+            registroVotosProxy.registrarVotoAsync(votoCompleto)
+                .whenComplete((registrado, ex) -> {
+                    if (ex != null) {
+                        System.err.println("❌ Error en la comunicación asíncrona al enviar voto " + voto.idVoto + ": " + ex.getMessage());
+                    } else {
+                        if (registrado) {
+                            System.out.println("  -> ✅ Voto " + voto.idVoto + " registrado exitosamente por el Servidor Nacional.");
+                        } else {
+                            System.err.println("  -> ❌ El Servidor Nacional RECHAZÓ el voto " + voto.idVoto + ". Revisar logs del nacional.");
+                        }
+                    }
+                });
+
+        } catch (Exception e) {
+             System.err.println("❌ Excepción inesperada al intentar enviar voto " + voto.idVoto + " al Nacional: " + e.getMessage());
         }
     }
 

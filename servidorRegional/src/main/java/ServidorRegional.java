@@ -22,7 +22,7 @@ public class ServidorRegional {
                 com.zeroc.Ice.ObjectAdapter adapter = communicator.createObjectAdapter("RegionalAdapter");
                 com.zeroc.Ice.Properties properties = communicator.getProperties();
 
-                ReceptorVotos receptorVotos = new ReceptorVotos(properties.getProperty("Ice.ProgramName"));
+                ReceptorVotos receptorVotos = new ReceptorVotos(properties.getProperty("Ice.ProgramName"), communicator);
                 GestionCandidatos gestionCandidatos = new GestionCandidatos(communicator);
 
                 com.zeroc.Ice.Identity idReceptor = com.zeroc.Ice.Util.stringToIdentity("receptorVotos");
