@@ -229,6 +229,51 @@ module Demo
         bool verificarConexionBD();
     };
 
+    // ========== INTERFAZ REGISTRO DE VOTOS ==========
+    
+    struct VotoCompleto
+    {
+        long id;
+        string mesaId;
+        long timestamp;
+        long candidatoId;
+        string hashVerificacion;
+        string municipio;
+        string departamento;
+    };
+
+    sequence<VotoCompleto> SeqVotosCompletos;
+
+    struct ResultadoRegistroVotos
+    {
+        bool exito;
+        int totalVotos;
+        int votosRegistrados;
+        int votosRechazados;
+        string mensaje;
+        long tiempoProcessamiento;
+    };
+
+    interface IRegistroVotos
+    {
+        // Registrar un solo voto
+        bool registrarVoto(VotoCompleto voto);
+        
+        // Registrar múltiples votos en lote
+        ResultadoRegistroVotos registrarVotosLote(SeqVotosCompletos votos);
+        
+        // Verificar si un voto ya existe por hash
+        bool existeVotoPorHash(string hashVerificacion);
+        
+        // Obtener estadísticas de votos
+        long contarVotosPorMesa(string mesaId);
+        long contarVotosPorCandidato(long candidatoId);
+        long contarVotosPorMunicipio(string municipio);
+        
+        // Verificar conexión a BD
+        bool verificarConexionBD();
+    };
+
     // ========== INTERFAZ PROCESAMIENTO DE VOTOS EN LOTE ==========
     
     struct ResultadoProcesamiento

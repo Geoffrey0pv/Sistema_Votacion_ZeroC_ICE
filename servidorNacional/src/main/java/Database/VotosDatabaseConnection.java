@@ -1,72 +1,59 @@
 package Database;
 
+import Config.VotosConfigManager;
 import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
- * Wrapper para el pool de conexiones de la base de datos de votos
- * Simplifica el uso del VotosConnectionPool para los servicios de votación
+ * Conexión RÁPIDA y SIMPLE para la base de datos de Votos
  */
 public class VotosDatabaseConnection {
     
-    private final VotosConnectionPool connectionPool;
+    private final ConnectionPoolManager poolManager;
+    private boolean isServiceActive = true;
     
     public VotosDatabaseConnection() {
-        this.connectionPool = VotosConnectionPool.getInstance();
-        System.out.println("🗳️  VotosDatabaseConnection inicializada");
+        this.poolManager = ConnectionPoolManager.getInstance();
+        System.out.println("🗳️ VotosDatabaseConnection RÁPIDA inicializada");
     }
     
     /**
-     * Obtiene una conexión de la base de datos de votos
-     * @return Connection o null si el servicio está inactivo
+     * Obtiene una conexión válida - RÁPIDO
      */
     public Connection getConnection() {
+        if (!isServiceActive) {
+            return null;
+        }
+        
         try {
-            return connectionPool.getConnection();
+            return poolManager.getVotosConnection();
         } catch (SQLException e) {
-            if ("SERVICIO_VOTOS_INACTIVO".equals(e.getMessage())) {
-                System.err.println("❌ Servicio de base de datos de votos inactivo");
-                return null;
-            } else {
-                System.err.println("❌ Error obteniendo conexión de votos: " + e.getMessage());
-                return null;
-            }
+            System.err.println("❌ Error conexión votos: " + e.getMessage());
+            return null;
         }
     }
     
-    /**
-     * Devuelve una conexión al pool de votos
-     * @param conn Conexión a devolver
-     */
-    public void returnConnection(Connection conn) {
-        if (conn != null) {
-            connectionPool.returnConnection(conn);
-        }
+    public void commit() {
+        // Usar connection.commit() directamente
     }
     
-    /**
-     * Cierra una conexión definitivamente
-     * @param conn Conexión a cerrar
-     */
-    public void closeConnection(Connection conn) {
-        if (conn != null) {
-            connectionPool.closeConnection(conn);
-        }
+    public void rollback() {
+        // Usar connection.rollback() directamente
     }
     
-    /**
-     * Verifica si el servicio de base de datos de votos está activo
-     * @return true si está activo, false si no
-     */
     public boolean isServiceActive() {
-        return connectionPool.isServiceActive();
+        return isServiceActive;
     }
     
-    /**
-     * Obtiene estadísticas del pool de conexiones de votos
-     * @return String con estadísticas
-     */
-    public String getPoolStats() {
-        return connectionPool.getPoolStats();
+    public void reconnect() {
+        // No hacer nada, el pool maneja esto
+    }
+    
+    public void close() {
+        isServiceActive = false;
+    }
+    
+    public String getConnectionInfo() {
+        return isServiceActive ? "🗳️ Votos: ACTIVA" : "❌ Votos: INACTIVA";
     }
 } 

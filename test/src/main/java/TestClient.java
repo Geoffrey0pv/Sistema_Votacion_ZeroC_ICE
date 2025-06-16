@@ -11,6 +11,7 @@ public class TestClient {
     private IConsultaMesaPrx consultaMesaProxy;
     private IConsultaCiudadanosPrx consultaCiudadanosProxy;
     private IConsultaCandidatosPrx consultaCandidatosProxy;
+    private IRegistroVotosPrx registroVotosProxy;
     
     public TestClient() {
         scanner = new Scanner(System.in);
@@ -81,6 +82,15 @@ public class TestClient {
                 System.out.println("⚠️  Servicio ConsultaCandidatos no disponible: " + e.getMessage());
             }
             
+            // Conectar RegistroVotos
+            try {
+                ObjectPrx base = communicator.stringToProxy("RegistroVotos:" + serverEndpoint);
+                registroVotosProxy = IRegistroVotosPrx.checkedCast(base);
+                System.out.println("✅ Servicio RegistroVotos conectado");
+            } catch (java.lang.Exception e) {
+                System.out.println("⚠️  Servicio RegistroVotos no disponible: " + e.getMessage());
+            }
+            
             System.out.println("═══════════════════════════════════════");
             
         } catch (java.lang.Exception e) {
@@ -105,6 +115,7 @@ public class TestClient {
             System.out.println("1. 🏛️  Consultar Lugar de Votación por Documento");
             System.out.println("2. 👥 Obtener Votantes por Departamento");
             System.out.println("3. 🗳️  Consultar Candidatos Electorales");
+            System.out.println("4. ✅ Registro de Votos");
             System.out.println("0. 🚪 Salir");
             System.out.println("───────────────────────────────────────────────────────────");
             System.out.print("Seleccione una opción: ");
@@ -121,6 +132,9 @@ public class TestClient {
                         break;
                     case 3:
                         consultarCandidatosElectorales();
+                        break;
+                    case 4:
+                        registroVotosMenu();
                         break;
                     case 0:
                         System.out.println("👋 ¡Hasta luego!");
@@ -497,7 +511,7 @@ public class TestClient {
             
             System.out.println("\n✅ RESULTADOS:");
             System.out.println("══════════════════════════════════════");
-            System.out.println("�� Búsqueda: " + partido);
+            System.out.println("🔍 Búsqueda: " + partido);
             System.out.println("📊 Candidatos encontrados: " + candidatos.length);
             System.out.println("⏱️  Tiempo de consulta: " + duration + " ms");
             System.out.println("══════════════════════════════════════");
@@ -552,5 +566,257 @@ public class TestClient {
             System.out.println("... y " + (candidatos.length - limite) + " candidatos más");
         }
         System.out.println("─────────────────────────────────────────────────────────────");
+    }
+    
+    private void registroVotosMenu() {
+        if (registroVotosProxy == null) {
+            System.out.println("❌ Servicio RegistroVotos no disponible");
+            return;
+        }
+        
+        System.out.println("\n✅ ═══ REGISTRO DE VOTOS ═══");
+        System.out.println("Este servicio permite registrar votos individuales y obtener estadísticas.");
+        System.out.println();
+        
+        while (true) {
+            System.out.println("Opciones disponibles:");
+            System.out.println("1. Registrar voto individual");
+            System.out.println("2. Estadísticas de votos (por mesa o hash)");
+            System.out.println("3. Contar votos por candidato");
+            System.out.println("4. Contar votos por municipio");
+            System.out.println("5. Verificar conexión a BD");
+            System.out.println("0. Volver al menú principal");
+            System.out.print("Seleccione una opción: ");
+            
+            try {
+                int option = Integer.parseInt(scanner.nextLine().trim());
+                
+                switch (option) {
+                    case 1:
+                        registrarVotoIndividual();
+                        break;
+                    case 2:
+                        obtenerEstadisticasVotos();
+                        break;
+                    case 3:
+                        contarVotosPorCandidato();
+                        break;
+                    case 4:
+                        contarVotosPorMunicipio();
+                        break;
+                    case 5:
+                        verificarConexionRegistroVotos();
+                        break;
+                    case 0:
+                        return;
+                    default:
+                        System.out.println("❌ Opción inválida");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("❌ Por favor, ingrese un número válido.");
+            } catch (java.lang.Exception e) {
+                System.out.println("❌ Error: " + e.getMessage());
+            }
+        }
+    }
+    
+    private void registrarVotoIndividual() {
+        System.out.println("\n📝 REGISTRAR VOTO INDIVIDUAL");
+        System.out.println("Ingrese los datos del voto:");
+        
+        try {
+            System.out.print("🆔 Mesa ID: ");
+            String mesaId = scanner.nextLine().trim();
+            
+            System.out.print("👤 Candidato ID: ");
+            long candidatoId = Long.parseLong(scanner.nextLine().trim());
+            
+            System.out.print("🔐 Hash de verificación: ");
+            String hashVerificacion = scanner.nextLine().trim();
+            
+            System.out.print("🌍 Departamento: ");
+            String departamento = scanner.nextLine().trim();
+            
+            System.out.print("🏙️  Municipio: ");
+            String municipio = scanner.nextLine().trim();
+            
+            if (mesaId.isEmpty() || hashVerificacion.isEmpty() || departamento.isEmpty() || municipio.isEmpty()) {
+                System.out.println("❌ Todos los campos son obligatorios");
+                return;
+            }
+            
+            // Crear el voto
+            VotoCompleto voto = new VotoCompleto();
+            voto.id = 0; // Se asignará automáticamente
+            voto.mesaId = mesaId;
+            voto.timestamp = System.currentTimeMillis();
+            voto.candidatoId = candidatoId;
+            voto.hashVerificacion = hashVerificacion;
+            voto.departamento = departamento;
+            voto.municipio = municipio;
+            
+            System.out.println("⏳ Registrando voto...");
+            long startTime = System.currentTimeMillis();
+            
+            boolean resultado = registroVotosProxy.registrarVoto(voto);
+            
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            
+            System.out.println("\n✅ RESULTADO DEL REGISTRO:");
+            System.out.println("══════════════════════════════════════");
+            System.out.println("🎯 Éxito: " + (resultado ? "Sí" : "No"));
+            if (resultado) {
+                System.out.println("💬 Mensaje: Voto registrado exitosamente");
+            } else {
+                System.out.println("💬 Mensaje: Error al registrar el voto");
+            }
+            System.out.println("⏱️  Tiempo de registro: " + duration + " ms");
+            System.out.println("══════════════════════════════════════");
+            
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Por favor, ingrese un número válido para Candidato ID.");
+        } catch (java.lang.Exception e) {
+            System.out.println("❌ Error registrando voto: " + e.getMessage());
+        }
+    }
+    
+    private void obtenerEstadisticasVotos() {
+        System.out.println("\n📊 ESTADÍSTICAS DE VOTOS");
+        System.out.println("Seleccione el tipo de estadística:");
+        System.out.println("1. Contar votos por mesa");
+        System.out.println("2. Verificar existencia de voto por hash");
+        System.out.print("Opción: ");
+        
+        try {
+            int opcion = Integer.parseInt(scanner.nextLine().trim());
+            
+            switch (opcion) {
+                case 1:
+                    System.out.print("🆔 Ingrese Mesa ID: ");
+                    String mesaId = scanner.nextLine().trim();
+                    
+                    long startTime = System.currentTimeMillis();
+                    long totalVotos = registroVotosProxy.contarVotosPorMesa(mesaId);
+                    long endTime = System.currentTimeMillis();
+                    
+                    System.out.println("\n✅ ESTADÍSTICAS DE MESA:");
+                    System.out.println("══════════════════════════════════════");
+                    System.out.println("🆔 Mesa ID: " + mesaId);
+                    System.out.println("📊 Total de votos: " + totalVotos);
+                    System.out.println("⏱️  Tiempo de consulta: " + (endTime - startTime) + " ms");
+                    System.out.println("══════════════════════════════════════");
+                    break;
+                    
+                case 2:
+                    System.out.print("🔐 Ingrese hash de verificación: ");
+                    String hash = scanner.nextLine().trim();
+                    
+                    startTime = System.currentTimeMillis();
+                    boolean existe = registroVotosProxy.existeVotoPorHash(hash);
+                    endTime = System.currentTimeMillis();
+                    
+                    System.out.println("\n✅ VERIFICACIÓN DE HASH:");
+                    System.out.println("══════════════════════════════════════");
+                    System.out.println("🔐 Hash: " + hash);
+                    System.out.println("📊 Existe: " + (existe ? "Sí" : "No"));
+                    System.out.println("⏱️  Tiempo de consulta: " + (endTime - startTime) + " ms");
+                    System.out.println("══════════════════════════════════════");
+                    break;
+                    
+                default:
+                    System.out.println("❌ Opción inválida");
+            }
+            
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Por favor, ingrese un número válido.");
+        } catch (java.lang.Exception e) {
+            System.out.println("❌ Error obteniendo estadísticas: " + e.getMessage());
+        }
+    }
+    
+    private void contarVotosPorCandidato() {
+        System.out.println("\n🗳️ CONTAR VOTOS POR CANDIDATO");
+        System.out.print("👤 Ingrese el ID del candidato: ");
+        
+        try {
+            long candidatoId = Long.parseLong(scanner.nextLine().trim());
+            
+            System.out.println("🔍 Contando votos para candidato ID: " + candidatoId);
+            long startTime = System.currentTimeMillis();
+            
+            long totalVotos = registroVotosProxy.contarVotosPorCandidato(candidatoId);
+            
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            
+            System.out.println("\n✅ RESULTADO DEL CONTEO:");
+            System.out.println("══════════════════════════════════════");
+            System.out.println("👤 Candidato ID: " + candidatoId);
+            System.out.println("📊 Total de votos: " + totalVotos);
+            System.out.println("⏱️  Tiempo de consulta: " + duration + " ms");
+            System.out.println("══════════════════════════════════════");
+            
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Por favor, ingrese un número válido.");
+        } catch (java.lang.Exception e) {
+            System.out.println("❌ Error contando votos: " + e.getMessage());
+        }
+    }
+    
+    private void contarVotosPorMunicipio() {
+        System.out.println("\n🏙️ CONTAR VOTOS POR MUNICIPIO");
+        System.out.print("🏙️  Ingrese el nombre del municipio: ");
+        
+        String municipio = scanner.nextLine().trim();
+        if (municipio.isEmpty()) {
+            System.out.println("❌ El nombre del municipio no puede estar vacío");
+            return;
+        }
+        
+        try {
+            System.out.println("🔍 Contando votos para municipio: " + municipio);
+            long startTime = System.currentTimeMillis();
+            
+            long totalVotos = registroVotosProxy.contarVotosPorMunicipio(municipio);
+            
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            
+            System.out.println("\n✅ RESULTADO DEL CONTEO:");
+            System.out.println("══════════════════════════════════════");
+            System.out.println("🏙️  Municipio: " + municipio);
+            System.out.println("📊 Total de votos: " + totalVotos);
+            System.out.println("⏱️  Tiempo de consulta: " + duration + " ms");
+            System.out.println("══════════════════════════════════════");
+            
+        } catch (java.lang.Exception e) {
+            System.out.println("❌ Error contando votos: " + e.getMessage());
+        }
+    }
+    
+    private void verificarConexionRegistroVotos() {
+        System.out.println("\n🔍 VERIFICAR CONEXIÓN A BASE DE DATOS");
+        System.out.println("Este servicio permite verificar la conexión a la base de datos.");
+        System.out.println();
+        
+        try {
+            System.out.println("⏳ Verificando conexión...");
+            long startTime = System.currentTimeMillis();
+            
+            boolean conexionExitosa = registroVotosProxy.verificarConexionBD();
+            
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            
+            System.out.println("\n✅ RESULTADO DE LA VERIFICACIÓN:");
+            System.out.println("══════════════════════════════════════");
+            System.out.println("📊 Conexión exitosa: " + (conexionExitosa ? "Sí" : "No"));
+            System.out.println("⏱️  Tiempo de consulta: " + duration + " ms");
+            System.out.println("══════════════════════════════════════");
+            
+        } catch (java.lang.Exception e) {
+            System.out.println("❌ Error verificando conexión: " + e.getMessage());
+        }
     }
 } 
