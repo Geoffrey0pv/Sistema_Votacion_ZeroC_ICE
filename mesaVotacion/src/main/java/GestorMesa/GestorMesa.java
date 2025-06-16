@@ -1,25 +1,34 @@
 package GestorMesa;
 
+import Demo.*;
+import Demo.Candidato;
+import Demo.ICargarCandidatosPrx;
+import Demo.IConfirmacionCandidatosPrx;
+import Demo.IConfirmacionVotoPrx;
+import Demo.IRecibirCandidatos;
+import Demo.IRegistrarVotoPrx;
+
+import GestorVotos.GestorVotos;
+import GestorVotos.VotoImp;
+
+import ReliableMessageManager.ReliableMessageManager;
+
+import mesaVotacion.SistemaVerificacion;
+
+import com.zeroc.Ice.Communicator;
+import com.zeroc.Ice.Current;
+import com.zeroc.Ice.Exception;
+import com.zeroc.Ice.Identity;
+import com.zeroc.Ice.ObjectAdapter;
+import com.zeroc.Ice.Properties;
+import com.zeroc.Ice.*;
+
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.security.NoSuchAlgorithmException;
-import com.zeroc.Ice.Exception;
-import com.zeroc.Ice.Current;
-import com.zeroc.Ice.Properties;
-import com.zeroc.Ice.Identity;
-import com.zeroc.Ice.ObjectAdapter;
-import ReliableMessageManager.ReliableMessageManager;
-import GestorVotos.GestorVotos;
-import GestorVotos.VotoImp;
-import Demo.IRecibirCandidatos;
-import Demo.ICargarCandidatosPrx;
-import Demo.IRegistrarVotoPrx;
-import Demo.IConfirmacionVotoPrx;
-import Demo.IConfirmacionCandidatosPrx;
-import Demo.Candidato;
-import com.zeroc.Ice.*;
+
 
 public class GestorMesa implements IRecibirCandidatos {
     private final ReliableMessageManager messageManager;
@@ -32,12 +41,37 @@ public class GestorMesa implements IRecibirCandidatos {
     private List<Candidato> candidatosDisponibles;
     private List<String> electoresYaVotaron;
     private boolean candidatosCargados = false;
+    
+    // NUEVO: Sistema de Verificación integrado
+    private SistemaVerificacion sistemaVerificacion;
+    private boolean verificacionLocalActiva = false;
 
     public GestorMesa(String idMesa) {
         this.idMesa = idMesa;
         this.candidatosDisponibles = new ArrayList<>();
         this.electoresYaVotaron = new ArrayList<>();
         this.messageManager = new ReliableMessageManager();
+        
+        // NUEVO: Inicializar Sistema de Verificación
+        try {
+            this.sistemaVerificacion = new SistemaVerificacion(idMesa);
+            this.verificacionLocalActiva = true;
+            System.out.println("✅ Sistema de Verificación local activado para Mesa " + idMesa);
+        } catch (Exception e) {
+            this.verificacionLocalActiva = false;
+            System.out.println("⚠️ Sistema de Verificación no disponible: " + e.getMessage());
+            System.out.println("💡 Mesa funcionará sin verificación local (solo validación básica)");
+        }
+        
+        try {
+            this.sistemaVerificacion = new SistemaVerificacion(idMesa);
+            this.verificacionLocalActiva = true;
+            System.out.println("✅ Sistema de Verificación local activado para Mesa " + idMesa);
+        } catch (Exception e) {
+            this.verificacionLocalActiva = false;
+            System.out.println("⚠️ Sistema de Verificación no disponible: " + e.getMessage());
+            System.out.println("💡 Mesa funcionará sin verificación local (solo validación básica)");
+        }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("\n Guardando mensajes pendientes...");
@@ -232,18 +266,40 @@ public class GestorMesa implements IRecibirCandidatos {
     }
 
     public boolean validarElector(String documentoIdentidad) {
+        // 1. VALIDACIÓN BÁSICA (Original)
+        if (documentoIdentidad == null || documentoIdentidad.trim().isEmpty()) {
+            System.err.println("❌ Documento de identidad no válido");
+            return false;
+        }
+        
         String hashElector = generarHashElector(documentoIdentidad);
         if (electoresYaVotaron.contains(hashElector)) {
-            System.err.println("  El elector ya votó en esta mesa");
+            System.err.println("❌ El elector ya votó en esta mesa");
             return false;
         }
 
-        boolean valido = documentoIdentidad != null && !documentoIdentidad.trim().isEmpty();
-        if (valido) {
-            System.out.println(" Elector validado: " + documentoIdentidad.substring(0,
-                    Math.min(3, documentoIdentidad.length())) + "***");
+        // 2. NUEVA VALIDACIÓN: Verificar que pertenece a esta mesa
+        if (verificacionLocalActiva) {
+            try {
+                boolean perteneceAMesa = sistemaVerificacion.verificarVotante(documentoIdentidad);
+                if (!perteneceAMesa) {
+                    System.err.println("❌ El documento " + documentoIdentidad.substring(0, Math.min(3, documentoIdentidad.length())) + "*** NO está registrado en esta mesa");
+                    System.err.println("💡 Verifique que está en la mesa correcta");
+                    return false;
+                }
+                System.out.println("✅ Documento verificado: pertenece a Mesa " + idMesa);
+            } catch (Exception e) {
+                System.err.println("⚠️ Error en verificación local: " + e.getMessage());
+                System.out.println("💡 Continuando con validación básica...");
+            }
+        } else {
+            System.out.println("⚠️ Verificación local no disponible - usando validación básica");
         }
-        return valido;
+
+        // 3. VALIDACIÓN EXITOSA
+        System.out.println("✅ Elector validado: " + documentoIdentidad.substring(0,
+                Math.min(3, documentoIdentidad.length())) + "***");
+        return true;
     }
 
     public boolean validarCandidato(long idCandidato) {
