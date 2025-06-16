@@ -201,6 +201,34 @@ module Demo
         bool verificarConexionBD();
     };
 
+    // ========== INTERFAZ CONSULTA CANDIDATOS ==========
+    
+    struct CandidatoElectoral
+    {
+        long id;
+        string nombre;
+        string partido;
+        string fechaCreacion;
+        bool activo;
+    };
+
+    sequence<CandidatoElectoral> SeqCandidatosElectorales;
+
+    interface IConsultaCandidatos
+    {
+        // Obtener todos los candidatos electorales
+        SeqCandidatosElectorales obtenerTodosCandidatosElectorales();
+        
+        // Obtener candidatos por partido
+        SeqCandidatosElectorales obtenerCandidatosPorPartido(string partido);
+        
+        // Contar total de candidatos
+        long contarCandidatos();
+        
+        // Verificar conexión a BD
+        bool verificarConexionBD();
+    };
+
     // ========== INTERFAZ PROCESAMIENTO DE VOTOS EN LOTE ==========
     
     struct ResultadoProcesamiento

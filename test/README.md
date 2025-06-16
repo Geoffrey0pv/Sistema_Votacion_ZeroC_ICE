@@ -2,11 +2,13 @@
 
 ## Descripción
 
-Este módulo proporciona un cliente de pruebas interactivo para el **Servidor Nacional** del Sistema de Votación ZeroC ICE. El cliente permite probar las dos funcionalidades principales del servidor:
+Este módulo proporciona un cliente de pruebas interactivo para el **Servidor Nacional** del Sistema de Votación ZeroC ICE. El cliente permite probar las tres funcionalidades principales del servidor:
 
 1. **🏛️ Consultar Lugar de Votación por Documento**: Permite buscar el lugar de votación (departamento, municipio, puesto y mesa) usando un número de documento de identidad.
 
 2. **👥 Obtener Votantes por Departamento**: Permite consultar la lista de votantes registrados en uno o varios departamentos, con diferentes opciones de consulta.
+
+3. **🗳️ Consultar Candidatos Electorales**: Permite consultar todos los candidatos registrados en la base de datos electoral, buscar por partido y obtener estadísticas.
 
 ## Uso
 
@@ -35,8 +37,9 @@ java -jar test/build/libs/test.jar
 ## Prerrequisitos
 
 1. **Servidor Nacional ejecutándose**: El servidor debe estar corriendo en `localhost:9090`
-2. **Base de datos PostgreSQL configurada**: Para las consultas de mesa y ciudadanos
+2. **Base de datos PostgreSQL configurada**: Para las consultas de mesa, ciudadanos y candidatos
 3. **Puerto 9090 disponible**: Para la conexión con el servidor
+4. **Datos de candidatos**: La tabla `candidato` debe tener datos en la base de datos de votos
 
 ## Funcionalidades Disponibles
 
@@ -111,6 +114,57 @@ Departamentos: Antioquia, Cundinamarca
 ...
 ```
 
+### 3. Consultar Candidatos Electorales
+
+Esta funcionalidad ofrece **3 opciones de consulta**:
+
+#### Opción 1: Obtener Todos los Candidatos Electorales
+- Consulta todos los candidatos registrados en la base de datos
+- Muestra información completa: ID, nombre, partido, fecha de creación y estado
+- Ideal para obtener una vista general de todos los candidatos
+
+#### Opción 2: Buscar Candidatos por Partido
+- Permite buscar candidatos por nombre de partido (búsqueda parcial)
+- Útil para filtrar candidatos de partidos específicos
+- Soporta búsqueda con texto parcial
+
+#### Opción 3: Contar Total de Candidatos
+- Solo cuenta el número total de candidatos activos
+- Consulta rápida para obtener estadísticas
+
+**Ejemplo de uso:**
+```
+🗳️ ═══ CONSULTAR CANDIDATOS ELECTORALES ═══
+Este servicio permite consultar los candidatos registrados en la base de datos electoral.
+
+Opciones disponibles:
+1. Obtener todos los candidatos electorales
+2. Buscar candidatos por partido
+3. Contar total de candidatos
+0. Volver al menú principal
+Seleccione una opción: 1
+
+📋 OBTENIENDO TODOS LOS CANDIDATOS ELECTORALES
+🔍 Consultando candidatos...
+
+✅ RESULTADOS:
+══════════════════════════════════════
+📊 Total de candidatos encontrados: 25
+⏱️  Tiempo de consulta: 89 ms
+══════════════════════════════════════
+
+🗳️ CANDIDATOS ELECTORALES (mostrando 10 de 25):
+─────────────────────────────────────────────────────────────
+🆔 ID: 1 | 👤 Juan Carlos Pérez
+   🏛️  Partido: Partido Liberal
+   📅 Fecha: 2024-01-15 10:30:25.0 | ✅ Activo: Sí
+
+🆔 ID: 2 | 👤 María Elena González
+   🏛️  Partido: Partido Conservador
+   📅 Fecha: 2024-01-15 10:31:12.0 | ✅ Activo: Sí
+...
+```
+
 ## Configuración
 
 ### Cambiar Endpoint del Servidor
@@ -156,34 +210,49 @@ java -jar servidorNacional/build/libs/servidorNacional.jar
    Endpoint: tcp -h localhost -p 9090
 ✅ Servicio ConsultaMesa conectado
 ✅ Servicio ConsultaCiudadanos conectado
+✅ Servicio ConsultaCandidatos conectado
 ═══════════════════════════════════════
 
 📋 MENÚ DE SERVICIOS:
 ───────────────────────────────────────────────────────────
 1. 🏛️  Consultar Lugar de Votación por Documento
 2. 👥 Obtener Votantes por Departamento
+3. 🗳️  Consultar Candidatos Electorales
 0. 🚪 Salir
 ───────────────────────────────────────────────────────────
+Seleccione una opción: 3
+
+🗳️ ═══ CONSULTAR CANDIDATOS ELECTORALES ═══
+Este servicio permite consultar los candidatos registrados en la base de datos electoral.
+
+Opciones disponibles:
+1. Obtener todos los candidatos electorales
+2. Buscar candidatos por partido
+3. Contar total de candidatos
+0. Volver al menú principal
 Seleccione una opción: 1
 
-🏛️ ═══ CONSULTAR LUGAR DE VOTACIÓN ═══
-Este servicio permite buscar el lugar de votación usando un documento de identidad.
+📋 OBTENIENDO TODOS LOS CANDIDATOS ELECTORALES
+🔍 Consultando candidatos...
 
-📄 Ingrese el número de documento: 12345678
-⏳ Consultando lugar de votación...
+✅ RESULTADOS:
+══════════════════════════════════════
+📊 Total de candidatos encontrados: 25
+⏱️  Tiempo de consulta: 89 ms
+══════════════════════════════════════
 
-✅ Lugar de votación encontrado en 45ms:
-══════════════════════════════════════════════════════════
-🌍 Departamento: Antioquia
-🏙️  Municipio: Medellín
-🏢 Puesto de Votación: Institución Educativa San José
-🗳️  Mesa: 001
-══════════════════════════════════════════════════════════
+🗳️ CANDIDATOS ELECTORALES (mostrando 10 de 25):
+─────────────────────────────────────────────────────────────
+🆔 ID: 1 | 👤 Juan Carlos Pérez
+   🏛️  Partido: Partido Liberal
+   📅 Fecha: 2024-01-15 10:30:25.0 | ✅ Activo: Sí
+...
 
 📋 MENÚ DE SERVICIOS:
 ───────────────────────────────────────────────────────────
 1. 🏛️  Consultar Lugar de Votación por Documento
 2. 👥 Obtener Votantes por Departamento
+3. 🗳️  Consultar Candidatos Electorales
 0. 🚪 Salir
 ───────────────────────────────────────────────────────────
 Seleccione una opción: 0
@@ -203,6 +272,7 @@ El cliente de pruebas se conecta directamente a los siguientes servicios del Ser
 
 - **ConsultaMesa**: Para consultas de lugar de votación
 - **ConsultaCiudadanos**: Para consultas de votantes por departamento
+- **ConsultaCandidatos**: Para consultas de candidatos electorales
 
 ```
 ┌─────────────────┐    ┌─────────────────────────────────┐
@@ -210,6 +280,7 @@ El cliente de pruebas se conecta directamente a los siguientes servicios del Ser
 │  Cliente de     │◄──►│  ┌─────────────────────────────┐ │
 │  Pruebas        │    │  │ ConsultaMesa                │ │
 │  (TestClient)   │    │  │ ConsultaCiudadanos          │ │
+│                 │    │  │ ConsultaCandidatos          │ │
 │                 │    │  └─────────────────────────────┘ │
 └─────────────────┘    └─────────────────────────────────┘
                                       │
@@ -217,5 +288,6 @@ El cliente de pruebas se conecta directamente a los siguientes servicios del Ser
                               ┌─────────────────┐
                               │   PostgreSQL    │
                               │   Database      │
+                              │   (votos.cfg)   │
                               └─────────────────┘
 ``` 

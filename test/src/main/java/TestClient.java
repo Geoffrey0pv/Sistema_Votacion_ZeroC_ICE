@@ -10,6 +10,7 @@ public class TestClient {
     // Referencias a los proxies de servicios
     private IConsultaMesaPrx consultaMesaProxy;
     private IConsultaCiudadanosPrx consultaCiudadanosProxy;
+    private IConsultaCandidatosPrx consultaCandidatosProxy;
     
     public TestClient() {
         scanner = new Scanner(System.in);
@@ -71,6 +72,15 @@ public class TestClient {
                 System.out.println("⚠️  Servicio ConsultaCiudadanos no disponible: " + e.getMessage());
             }
             
+            // Conectar ConsultaCandidatos
+            try {
+                ObjectPrx base = communicator.stringToProxy("ConsultaCandidatos:" + serverEndpoint);
+                consultaCandidatosProxy = IConsultaCandidatosPrx.checkedCast(base);
+                System.out.println("✅ Servicio ConsultaCandidatos conectado");
+            } catch (java.lang.Exception e) {
+                System.out.println("⚠️  Servicio ConsultaCandidatos no disponible: " + e.getMessage());
+            }
+            
             System.out.println("═══════════════════════════════════════");
             
         } catch (java.lang.Exception e) {
@@ -94,6 +104,7 @@ public class TestClient {
             System.out.println("───────────────────────────────────────────────────────────");
             System.out.println("1. 🏛️  Consultar Lugar de Votación por Documento");
             System.out.println("2. 👥 Obtener Votantes por Departamento");
+            System.out.println("3. 🗳️  Consultar Candidatos Electorales");
             System.out.println("0. 🚪 Salir");
             System.out.println("───────────────────────────────────────────────────────────");
             System.out.print("Seleccione una opción: ");
@@ -107,6 +118,9 @@ public class TestClient {
                         break;
                     case 2:
                         obtenerVotantesPorDepartamento();
+                        break;
+                    case 3:
+                        consultarCandidatosElectorales();
                         break;
                     case 0:
                         System.out.println("👋 ¡Hasta luego!");
@@ -385,6 +399,157 @@ public class TestClient {
         
         if (votantes.length > limite) {
             System.out.println("... y " + (votantes.length - limite) + " votantes más");
+        }
+        System.out.println("─────────────────────────────────────────────────────────────");
+    }
+    
+    private void consultarCandidatosElectorales() {
+        if (consultaCandidatosProxy == null) {
+            System.out.println("❌ Servicio ConsultaCandidatos no disponible");
+            return;
+        }
+        
+        System.out.println("\n🗳️ ═══ CONSULTAR CANDIDATOS ELECTORALES ═══");
+        System.out.println("Este servicio permite consultar los candidatos registrados en la base de datos electoral.");
+        System.out.println();
+        
+        while (true) {
+            System.out.println("Opciones disponibles:");
+            System.out.println("1. Obtener todos los candidatos electorales");
+            System.out.println("2. Buscar candidatos por partido");
+            System.out.println("3. Contar total de candidatos");
+            System.out.println("0. Volver al menú principal");
+            System.out.print("Seleccione una opción: ");
+            
+            try {
+                int option = Integer.parseInt(scanner.nextLine().trim());
+                
+                switch (option) {
+                    case 1:
+                        obtenerTodosCandidatos();
+                        break;
+                    case 2:
+                        buscarCandidatosPorPartido();
+                        break;
+                    case 3:
+                        contarCandidatos();
+                        break;
+                    case 0:
+                        return;
+                    default:
+                        System.out.println("❌ Opción inválida");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("❌ Por favor, ingrese un número válido.");
+            } catch (java.lang.Exception e) {
+                System.out.println("❌ Error: " + e.getMessage());
+            }
+        }
+    }
+    
+    private void obtenerTodosCandidatos() {
+        System.out.println("\n📋 OBTENIENDO TODOS LOS CANDIDATOS ELECTORALES");
+        
+        try {
+            System.out.println("🔍 Consultando candidatos...");
+            long startTime = System.currentTimeMillis();
+            
+            CandidatoElectoral[] candidatos = consultaCandidatosProxy.obtenerTodosCandidatosElectorales();
+            
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            
+            System.out.println("\n✅ RESULTADOS:");
+            System.out.println("══════════════════════════════════════");
+            System.out.println("📊 Total de candidatos encontrados: " + candidatos.length);
+            System.out.println("⏱️  Tiempo de consulta: " + duration + " ms");
+            System.out.println("══════════════════════════════════════");
+            
+            if (candidatos.length > 0) {
+                mostrarCandidatos(candidatos, Math.min(10, candidatos.length));
+            } else {
+                System.out.println("ℹ️  No se encontraron candidatos en la base de datos.");
+            }
+            
+        } catch (java.lang.Exception e) {
+            System.out.println("❌ Error consultando candidatos: " + e.getMessage());
+        }
+    }
+    
+    private void buscarCandidatosPorPartido() {
+        System.out.println("\n🔍 BUSCAR CANDIDATOS POR PARTIDO");
+        System.out.print("Ingrese el nombre del partido (o parte del nombre): ");
+        
+        String partido = scanner.nextLine().trim();
+        if (partido.isEmpty()) {
+            System.out.println("❌ El nombre del partido no puede estar vacío");
+            return;
+        }
+        
+        try {
+            System.out.println("🔍 Buscando candidatos del partido: " + partido);
+            long startTime = System.currentTimeMillis();
+            
+            CandidatoElectoral[] candidatos = consultaCandidatosProxy.obtenerCandidatosPorPartido(partido);
+            
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            
+            System.out.println("\n✅ RESULTADOS:");
+            System.out.println("══════════════════════════════════════");
+            System.out.println("�� Búsqueda: " + partido);
+            System.out.println("📊 Candidatos encontrados: " + candidatos.length);
+            System.out.println("⏱️  Tiempo de consulta: " + duration + " ms");
+            System.out.println("══════════════════════════════════════");
+            
+            if (candidatos.length > 0) {
+                mostrarCandidatos(candidatos, candidatos.length);
+            } else {
+                System.out.println("ℹ️  No se encontraron candidatos para el partido: " + partido);
+            }
+            
+        } catch (java.lang.Exception e) {
+            System.out.println("❌ Error buscando candidatos: " + e.getMessage());
+        }
+    }
+    
+    private void contarCandidatos() {
+        System.out.println("\n🔢 CONTAR CANDIDATOS ELECTORALES");
+        
+        try {
+            System.out.println("🔍 Contando candidatos...");
+            long startTime = System.currentTimeMillis();
+            
+            long total = consultaCandidatosProxy.contarCandidatos();
+            
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            
+            System.out.println("\n✅ RESULTADO DEL CONTEO:");
+            System.out.println("══════════════════════════════════════");
+            System.out.println("📊 Total de candidatos activos: " + total);
+            System.out.println("⏱️  Tiempo de consulta: " + duration + " ms");
+            System.out.println("══════════════════════════════════════");
+            
+        } catch (java.lang.Exception e) {
+            System.out.println("❌ Error contando candidatos: " + e.getMessage());
+        }
+    }
+    
+    private void mostrarCandidatos(CandidatoElectoral[] candidatos, int limite) {
+        System.out.println("\n🗳️ CANDIDATOS ELECTORALES (mostrando " + limite + " de " + candidatos.length + "):");
+        System.out.println("─────────────────────────────────────────────────────────────");
+        
+        for (int i = 0; i < limite && i < candidatos.length; i++) {
+            CandidatoElectoral c = candidatos[i];
+            System.out.println("🆔 ID: " + c.id + " | 👤 " + c.nombre);
+            System.out.println("   🏛️  Partido: " + c.partido);
+            System.out.println("   📅 Fecha: " + c.fechaCreacion + " | ✅ Activo: " + (c.activo ? "Sí" : "No"));
+            if (i < limite - 1) System.out.println();
+        }
+        
+        if (candidatos.length > limite) {
+            System.out.println("... y " + (candidatos.length - limite) + " candidatos más");
         }
         System.out.println("─────────────────────────────────────────────────────────────");
     }

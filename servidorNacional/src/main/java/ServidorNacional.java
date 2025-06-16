@@ -4,6 +4,7 @@ import Broker.BrokerNacional;
 import HelloWorld.HelloWorldImpl;
 import ConsultaMesa.ConsultaMesaImpl;
 import ConsultaCiudadanos.ConsultaCiudadanosImpl;
+import ConsultaCandidatos.ConsultaCandidatosImpl;
 import ServidorNacionalUI.ServidorNacionalUI;
 import Config.ConfigManager;
 import Services.ProcesadorLoteVotosImpl;
@@ -20,6 +21,7 @@ public class ServidorNacional {
     private static HelloWorldImpl helloWorld;
     private static ConsultaMesaImpl consultaMesa;
     private static ConsultaCiudadanosImpl consultaCiudadanos;
+    private static ConsultaCandidatosImpl consultaCandidatos;
     private static ProcesadorLoteVotosImpl procesadorLoteVotos;
     private static Communicator communicator;
     private static ObjectAdapter adapter;
@@ -58,6 +60,9 @@ public class ServidorNacional {
             // Crear e inicializar ConsultaCiudadanos con configuración
             consultaCiudadanos = new ConsultaCiudadanosImpl();
             
+            // Crear e inicializar ConsultaCandidatos con configuración
+            consultaCandidatos = new ConsultaCandidatosImpl();
+            
             // Crear e inicializar ProcesadorLoteVotos
             procesadorLoteVotos = new ProcesadorLoteVotosImpl();
             
@@ -81,6 +86,10 @@ public class ServidorNacional {
             Identity consultaCiudadanosId = Util.stringToIdentity("ConsultaCiudadanos");
             adapter.add(consultaCiudadanos, consultaCiudadanosId);
             
+            // Registrar ConsultaCandidatos endpoint
+            Identity consultaCandidatosId = Util.stringToIdentity("ConsultaCandidatos");
+            adapter.add(consultaCandidatos, consultaCandidatosId);
+            
             // Registrar ProcesadorLoteVotos endpoint
             Identity procesadorLoteVotosId = Util.stringToIdentity("ProcesadorLoteVotos");
             adapter.add(procesadorLoteVotos, procesadorLoteVotosId);
@@ -102,6 +111,7 @@ public class ServidorNacional {
             System.out.println("   • HelloWorld (endpoint de prueba) 🌍");
             System.out.println("   • ConsultaMesa (consulta por documento) 🔍");
             System.out.println("   • ConsultaCiudadanos (consulta por ciudadano) 🌍");
+            System.out.println("   • ConsultaCandidatos (consulta candidatos electorales) 🗳️");
             System.out.println("   • ProcesadorLoteVotos (procesamiento de votos) 🗳️");
             System.out.println("==========================================");
             
@@ -176,6 +186,13 @@ public class ServidorNacional {
             System.out.println("   Estado: " + (ciudadanosOk ? "✅ CONECTADO" : "❌ DESCONECTADO"));
         }
         
+        // Test ConsultaCandidatos (debe usar BD de votos)
+        if (consultaCandidatos != null) {
+            System.out.println("🗳️  Probando ConsultaCandidatos...");
+            boolean candidatosOk = consultaCandidatos.verificarConexionBD(null);
+            System.out.println("   Estado: " + (candidatosOk ? "✅ CONECTADO" : "❌ DESCONECTADO"));
+        }
+        
         // Test ProcesadorLoteVotos (debe usar BD de votos)
         if (procesadorLoteVotos != null) {
             System.out.println("🗳️  Probando ProcesadorLoteVotos...");
@@ -209,6 +226,11 @@ public class ServidorNacional {
             // Cerrar servicio de consulta de ciudadanos
             if (consultaCiudadanos != null) {
                 consultaCiudadanos.shutdown();
+            }
+            
+            // Cerrar servicio de consulta de candidatos
+            if (consultaCandidatos != null) {
+                consultaCandidatos.shutdown();
             }
             
             // Cerrar procesador de lote de votos
@@ -251,6 +273,11 @@ public class ServidorNacional {
     // Método para obtener ConsultaCiudadanos (útil para testing)
     public static ConsultaCiudadanosImpl getConsultaCiudadanos() {
         return consultaCiudadanos;
+    }
+    
+    // Método para obtener ConsultaCandidatos (útil para testing)
+    public static ConsultaCandidatosImpl getConsultaCandidatos() {
+        return consultaCandidatos;
     }
     
     // Método para obtener el communicator (útil para testing)

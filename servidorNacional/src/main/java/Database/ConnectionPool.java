@@ -50,8 +50,8 @@ public class ConnectionPool {
         if (type.equals("nacional")) {
             this.config = (IConfig) ConfigManager.getInstance();
             // CONFIGURACIÓN SÚPER AGRESIVA PARA ALTO RENDIMIENTO
-            this.minPoolSize = Math.max(((ConfigManager) config).getPoolMinSize(), 50);  // Mínimo 50 conexiones
-            this.maxPoolSize = Math.max(((ConfigManager) config).getPoolMaxSize(), 200); // Máximo 200 conexiones
+            this.minPoolSize = Math.max(((ConfigManager) config).getPoolMinSize(), 1);  // Mínimo 50 conexiones
+            this.maxPoolSize = Math.max(((ConfigManager) config).getPoolMaxSize(), 1); // Máximo 200 conexiones
             this.poolTimeout = Math.min(((ConfigManager) config).getPoolTimeout(), 100); // Timeout súper rápido
             this.dbUrl = ((ConfigManager) config).getDatabaseUrl() + "?tcpKeepAlive=true&socketTimeout=30000&loginTimeout=10";
             this.dbUser = ((ConfigManager) config).getDatabaseUser();
