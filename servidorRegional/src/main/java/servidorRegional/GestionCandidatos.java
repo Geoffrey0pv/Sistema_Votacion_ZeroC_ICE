@@ -2,138 +2,200 @@ package servidorRegional;
 
 import Demo.*;
 import com.zeroc.Ice.*;
-
+import java.io.InputStream;
+import java.util.Properties;
 import java.lang.Exception;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GestionCandidatos implements ICargarCandidatos {
     private final Communicator communicator;
-    private final List<Candidato> candidatos;
-    private final List<String> endpointsMesas;
+    private final List<CandidatoElectoral> candidatosElectorales;
+    private IConsultaCandidatosPrx consultaCandidatosNacional;
+    private ObjectAdapter callbackAdapter;
+    private Properties config;
+    private final AtomicBoolean actualizandoCandidatos = new AtomicBoolean(false);
 
     public GestionCandidatos(Communicator communicator) {
         this.communicator = communicator;
-        this.candidatos = new CopyOnWriteArrayList<>();
-        this.endpointsMesas = new CopyOnWriteArrayList<>();
+        this.candidatosElectorales = new CopyOnWriteArrayList<>();
+        cargarConfiguracion();
 
-        // Cargar endpoints conocidos de las mesas (esto podría venir de configuración)
-        cargarEndpointsMesas();
+        // Crear adaptador para callbacks una sola vez
+        try {
+            this.callbackAdapter = communicator.createObjectAdapter("");
+            this.callbackAdapter.activate();
+        } catch (Exception e) {
+            System.err.println("❌ Error creando adaptador para callbacks: " + e.getMessage());
+        }
+
+        conectarAServidorNacional();
     }
 
-    private void cargarEndpointsMesas() {
-        // Aquí cargarías los endpoints desde configuración o registro
-        // Por ejemplo:
-        endpointsMesas.add("Mesa1:tcp -h 192.168.1.10 -p 10001");
-        endpointsMesas.add("Mesa2:tcp -h 192.168.1.11 -p 10001");
-        endpointsMesas.add("Mesa3:tcp -h 192.168.1.12 -p 10001");
+    private void cargarConfiguracion() {
+        config = new Properties();
+        try (InputStream input = GestionCandidatos.class.getClassLoader().getResourceAsStream("regional.properties")) {
+            if (input == null) {
+                System.err.println("No se pudo encontrar regional.properties");
+                return;
+            }
+            config.load(input);
+            System.out.println("Configuración cargada correctamente");
+        } catch (Exception e) {
+            System.err.println("Error cargando configuración: " + e.getMessage());
+        }
+    }
+
+    private void conectarAServidorNacional() {
+        new Thread(() -> {
+            try {
+                System.out.println("🔄 Conectando con Servidor Nacional...");
+
+                // Proxy para IConsultaCandidatos
+                ObjectPrx consultaBase = communicator.stringToProxy("ConsultaCandidatos@ServidorNacionalAdapter");
+                consultaCandidatosNacional = IConsultaCandidatosPrx.checkedCast(consultaBase);
+                if (consultaCandidatosNacional == null) {
+                    throw new Error("Proxy nulo para IConsultaCandidatos");
+                }
+                
+                System.out.println("✅ Conexión establecida con el servicio de Consulta de Candidatos");
+                actualizarCandidatosElectoralesDesdeNacional();
+                
+            } catch (Exception e) {
+                System.err.println("❌ Error conectando con el Servidor Nacional: " + e.getMessage());
+                
+                try {
+                    System.out.println("🔄 Reintentando conexión en 5 segundos...");
+                    Thread.sleep(5000);
+                    conectarAServidorNacional();
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }).start();
+    }
+
+    private void actualizarCandidatosElectoralesDesdeNacional() {
+        try {
+            if (consultaCandidatosNacional != null) {
+                System.out.println("🗳️  Solicitando candidatos electorales al Servidor Nacional...");
+                CandidatoElectoral[] resultado = consultaCandidatosNacional.obtenerTodosCandidatosElectorales();
+                if (resultado != null && resultado.length > 0) {
+                    this.candidatosElectorales.clear();
+                    for (CandidatoElectoral c : resultado) {
+                        this.candidatosElectorales.add(c);
+                    }
+                    System.out.println("✅ Candidatos Electorales actualizados: " + this.candidatosElectorales.size());
+                } else {
+                     System.err.println("⚠️ No se obtuvieron candidatos electorales (lista vacía).");
+                }
+            }
+        } catch(Exception e) {
+            System.err.println("❌ Error al obtener candidatos electorales: " + e.getMessage());
+        }
     }
 
     @Override
     public boolean enviarCandidatosATodasMesas(Current current) {
-        System.out.println("Enviando candidatos a todas las mesas de votación...");
-
-        if (candidatos.isEmpty()) {
-            System.err.println("No hay candidatos para enviar");
+        if (candidatosElectorales.isEmpty()) {
+            System.err.println("⚠️ No hay candidatos para enviar, intentando actualizar desde el nacional...");
+            actualizarCandidatosElectoralesDesdeNacional();
             return false;
         }
-
-        boolean todosExitosos = true;
-        Candidato[] arrayCandidatos = candidatos.toArray(new Candidato[0]);
-
-        for (String endpoint : endpointsMesas) {
-            try {
-                boolean resultado = enviarCandidatosAMesa(endpoint, arrayCandidatos);
-                if (!resultado) {
-                    todosExitosos = false;
-                    System.err.println("Falló el envío a mesa con endpoint: " + endpoint);
-                }
-            } catch (Exception e) {
-                System.err.println("Error enviando a mesa " + endpoint + ": " + e.getMessage());
-                todosExitosos = false;
-            }
-        }
-
-        System.out.println("Envío completado. Éxito: " + todosExitosos);
-        return todosExitosos;
+        
+        System.out.println("Enviando candidatos a todas las mesas registradas (lógica no implementada).");
+        return true;
     }
 
     @Override
     public boolean enviarCandidatosAMesas(String endpointMesa, Current current) {
-        System.out.println("Enviando candidatos a mesa específica: " + endpointMesa);
+        System.out.println("DEBUG: Solicitud recibida de la mesa: " + endpointMesa);
 
-        if (candidatos.isEmpty()) {
-            System.err.println("No hay candidatos para enviar");
-            return false;
+        if (candidatosElectorales.isEmpty()) {
+            System.err.println("DEBUG: ⚠️ Lista de candidatos electorales vacía. Intentando actualizar...");
+            actualizarCandidatosElectoralesDesdeNacional();
+            
+            try {
+                Thread.sleep(3000); 
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            if (candidatosElectorales.isEmpty()) {
+                System.err.println("DEBUG: ❌ Fallo definitivo. No se pudieron obtener candidatos.");
+                return false;
+            }
         }
 
-        Candidato[] arrayCandidatos = candidatos.toArray(new Candidato[0]);
+        // Convertir la lista de 'CandidatoElectoral' al formato 'Candidato' que espera la mesa.
+        List<Candidato> candidatosParaEnviar = new ArrayList<>();
+        for (CandidatoElectoral ce : this.candidatosElectorales) {
+            // Asumiendo que solo los candidatos activos deben ser enviados
+            if (ce.activo) {
+                candidatosParaEnviar.add(new Candidato(ce.id, ce.nombre, ce.partido));
+            }
+        }
+        
+        Candidato[] arrayCandidatos = candidatosParaEnviar.toArray(new Candidato[0]);
+
+        System.out.println("DEBUG: Preparando para enviar " + arrayCandidatos.length + " candidatos a la mesa.");
+        if (arrayCandidatos.length > 0) {
+            System.out.println("DEBUG: Primer candidato a enviar: " + arrayCandidatos[0].nombre);
+        }
+
         return enviarCandidatosAMesa(endpointMesa, arrayCandidatos);
     }
 
     private boolean enviarCandidatosAMesa(String endpoint, Candidato[] candidatos) {
         try {
-            // Crear proxy para la mesa de votación
-            ObjectPrx base = communicator.stringToProxy("IceGrid/Query:tcp -h localhost -p 4061");
-
-            // Obtener proxy de la mesa usando el endpoint
-            ObjectPrx mesaProxy = communicator.stringToProxy(endpoint);
-            IRecibirCandidatosPrx mesa = IRecibirCandidatosPrx.checkedCast(mesaProxy);
+            System.out.println("Enviando " + candidatos.length + " candidatos a: " + endpoint);
+            
+            ObjectPrx mesaBase = communicator.stringToProxy(endpoint);
+            IRecibirCandidatosPrx mesa = IRecibirCandidatosPrx.checkedCast(mesaBase);
 
             if (mesa == null) {
-                System.err.println("No se pudo conectar con la mesa: " + endpoint);
+                System.err.println("❌ No se pudo obtener un proxy para la mesa en el endpoint: " + endpoint);
                 return false;
             }
 
-            // Crear callback para recibir confirmación
             ConfirmacionCallback callback = new ConfirmacionCallback();
-            IConfirmacionCandidatosPrx callbackProxy =
-                    IConfirmacionCandidatosPrx.uncheckedCast(
-                            communicator.createObjectAdapter("CallbackAdapter").addWithUUID(callback)
-                    );
+            IConfirmacionCandidatosPrx callbackProxy = IConfirmacionCandidatosPrx.uncheckedCast(
+                callbackAdapter.addWithUUID(callback)
+            );
 
-            // Enviar candidatos a la mesa
             mesa.recibirCandidatos(candidatos, callbackProxy);
-
-            // Esperar confirmación (implementación simplificada)
-            Thread.sleep(1000);
-
-            return callback.isExitoso();
-
+            System.out.println("✅ Petición de candidatos enviada a " + endpoint);
+            
+            return true; 
         } catch (Exception e) {
-            System.err.println("Error enviando candidatos a mesa " + endpoint + ": " + e.getMessage());
+            System.err.println("❌ Error enviando candidatos a mesa " + endpoint + ": " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
 
     // Métodos para gestionar la lista de candidatos
     public void actualizarCandidatos(Candidato[] nuevosCandidatos) {
-        candidatos.clear();
-        for (Candidato candidato : nuevosCandidatos) {
-            candidatos.add(candidato);
-        }
-        System.out.println("Lista de candidatos actualizada. Total: " + candidatos.size());
+        // Implementa la lógica para actualizar la lista de candidatos
     }
 
     public void agregarEndpointMesa(String endpoint) {
-        if (!endpointsMesas.contains(endpoint)) {
-            endpointsMesas.add(endpoint);
-            System.out.println("Nuevo endpoint de mesa agregado: " + endpoint);
-        }
+        // Implementa la lógica para agregar un nuevo endpoint de mesa
     }
 
     public void removerEndpointMesa(String endpoint) {
-        endpointsMesas.remove(endpoint);
-        System.out.println("Endpoint de mesa removido: " + endpoint);
+        // Implementa la lógica para remover un endpoint de mesa
     }
 
     public List<String> obtenerEndpointsMesas() {
-        return new ArrayList<>(endpointsMesas);
+        // Implementa la lógica para obtener la lista de endpoints de mesas
+        return new ArrayList<>();
     }
 
     public int obtenerCantidadCandidatos() {
-        return candidatos.size();
+        return candidatosElectorales.size();
     }
 
     // Clase interna para manejar callbacks de confirmación

@@ -4,21 +4,15 @@
 
     <!-- Nodo para Servidor Regional -->
     <node name="nodeRegional">
-      <server id="RegionalServer" exe="java" activation="always">
+      <server id="RegionalServer" exe="java" activation="on-demand">
         <option>-jar</option>
         <option>../servidorRegional/build/libs/servidorRegional.jar</option>
-        <adapter name="RegionalAdapter" endpoints="tcp -h localhost" />
-      </server>
-    </node>
-
-    <!-- Nodo para Servidor Nacional - Réplica 1 -->
-    <node name="nodeNacional1">
-      <server id="ServidorNacional1" exe="java" activation="always">
-        <option>-cp</option>
-        <option>../servidorNacional/build/classes/java/main:../servidorNacional/build/generated-src:../servidorNacional/build/libs/*</option>
-        <option>ServidorNacional</option>
-        <adapter name="ServidorNacionalAdapter1" endpoints="tcp -h localhost -p 9090"/>
+        <adapter name="RegionalAdapter" endpoints="tcp -h localhost -p 10000">
+          <object identity="receptorVotos" type="::Demo::IRegistrarVoto"/>
+          <object identity="gestionCandidatos" type="::Demo::ICargarCandidatos"/>
+        </adapter>
         <properties>
+          <property name="Ice.Default.Locator" value="${ice.default.locator}"/>
           <property name="Ice.Default.Package" value="Demo"/>
           <property name="Replica.Id" value="1"/>
           <property name="Replica.Port" value="9090"/>
@@ -35,7 +29,7 @@
           <property name="ReliableQueue.AutoCleanup" value="1"/>
           <property name="ReliableQueue.CleanupInterval" value="3600000"/>
           <property name="ReliableQueue.MaxProcessedFiles" value="1000"/>
-          <property name="ReliableQueue.LogLevel" value="INFO"/>
+          <property name="ReliableQueue.LogLevel" value="DEBUG"/>
           <property name="ReliableQueue.LogStatistics" value="1"/>
           <property name="ReliableQueue.StatisticsInterval" value="30000"/>
           
@@ -47,20 +41,21 @@
       </server>
     </node>
 
-    <!-- Nodo para Servidor Nacional - Réplica 2 -->
-    <node name="nodeNacional2">
-      <server id="ServidorNacional2" exe="java" activation="always">
-        <option>-cp</option>
-        <option>../servidorNacional/build/classes/java/main:../servidorNacional/build/generated-src:../servidorNacional/build/libs/*</option>
-        <option>ServidorNacional</option>
-        <adapter name="ServidorNacionalAdapter2" endpoints="tcp -h localhost -p 9091"/>
+    <!-- Nodo para Servidor Nacional (Broker) -->
+    <node name="nodeNacional">
+      <server id="ServidorNacional" exe="java" activation="on-demand">
+        <option>-jar</option>
+        <option>../servidorNacional/build/libs/servidorNacional.jar</option>
+        <adapter name="ServidorNacionalAdapter" endpoints="tcp -h localhost -p 9090">
+          <object identity="administradorCandidatos" type="::Demo::IAdministradorCandidatos"/>
+          <object identity="consultaCandidatos" type="::Demo::IConsultaCandidatos"/>
+          <object identity="brokerNacional" type="::Demo::IBrokerNacional"/>
+        </adapter>
         <properties>
           <property name="Ice.Default.Package" value="Demo"/>
-          <property name="Replica.Id" value="2"/>
-          <property name="Replica.Port" value="9091"/>
           
           <!-- Configuración del ReliableMessageQueue -->
-          <property name="ReliableQueue.BaseDir" value="reliable_queue_2"/>
+          <property name="ReliableQueue.BaseDir" value="reliable_queue"/>
           <property name="ReliableQueue.ProcessingInterval" value="5000"/>
           <property name="ReliableQueue.BatchSize" value="50"/>
           <property name="ReliableQueue.MaxRetries" value="3"/>
@@ -71,7 +66,7 @@
           <property name="ReliableQueue.AutoCleanup" value="1"/>
           <property name="ReliableQueue.CleanupInterval" value="3600000"/>
           <property name="ReliableQueue.MaxProcessedFiles" value="1000"/>
-          <property name="ReliableQueue.LogLevel" value="INFO"/>
+          <property name="ReliableQueue.LogLevel" value="DEBUG"/>
           <property name="ReliableQueue.LogStatistics" value="1"/>
           <property name="ReliableQueue.StatisticsInterval" value="30000"/>
           
@@ -84,6 +79,14 @@
     </node>
 
     <service-template id="BrokerService">
+      <service name="AdministradorCandidatos" entry="ServidorNacionalAdapter.AdministradorCandidatos" />
+      <service name="BrokerNacional" entry="ServidorNacionalAdapter.BrokerNacional" />
+      <service name="HelloWorld" entry="ServidorNacionalAdapter.HelloWorld" />
+      <service name="MonitorRecursos" entry="ServidorNacionalAdapter.MonitorRecursos" />
+      <service name="BalanceadorCarga" entry="ServidorNacionalAdapter.BalanceadorCarga" />
+      <service name="GestorReplicas" entry="ServidorNacionalAdapter.GestorReplicas" />
+      <service name="VotosService" entry="ServidorNacionalAdapter.VotosService" />
+    </service-template>
       <service name="AdministradorCandidatos" entry="ServidorNacionalAdapter1.AdministradorCandidatos" />
       <service name="BrokerNacional" entry="ServidorNacionalAdapter1.BrokerNacional" />
       <service name="HelloWorld" entry="ServidorNacionalAdapter1.HelloWorld" />
@@ -94,16 +97,6 @@
       <service name="ReplicaInfo" entry="ServidorNacionalAdapter1.ReplicaInfo" />
     </service-template>
 
-    <service-template id="BrokerServiceReplica2">
-      <service name="AdministradorCandidatos" entry="ServidorNacionalAdapter2.AdministradorCandidatos" />
-      <service name="BrokerNacional" entry="ServidorNacionalAdapter2.BrokerNacional" />
-      <service name="HelloWorld" entry="ServidorNacionalAdapter2.HelloWorld" />
-      <service name="MonitorRecursos" entry="ServidorNacionalAdapter2.MonitorRecursos" />
-      <service name="BalanceadorCarga" entry="ServidorNacionalAdapter2.BalanceadorCarga" />
-      <service name="GestorReplicas" entry="ServidorNacionalAdapter2.GestorReplicas" />
-      <service name="VotosService" entry="ServidorNacionalAdapter2.VotosService" />
-      <service name="ReplicaInfo" entry="ServidorNacionalAdapter2.ReplicaInfo" />
-    </service-template>
 
   </application>
 </icegrid>

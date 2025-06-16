@@ -2,7 +2,7 @@ package Services;
 
 import Models.VotoModel;
 import Database.DatabaseManager;
-import Database.DatabaseConnection;
+import Database.VotosDatabaseConnection;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
@@ -16,18 +16,18 @@ import java.util.List;
 
 /**
  * Servicio para gestionar votos con reliable messaging
- * Utiliza la base de datos de registraduría
+ * Utiliza la base de datos de votos
  */
 public class VotosService implements ReliableMessageQueue.VotoProcessor {
     
     private final DatabaseManager dbManager;
-    private final DatabaseConnection dbConnection;
+    private final VotosDatabaseConnection dbConnection;
     private final Gson gson;
     private final ReliableMessageQueue messageQueue;
     
     public VotosService() {
         this.dbManager = DatabaseManager.getInstance();
-        this.dbConnection = dbManager.getRegistraduriaConnection();
+        this.dbConnection = dbManager.getVotosConnection();
         this.gson = new GsonBuilder()
             .registerTypeAdapter(LocalDateTime.class, (JsonDeserializer<LocalDateTime>) (json, typeOfT, context) -> 
                 LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_DATE_TIME))
@@ -41,7 +41,7 @@ public class VotosService implements ReliableMessageQueue.VotoProcessor {
         createVotosTableIfNotExists();
         
         System.out.println("✅ VotosService inicializado con reliable messaging");
-        System.out.println("   📊 Base de datos: registraduría");
+        System.out.println("   📊 Base de datos: votos");
     }
     
     private void createVotosTableIfNotExists() {
@@ -129,8 +129,11 @@ public class VotosService implements ReliableMessageQueue.VotoProcessor {
     @Override
     public boolean processVoto(VotoModel voto) {
         if (voto == null || !voto.isValid()) {
+            System.err.println("❌ Voto inválido o nulo");
             return false;
         }
+        
+        System.out.println("🔄 Procesando voto: " + voto.getMesaId() + " -> " + voto.getCandidatoId());
         
         String insertSQL = "INSERT INTO votos (mesa_id, candidato_id, timestamp, municipio, departamento, " +
                           "hash_verificacion, firma_mesa, fecha_recepcion, estado) " +
@@ -138,23 +141,38 @@ public class VotosService implements ReliableMessageQueue.VotoProcessor {
                           "ON CONFLICT (mesa_id, candidato_id, timestamp, hash_verificacion) " +
                           "DO NOTHING";
         
-        try (Connection conn = dbConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(insertSQL)) {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        
+        try {
+            conn = dbConnection.getConnection();
             
             if (conn == null) {
+                System.err.println("❌ Conexión a BD es null");
                 return false;
             }
             
+            System.out.println("✅ Conexión obtenida, preparando statement...");
+            
+            stmt = conn.prepareStatement(insertSQL);
             stmt.setString(1, voto.getMesaId());
             stmt.setString(2, voto.getCandidatoId());
             stmt.setTimestamp(3, Timestamp.valueOf(voto.getTimestamp()));
             stmt.setString(4, voto.getMunicipio());
             stmt.setString(5, voto.getDepartamento());
             stmt.setString(6, voto.getHashVerificacion());
-            stmt.setTimestamp(7, Timestamp.valueOf(voto.getFechaRecepcion()));
-            stmt.setString(8, "PROCESADO");
+            stmt.setString(7, voto.getFirmaMesa());
+            stmt.setTimestamp(8, Timestamp.valueOf(voto.getFechaRecepcion()));
+            stmt.setString(9, "PROCESADO");
             
+            System.out.println("✅ Statement preparado, ejecutando INSERT...");
             int rowsAffected = stmt.executeUpdate();
+            System.out.println("📊 Filas afectadas: " + rowsAffected);
+            
+            // Hacer commit ya que autoCommit está deshabilitado
+            System.out.println("🔄 Haciendo commit...");
+            conn.commit();
+            System.out.println("✅ Commit realizado");
             
             if (rowsAffected > 0) {
                 System.out.println("✅ Voto guardado: " + voto.getMesaId() + " -> " + voto.getCandidatoId());
@@ -166,7 +184,35 @@ public class VotosService implements ReliableMessageQueue.VotoProcessor {
             
         } catch (SQLException e) {
             System.err.println("❌ Error guardando voto: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Hacer rollback en caso de error
+            if (conn != null) {
+                try {
+                    System.out.println("🔄 Haciendo rollback...");
+                    conn.rollback();
+                    System.out.println("✅ Rollback realizado");
+                } catch (SQLException rollbackEx) {
+                    System.err.println("❌ Error en rollback: " + rollbackEx.getMessage());
+                }
+            }
             return false;
+        } finally {
+            // Cerrar recursos manualmente
+            if (stmt != null) {
+                try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    System.err.println("⚠️ Error cerrando statement: " + e.getMessage());
+                }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("⚠️ Error cerrando conexión: " + e.getMessage());
+                }
+            }
         }
     }
     
@@ -175,7 +221,23 @@ public class VotosService implements ReliableMessageQueue.VotoProcessor {
      */
     @Override
     public boolean isDatabaseAvailable() {
-        return dbConnection.isServiceActive();
+        try (Connection conn = dbConnection.getConnection()) {
+            if (conn == null) {
+                return false;
+            }
+            
+            // Test simple para verificar que la BD responde
+            try (PreparedStatement stmt = conn.prepareStatement("SELECT 1")) {
+                stmt.setQueryTimeout(5); // 5 segundos timeout
+                try (ResultSet rs = stmt.executeQuery()) {
+                    return rs.next() && rs.getInt(1) == 1;
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("⚠️ BD no disponible: " + e.getMessage());
+            return false;
+        }
     }
     
     /**

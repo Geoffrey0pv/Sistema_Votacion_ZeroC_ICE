@@ -1,4 +1,4 @@
-# Configuration file (06/15/25 02:46:33.689)
+# Configuration file (06/16/25 02:27:16.931)
 
 # Server configuration
 Ice.Admin.ServerId=ServidorNacional
@@ -9,6 +9,23 @@ ServidorNacionalAdapter.Endpoints=tcp -h localhost -p 9090
 ServidorNacionalAdapter.AdapterId=ServidorNacional.ServidorNacionalAdapter
 # Server descriptor properties
 Ice.Default.Package=Demo
+ReliableQueue.BaseDir=reliable_queue
+ReliableQueue.ProcessingInterval=5000
+ReliableQueue.BatchSize=50
+ReliableQueue.MaxRetries=3
+ReliableQueue.RetryDelay=10000
+ReliableQueue.ProcessingThreads=5
+ReliableQueue.SchedulerThreads=2
+ReliableQueue.PersistenceEnabled=1
+ReliableQueue.AutoCleanup=1
+ReliableQueue.CleanupInterval=3600000
+ReliableQueue.MaxProcessedFiles=1000
+ReliableQueue.LogLevel=INFO
+ReliableQueue.LogStatistics=1
+ReliableQueue.StatisticsInterval=30000
+VotosDB.ConnectionTimeout=5000
+VotosDB.MaxRetries=3
+VotosDB.RetryInterval=2000
 Ice.StdErr=logs/ServidorNacional.out
 Ice.StdOut=logs/ServidorNacional.out
 Ice.Default.Locator=DemoIceGrid/Locator:default -h localhost -p 4061

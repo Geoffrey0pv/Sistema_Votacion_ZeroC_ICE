@@ -1,11 +1,11 @@
-# Configuration file (06/15/25 02:46:38.499)
+# Configuration file (06/16/25 03:02:01.705)
 
 # Server configuration
 Ice.Admin.ServerId=RegionalServer
 Ice.Admin.Endpoints=tcp -h localhost
 Ice.ProgramName=RegionalServer
 # Object adapter RegionalAdapter
-RegionalAdapter.Endpoints=tcp -h localhost -p 8080
+RegionalAdapter.Endpoints=tcp -h localhost -p 10000
 RegionalAdapter.AdapterId=RegionalServer.RegionalAdapter
 Ice.StdErr=logs/RegionalServer.out
 Ice.StdOut=logs/RegionalServer.out

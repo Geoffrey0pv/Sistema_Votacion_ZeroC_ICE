@@ -24,10 +24,9 @@ public class ServidorRegional {
         try {
             // Configurar propiedades antes de crear el communicator
             configurarPropiedades(args);
-            
             com.zeroc.Ice.Communicator communicator = com.zeroc.Ice.Util.initialize(args, extraArgs);
-            
             scanner = new Scanner(System.in);
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> communicator.destroy()));
 
             if(!extraArgs.isEmpty()) {
                 System.err.println("too many arguments");
@@ -67,12 +66,6 @@ public class ServidorRegional {
                 com.zeroc.Ice.Identity idGestion = com.zeroc.Ice.Util.stringToIdentity("gestionCandidatos");
                 adapter.add(gestionCandidatos, idGestion);
 
-                com.zeroc.Ice.Identity idReceptorTipo = com.zeroc.Ice.Util.stringToIdentity("IRegistrarVoto");
-                adapter.add(receptorVotos, idReceptorTipo);
-
-                com.zeroc.Ice.Identity idGestionTipo = com.zeroc.Ice.Util.stringToIdentity("ICargarCandidatos");
-                adapter.add(gestionCandidatos, idGestionTipo);
-
                 adapter.activate();
                 
                 System.out.println("✅ Servidor Regional iniciado correctamente");
@@ -81,6 +74,10 @@ public class ServidorRegional {
                 System.out.println("   • GestionCandidatos: " + idGestion.name + " y " + idGestionTipo.name);
                 System.out.println("   • ConsultorVotantesRegional: Consulta de votantes del servidor nacional");
                 System.out.println("   • DistribuidorMesas: Distribución de votantes por mesas");
+                System.out.println("Servidor Regional iniciado correctamente");
+                System.out.println("- ReceptorVotos disponible en: " + idReceptor.name);
+                System.out.println("- GestionCandidatos disponible en: " + idGestion.name);
+
                 
                 try {
                     com.zeroc.IceGrid.RegistryPrx registry = com.zeroc.IceGrid.RegistryPrx.checkedCast(
