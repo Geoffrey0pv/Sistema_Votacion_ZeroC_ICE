@@ -2549,3 +2549,86 @@ DEBUG: ? Fallo definitivo. No se pudieron obtener candidatos.
 ? Conectando con Servidor Nacional...
 ? Error conectando con el Servidor Nacional: null
 ? Reintentando conexión en 5 segundos...
+Intentando conectar con el Servidor Nacional para registro de votos...
+? Error crítico al conectar con el Servidor Nacional: null
+   Los votos serán almacenados localmente pero no se enviarán al nacional hasta que se reinicie el servicio.
+No se pudo encontrar regional.properties
+? Intentando conectar GestionCandidatos con Servidor Nacional...
+?? GestionCandidatos no pudo conectar: null
+? Los candidatos se cargarán bajo demanda cuando sea necesario
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+? Base de datos SQLite inicializada: data/regional_votantes.db
+?? Distribuidor de Mesas inicializado (Local + Distribuido)
+? Usando configuración: tcp -h localhost -p 10000
+? Servidor Regional iniciado correctamente
+? Componentes disponibles:
+   • ConsultorVotantesRegional: Consulta de votantes del servidor nacional
+   • DistribuidorMesas: Distribución de votantes por mesas
+Servidor Regional iniciado correctamente
+- ReceptorVotos disponible en: receptorVotos
+- GestionCandidatos disponible en: gestionCandidatos
+? Conectado al Registry de IceGrid
+
+? === CONSOLA INTERACTIVA ACTIVADA ===
+? Comandos disponibles:
+   conectar     - Conectar al servidor nacional
+   estado       - Mostrar estado de conexión
+   contar <dep> - Contar votantes por departamento (servidor nacional)
+   listar <dep> - Listar votantes por departamento (servidor nacional)
+   guardar <dep>- Consultar y guardar votantes en SQLite
+   local <dep>  - Listar votantes desde SQLite local
+   contarlocal <dep> - Contar votantes desde SQLite local
+   distribuir <dep> - Distribuir votantes por mesas (crear archivos SQLite LOCAL)
+   distribuirremoto <dep> - Distribuir archivos SQLite a mesas REMOTAS
+   registrar <mesa> <endpoint> - Registrar mesa remota
+   desregistrar <mesa> - Desregistrar mesa remota
+   verificarmesas - Verificar conectividad con mesas remotas
+   mesas <dep>  - Ver mesas identificadas de un departamento
+   estadisticasdist - Ver estadísticas de distribución
+   limpiardist <dep> - Limpiar archivos de distribución
+   paginar <dep> <pag> <tam> - Consulta paginada
+   multiple <dep1,dep2,...> - Múltiples departamentos
+   estadisticas - Ver estadísticas de base de datos local
+   limpiar <dep>- Limpiar datos de departamento en SQLite
+   ejemplos     - Ejecutar ejemplos de prueba
+   ayuda        - Mostrar esta ayuda
+   salir        - Terminar el servidor
+?????????????????????????????????????????????????????
+
+> ? Solicitud de padrón para mesa: 1 en Cundinamarca
+? Padrón para '1' generado (151 ciudadanos).
+
+=======================================================
+==        VOTO RECIBIDO EN SERVIDOR REGIONAL        ==
+=======================================================
+  Región:       RegionalServer
+  Mesa Origen:  1
+  ID Voto:      1750099513374
+  ID Candidato: 1
+  Hash Elector: 95653cb4b66ab4cecfb93886d36a3e3dc830c634f613957bec751c36061c243f
+  Emitido:      Wed Jan 21 01:08:19 COT 1970
+-------------------------------------------------------
+  RESULTADO: Voto 1750099513374 ACEPTADO y almacenado localmente.
+??  No se puede enviar voto 1750099513374 al Servidor Nacional, el proxy no está disponible.
+=======================================================
+
+
+=======================================================
+==        VOTO RECIBIDO EN SERVIDOR REGIONAL        ==
+=======================================================
+  Región:       RegionalServer
+  Mesa Origen:  1
+  ID Voto:      1750099771669
+  ID Candidato: 1
+  Hash Elector: 5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5
+  Emitido:      Wed Jan 21 01:08:19 COT 1970
+-------------------------------------------------------
+  RESULTADO: Voto 1750099771669 ACEPTADO y almacenado localmente.
+??  No se puede enviar voto 1750099771669 al Servidor Nacional, el proxy no está disponible.
+=======================================================
+
+DEBUG: Solicitud recibida de la mesa: 1:tcp -h localhost -p 0
+DEBUG: ?? Lista de candidatos electorales vacía. Intentando actualizar...
+DEBUG: ? Fallo definitivo. No se pudieron obtener candidatos.
