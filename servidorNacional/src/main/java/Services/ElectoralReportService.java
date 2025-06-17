@@ -101,10 +101,11 @@ public class ElectoralReportService {
     private boolean generateResumeReport(String reportDir) {
         String sql = "SELECT " +
                     "v.candidato_id, " +
-                    "v.candidato_id as candidato_nombre, " +
+                    "COALESCE(c.nombre, 'Candidato ' || v.candidato_id) as candidato_nombre, " +
                     "COUNT(*) as total_votos " +
                     "FROM votos v " +
-                    "GROUP BY v.candidato_id " +
+                    "LEFT JOIN candidato c ON CAST(v.candidato_id AS BIGINT) = c.id " +
+                    "GROUP BY v.candidato_id, c.nombre " +
                     "ORDER BY total_votos DESC";
         
         try (Connection conn = votosConnection.getConnection();
@@ -127,7 +128,7 @@ public class ElectoralReportService {
                 
                 while (rs.next()) {
                     String candidatoId = rs.getString("candidato_id");
-                    String candidatoNombre = "Candidato " + candidatoId; // Nombre genérico
+                    String candidatoNombre = rs.getString("candidato_nombre");
                     long votos = rs.getLong("total_votos");
                     
                     writer.printf("%s,\"%s\",%d%n", candidatoId, candidatoNombre, votos);
@@ -190,11 +191,12 @@ public class ElectoralReportService {
     private boolean generateSingleMesaReport(Connection conn, String reportDir, String mesaId) {
         String sql = "SELECT " +
                     "v.candidato_id, " +
-                    "v.candidato_id as candidato_nombre, " +
+                    "COALESCE(c.nombre, 'Candidato ' || v.candidato_id) as candidato_nombre, " +
                     "COUNT(*) as total_votos " +
                     "FROM votos v " +
+                    "LEFT JOIN candidato c ON CAST(v.candidato_id AS BIGINT) = c.id " +
                     "WHERE v.mesa_id = ? " +
-                    "GROUP BY v.candidato_id " +
+                    "GROUP BY v.candidato_id, c.nombre " +
                     "ORDER BY total_votos DESC";
         
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -212,7 +214,7 @@ public class ElectoralReportService {
                     
                     while (rs.next()) {
                         String candidatoId = rs.getString("candidato_id");
-                        String candidatoNombre = "Candidato " + candidatoId; // Nombre genérico
+                        String candidatoNombre = rs.getString("candidato_nombre");
                         long votos = rs.getLong("total_votos");
                         
                         writer.printf("%s,\"%s\",%d%n", candidatoId, candidatoNombre, votos);
