@@ -1,12 +1,31 @@
-# Configuration file (06/16/25 21:09:02.991)
+# Configuration file (06/17/25 03:19:48.661)
 
 # Server configuration
 Ice.Admin.ServerId=RegionalServer
 Ice.Admin.Endpoints=tcp -h localhost
 Ice.ProgramName=RegionalServer
-# Object adapter RegionalAdapter
-RegionalAdapter.Endpoints=tcp -h localhost -p 10000
-RegionalAdapter.AdapterId=RegionalServer.RegionalAdapter
-Ice.StdErr=logs/RegionalServer.out
-Ice.StdOut=logs/RegionalServer.out
-Ice.Default.Locator=DemoIceGrid/Locator:default -h localhost -p 4061
+# Object adapter ServidorRegionalAdapter
+ServidorRegionalAdapter.Endpoints=tcp -p 10001
+ServidorRegionalAdapter.AdapterId=RegionalServer.ServidorRegionalAdapter
+# Server descriptor properties
+Ice.Default.Locator=DemoIceGrid/Locator:tcp -h localhost -p 4061
+Ice.Default.Package=Demo
+Replica.Id=1
+Replica.Port=9090
+ReliableQueue.BaseDir=reliable_queue_1
+ReliableQueue.ProcessingInterval=5000
+ReliableQueue.BatchSize=50
+ReliableQueue.MaxRetries=3
+ReliableQueue.RetryDelay=10000
+ReliableQueue.ProcessingThreads=5
+ReliableQueue.SchedulerThreads=2
+ReliableQueue.PersistenceEnabled=1
+ReliableQueue.AutoCleanup=1
+ReliableQueue.CleanupInterval=3600000
+ReliableQueue.MaxProcessedFiles=1000
+ReliableQueue.LogLevel=DEBUG
+ReliableQueue.LogStatistics=1
+ReliableQueue.StatisticsInterval=30000
+VotosDB.ConnectionTimeout=5000
+VotosDB.MaxRetries=3
+VotosDB.RetryInterval=2000

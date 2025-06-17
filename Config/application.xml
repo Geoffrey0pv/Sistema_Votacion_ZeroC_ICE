@@ -2,16 +2,26 @@
 
   <application name="SistemaVotacion">
 
+    <!-- Definición de la variable para que todos los servidores la puedan usar -->
+    <variable name="ice.default.locator" value="DemoIceGrid/Locator:tcp -h localhost -p 4061"/>
+
     <!-- Nodo para Servidor Regional -->
     <node name="nodeRegional">
       <server id="RegionalServer" exe="java" activation="always">
         <option>-jar</option>
         <option>../servidorRegional/build/libs/servidorRegional.jar</option>
-        <adapter name="RegionalAdapter" endpoints="tcp -h localhost -p 10000">
+        <adapter name="ServidorRegionalAdapter" endpoints="tcp -p 10001">
+          <object identity="CargarCandidatos" type="::Demo::ICargarCandidatos"/>
+          <object identity="ReceptorVotosRegional" type="::Demo::IReceptorVotosRegional"/>
           <object identity="receptorVotos" type="::Demo::IRegistrarVoto"/>
-          <object identity="gestionCandidatos" type="::Demo::ICargarCandidatos"/>
         </adapter>
         <properties>
+          <!-- Propiedades para la conexión DIRECTA al Servidor Nacional -->
+          <property name="RegistroVotos.Proxy" value="RegistroVotos:tcp -h localhost -p 10002"/>
+          <property name="ConsultaCandidatos.Proxy" value="ConsultaCandidatos:tcp -h localhost -p 10002"/>
+          <property name="ConsultaCiudadanos.Proxy" value="ConsultaCiudadanos:tcp -h localhost -p 10002"/>
+
+          <!-- Propiedades heredadas de IceGrid -->
           <property name="Ice.Default.Locator" value="${ice.default.locator}"/>
           <property name="Ice.Default.Package" value="Demo"/>
           <property name="Replica.Id" value="1"/>
@@ -46,11 +56,9 @@
       <server id="ServidorNacional" exe="java" activation="always">
         <option>-jar</option>
         <option>../servidorNacional/build/libs/servidorNacional.jar</option>
-        <adapter name="ServidorNacionalAdapter" endpoints="tcp -h localhost -p 9090">
-          <object identity="administradorCandidatos" type="::Demo::IAdministradorCandidatos"/>
-          <object identity="consultaCandidatos" type="::Demo::IConsultaCandidatos"/>
-          <object identity="brokerNacional" type="::Demo::IBrokerNacional"/>
-          <object identity="registroVotos" type="::Demo::IRegistroVotos"/>
+        <adapter name="ServidorNacionalAdapter" endpoints="tcp -p 10002">
+          <object identity="ConsultaCiudadanos" type="::Demo::IConsultaCiudadanos"/>
+          <object identity="RegistroVotos" type="::Demo::IRegistroVotos"/>
         </adapter>
         <properties>
           <property name="Ice.Default.Package" value="Demo"/>
