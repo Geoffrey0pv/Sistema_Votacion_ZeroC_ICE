@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 public class ServidorRegional {
     private static ReceptorVotos receptorVotos;
+    private static ReceptorVotosImpl receptorVotosRegional;
     private static GestionCandidatos gestionCandidatos;
     private static GestorCandidatosSQLite gestorCandidatosSQLite;
     private static ConsultaCandidatosImpl consultaCandidatosImpl;
@@ -40,6 +41,9 @@ public class ServidorRegional {
                 // Componentes existentes
                 receptorVotos = new ReceptorVotos(properties.getProperty("Ice.ProgramName"));
                 gestionCandidatos = new GestionCandidatos(communicator);
+
+                // NUEVO: Receptor de Votos Regional con SQLite
+                receptorVotosRegional = new ReceptorVotosImpl("ServidorRegional");
 
                 // NUEVO: Gestor de Candidatos SQLite
                 gestorCandidatosSQLite = new GestorCandidatosSQLite(communicator);
@@ -85,6 +89,10 @@ public class ServidorRegional {
                 com.zeroc.Ice.Identity idReceptor = com.zeroc.Ice.Util.stringToIdentity("receptorVotos");
                 adapter.add(receptorVotos, idReceptor);
 
+                // NUEVO: Registrar Receptor de Votos Regional
+                com.zeroc.Ice.Identity idReceptorRegional = com.zeroc.Ice.Util.stringToIdentity("receptorVotosRegional");
+                adapter.add(receptorVotosRegional, idReceptorRegional);
+
                 com.zeroc.Ice.Identity idGestion = com.zeroc.Ice.Util.stringToIdentity("gestionCandidatos");
                 adapter.add(gestionCandidatos, idGestion);
 
@@ -108,8 +116,10 @@ public class ServidorRegional {
                 System.out.println("   • ConsultaMesaSQLite: Consulta información de mesas desde SQLite");
                 System.out.println("   • GestorCandidatosSQLite: Consulta candidatos desde servidor nacional (10.147.17.113)");
                 System.out.println("   • ConsultaCandidatosImpl: Servicio especializado de consulta de candidatos");
+                System.out.println("   • ReceptorVotosRegional: Recepción y almacenamiento de votos en SQLite");
                 System.out.println("Servidor Regional iniciado correctamente");
                 System.out.println("- ReceptorVotos disponible en: " + idReceptor.name);
+                System.out.println("- ReceptorVotosRegional disponible en: " + idReceptorRegional.name);
                 System.out.println("- GestionCandidatos disponible en: " + idGestion.name);
                 System.out.println("- ConsultaMesaSQLite disponible en: " + idConsultaMesa.name);
                 System.out.println("- ConsultaCandidatos disponible en: " + idCandidatosSQLite.name);
@@ -223,6 +233,15 @@ public class ServidorRegional {
         System.out.println("   sincronizarcandidatos - Sincronizar con servidor nacional");
         System.out.println("   validarcandidato <id> - Validar candidato por ID");
         System.out.println("   estadscandidatos - Estadísticas de candidatos");
+        // Nuevos comandos para receptor de votos
+        System.out.println("   ━━━ RECEPTOR DE VOTOS REGIONAL ━━━");
+        System.out.println("   contarvotos  - Contar total de votos recibidos");
+        System.out.println("   contarvotosmesa <mesaId> - Contar votos por mesa");
+        System.out.println("   contarvotoscandidato <candidatoId> - Contar votos por candidato");
+        System.out.println("   estadisticasvotos - Ver estadísticas detalladas de votos");
+        System.out.println("   limpiarvotos - Limpiar todos los votos (CUIDADO)");
+        System.out.println("   limpiarvotosmesa <mesaId> - Limpiar votos de una mesa");
+        System.out.println("   verificarvotos - Verificar servicio de votos");
         System.out.println("   ejemplos     - Ejecutar ejemplos de prueba");
         System.out.println("   ayuda        - Mostrar esta ayuda");
         System.out.println("   salir        - Terminar el servidor");

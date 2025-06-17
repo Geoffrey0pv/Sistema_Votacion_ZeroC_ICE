@@ -338,6 +338,65 @@ module Demo
         bool verificarConexionBD();
     };
 
+    // ========== INTERFAZ RECEPTOR DE VOTOS REGIONAL ==========
+    
+    struct VotoRegional
+    {
+        long idVoto;
+        string mesaId;
+        long timestamp;
+        long candidatoId;
+        string hashElector;
+        string municipio;
+        string departamento;
+        string estadoRegistro; // "NUEVO", "PROCESADO", "ERROR"
+    };
+
+    sequence<VotoRegional> SeqVotosRegionales;
+
+    struct ResultadoRecepcionVotos
+    {
+        bool exito;
+        int totalRecibidos;
+        int votosGuardados;
+        int votosRechazados;
+        string mensaje;
+        long tiempoProcessamiento;
+        SeqStrings errores; // Lista de errores específicos
+    };
+
+    interface IReceptorVotosRegional
+    {
+        // Recibir y guardar una lista de votos en SQLite
+        ResultadoRecepcionVotos recibirListaVotos(SeqVotosRegionales votos);
+        
+        // Recibir un solo voto
+        bool recibirVoto(VotoRegional voto);
+        
+        // Obtener estadísticas de votos almacenados
+        long contarVotosAlmacenados();
+        long contarVotosPorMesa(string mesaId);
+        long contarVotosPorCandidato(long candidatoId);
+        
+        // Obtener votos por criterios
+        SeqVotosRegionales obtenerVotosPorMesa(string mesaId);
+        SeqVotosRegionales obtenerVotosPorCandidato(long candidatoId);
+        
+        // Verificar si un voto ya existe
+        bool existeVoto(long idVoto);
+        bool existeVotoPorHash(string hashElector, string mesaId);
+        
+        // Limpiar votos (para testing)
+        bool limpiarVotos();
+        bool limpiarVotosMesa(string mesaId);
+        
+        // Verificar conectividad del servicio
+        bool verificarServicio();
+        
+        // Obtener estadísticas detalladas
+        string obtenerEstadisticasDetalladas();
+    };
+
     // ========== INTERFAZ PROCESAMIENTO DE VOTOS EN LOTE ==========
     
     struct ResultadoProcesamiento

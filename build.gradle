@@ -57,6 +57,11 @@ subprojects {
         if (project.name == 'webService') {
             implementation project(':servidorNacional')
         }
+        
+        // Dependencia específica para servidorRegional - usar clases Demo del proyecto raíz
+        if (project.name == 'servidorRegional') {
+            implementation files('../Demo')
+        }
     }
  
     //
@@ -134,8 +139,18 @@ subprojects {
         }
     }
     
+    // Configuración específica para servidorRegional - NO generar clases ICE
+    if (project.name == 'servidorRegional') {
+        // No generar clases ICE para evitar duplicados
+        slice {
+            java {
+                files = [] // No generar archivos ICE aquí
+            }
+        }
+    }
+    
     // Configuración por defecto para otros proyectos
-    if (project.name != 'servidorNacional' && project.name != 'webService') {
+    if (project.name != 'servidorNacional' && project.name != 'webService' && project.name != 'servidorRegional') {
         //
         // Generar clases ICE desde System.ice para otros proyectos
         //
