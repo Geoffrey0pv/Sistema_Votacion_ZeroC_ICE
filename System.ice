@@ -213,6 +213,7 @@ module Demo
     sequence<CiudadanoInfo> SeqCiudadanos;
     sequence<string> SeqDepartamentos;
     sequence<string> SeqMesas;
+    sequence<string> SeqStrings;
     sequence<byte> SeqBytes;
 
     struct ResultadoPaginado
@@ -267,6 +268,29 @@ module Demo
         
         // Verificar conexión a BD
         bool verificarConexionBD();
+        
+        // ========== MÉTODOS ADICIONALES PARA MESAS ==========
+        
+        // Buscar candidato por ID
+        CandidatoElectoral buscarCandidatoPorId(long idCandidato);
+        
+        // Buscar candidatos por nombre (búsqueda parcial)
+        SeqCandidatosElectorales buscarCandidatosPorNombre(string nombre);
+        
+        // Obtener lista de partidos disponibles
+        SeqStrings obtenerPartidosDisponibles();
+        
+        // Sincronizar candidatos desde servidor nacional
+        bool sincronizarCandidatos();
+        
+        // Verificar si un candidato es válido
+        bool validarCandidato(long idCandidato);
+        
+        // Obtener candidatos para una mesa específica
+        SeqCandidatosElectorales obtenerCandidatosParaMesa(string mesaId);
+        
+        // Verificar conectividad del servicio
+        bool verificarServicio();
     };
 
     // ========== INTERFAZ REGISTRO DE VOTOS ==========

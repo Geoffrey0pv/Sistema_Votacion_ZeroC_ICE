@@ -1,1 +1,72 @@
-[]
+[
+  {
+    "id": "192c7674-ee9a-4043-af28-4ea7e528b3c2",
+    "voto": {
+      "idVoto": 1750151778493,
+      "idMesa": "9060",
+      "idElectorHash": "bfe3e9bffb72b999b24a0dbdc54eb2e0232bee96ca93f61bc7e442d90e4f5212",
+      "idCandidato": 4,
+      "tsEmitido": 1750151777
+    },
+    "timestamp": "2025-06-17T04:16:17.549297",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "3763d44f-6ce1-4cbb-bfea-04e3f47c83ee",
+    "voto": {
+      "idVoto": 1750151782890,
+      "idMesa": "9060",
+      "idElectorHash": "bfe3e9bffb72b999b24a0dbdc54eb2e0232bee96ca93f61bc7e442d90e4f5212",
+      "idCandidato": 2,
+      "tsEmitido": 1750151782
+    },
+    "timestamp": "2025-06-17T04:16:22.39558",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "e0cb4000-0be7-463e-85e4-be40f0ebd570",
+    "voto": {
+      "idVoto": 1750151795217,
+      "idMesa": "9060",
+      "idElectorHash": "bfe3e9bffb72b999b24a0dbdc54eb2e0232bee96ca93f61bc7e442d90e4f5212",
+      "idCandidato": 6,
+      "tsEmitido": 1750151794
+    },
+    "timestamp": "2025-06-17T04:16:34.596172",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "ed27c94f-aa14-4377-8e42-80efc009d5a0",
+    "voto": {
+      "idVoto": 1750152444502,
+      "idMesa": "9060",
+      "idElectorHash": "ab9ee29e8d98abb1b2a01b5e9dc9d2ce02f8f45a8595c942cf3f574326ecdf5e",
+      "idCandidato": 3,
+      "tsEmitido": 1750152443
+    },
+    "timestamp": "2025-06-17T04:27:23.808086",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "e732c5d4-dbea-4845-bc11-78aacaaf0e26",
+    "voto": {
+      "idVoto": 1750152764268,
+      "idMesa": "9060",
+      "idElectorHash": "478f1518761227942b8c0c81d49db86a07ed1e7c536e7922cfd9cc7379987c29",
+      "idCandidato": 9,
+      "tsEmitido": 1750152764
+    },
+    "timestamp": "2025-06-17T04:32:44.194484",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  }
+]

@@ -153,21 +153,72 @@ public class MesaVotacionUI extends JFrame {
             return;
         }
 
-        boolean valido = gestorMesa.validarElector(documento);
+        int codigoValidacion = gestorMesa.validarElectorConCodigo(documento);
 
-        if (valido) {
-            documentoActual = documento;
-            electorValidado = true;
+        switch (codigoValidacion) {
+            case 0:
+                documentoActual = documento;
+                electorValidado = true;
 
-            habilitarSeleccionCandidatos(true);
-            txtDocumento.setEnabled(false);
-            btnValidarElector.setEnabled(false);
+                habilitarSeleccionCandidatos(true);
+                txtDocumento.setEnabled(false);
+                btnValidarElector.setEnabled(false);
 
-            mostrarMensaje("Elector validado correctamente. Seleccione su candidato.", "success");
-        } else {
-            mostrarMensaje("Elector no válido o ya votó en esta mesa", "error");
-            electorValidado = false;
-            habilitarSeleccionCandidatos(false);
+                mostrarMensaje("Elector validado correctamente. Seleccione su candidato.", "success");
+                break;
+                
+            case 1:
+                mostrarMensaje("El votante ya ha ejercido su derecho al voto", "error");
+                
+                JOptionPane.showMessageDialog(
+                    this,
+                    "⚠️ YA HA VOTADO\n\n" +
+                    "Este documento ya fue utilizado para votar en esta mesa.\n" +
+                    "No puede votar nuevamente.\n\n" +
+                    "Si considera que esto es un error, contacte al personal electoral.",
+                    "Votante Ya Registrado",
+                    JOptionPane.WARNING_MESSAGE
+                );
+                
+                electorValidado = false;
+                habilitarSeleccionCandidatos(false);
+                break;
+                
+            case 2:
+                mostrarMensaje("El votante no pertenece a esta mesa", "error");
+                
+                JOptionPane.showMessageDialog(
+                    this,
+                    "❌ NO PERTENECE A ESTA MESA\n\n" +
+                    "Su documento no está registrado en esta mesa de votación.\n" +
+                    "Debe dirigirse a su mesa de votación asignada.\n\n" +
+                    "Consulte su tarjetón electoral o pregunte al personal\n" +
+                    "para conocer su mesa correcta.",
+                    "Votante No Registrado",
+                    JOptionPane.ERROR_MESSAGE
+                );
+                
+                electorValidado = false;
+                habilitarSeleccionCandidatos(false);
+                break;
+                
+            case -1:
+            default:
+                mostrarMensaje("Error del sistema. Contacte al personal electoral.", "error");
+                
+                JOptionPane.showMessageDialog(
+                    this,
+                    "⚠️ ERROR DEL SISTEMA\n\n" +
+                    "Se ha producido un error técnico.\n" +
+                    "Por favor contacte al personal electoral\n" +
+                    "para resolver este inconveniente.",
+                    "Error del Sistema",
+                    JOptionPane.ERROR_MESSAGE
+                );
+                
+                electorValidado = false;
+                habilitarSeleccionCandidatos(false);
+                break;
         }
     }
 

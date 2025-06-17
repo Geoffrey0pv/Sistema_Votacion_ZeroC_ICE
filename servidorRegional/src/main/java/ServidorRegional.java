@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 public class ServidorRegional {
     private static ReceptorVotos receptorVotos;
     private static GestionCandidatos gestionCandidatos;
+    private static GestorCandidatosSQLite gestorCandidatosSQLite;
+    private static ConsultaCandidatosImpl consultaCandidatosImpl;
     private static ConsultorVotantesRegional consultorVotantes;
     private static DistribuidorMesas distribuidorMesas;
     private static ConsultaMesaSQLiteImpl consultaMesaSQLite;
@@ -18,7 +20,7 @@ public class ServidorRegional {
     private static boolean servidorActivo = true;
 
     public static void main(String[] args) {
-        System.out.println("🎯 === SERVIDOR REGIONAL CON CONSULTOR DE VOTANTES ===");
+        System.out.println("🎯 === SERVIDOR REGIONAL CON CONSULTOR DE VOTANTES Y CANDIDATOS ===");
         int status = 0;
         java.util.List<String> extraArgs = new java.util.ArrayList<>();
 
@@ -38,6 +40,12 @@ public class ServidorRegional {
                 // Componentes existentes
                 receptorVotos = new ReceptorVotos(properties.getProperty("Ice.ProgramName"));
                 gestionCandidatos = new GestionCandidatos(communicator);
+
+                // NUEVO: Gestor de Candidatos SQLite
+                gestorCandidatosSQLite = new GestorCandidatosSQLite(communicator);
+                
+                // NUEVO: Consulta de Candidatos especializada
+                consultaCandidatosImpl = new ConsultaCandidatosImpl(gestorCandidatosSQLite, "ServidorRegional");
 
                 // Nuevo componente: Consultor de Votantes
                 consultorVotantes = new ConsultorVotantesRegional(communicator);
@@ -80,6 +88,14 @@ public class ServidorRegional {
                 com.zeroc.Ice.Identity idGestion = com.zeroc.Ice.Util.stringToIdentity("gestionCandidatos");
                 adapter.add(gestionCandidatos, idGestion);
 
+                // NUEVO: Registrar Gestor de Candidatos SQLite
+                com.zeroc.Ice.Identity idCandidatosSQLite = com.zeroc.Ice.Util.stringToIdentity("consultaCandidatos");
+                adapter.add(gestorCandidatosSQLite, idCandidatosSQLite);
+                
+                // NUEVO: Registrar Servicio de Consulta de Candidatos especializado
+                com.zeroc.Ice.Identity idConsultaCandidatos = com.zeroc.Ice.Util.stringToIdentity("consultaCandidatosEspecializado");
+                adapter.add(consultaCandidatosImpl, idConsultaCandidatos);
+
                 com.zeroc.Ice.Identity idConsultaMesa = com.zeroc.Ice.Util.stringToIdentity("consultaMesaSQLite");
                 adapter.add(consultaMesaSQLite, idConsultaMesa);
 
@@ -90,10 +106,14 @@ public class ServidorRegional {
                 System.out.println("   • ConsultorVotantesRegional: Consulta de votantes del servidor nacional");
                 System.out.println("   • DistribuidorMesas: Distribución de votantes por mesas");
                 System.out.println("   • ConsultaMesaSQLite: Consulta información de mesas desde SQLite");
+                System.out.println("   • GestorCandidatosSQLite: Consulta candidatos desde servidor nacional (10.147.17.113)");
+                System.out.println("   • ConsultaCandidatosImpl: Servicio especializado de consulta de candidatos");
                 System.out.println("Servidor Regional iniciado correctamente");
                 System.out.println("- ReceptorVotos disponible en: " + idReceptor.name);
                 System.out.println("- GestionCandidatos disponible en: " + idGestion.name);
                 System.out.println("- ConsultaMesaSQLite disponible en: " + idConsultaMesa.name);
+                System.out.println("- ConsultaCandidatos disponible en: " + idCandidatosSQLite.name);
+                System.out.println("- ConsultaCandidatosEspecializado disponible en: " + idConsultaCandidatos.name);
 
                 
                 try {
@@ -193,6 +213,16 @@ public class ServidorRegional {
         System.out.println("   contarmesa <mesaId> - Contar votantes en una mesa");
         System.out.println("   logsmesa <mesaId> - Obtener logs de verificación de una mesa");
         System.out.println("   verificarservicio - Verificar servicio de consulta SQLite");
+        // Nuevos comandos para candidatos
+        System.out.println("   ━━━ CONSULTA CANDIDATOS ━━━");
+        System.out.println("   candidatos   - Listar todos los candidatos");
+        System.out.println("   candidatospartido <partido> - Candidatos por partido");
+        System.out.println("   buscarcandidato <id> - Buscar candidato por ID");
+        System.out.println("   buscarnombre <nombre> - Buscar candidatos por nombre");
+        System.out.println("   partidos     - Listar partidos disponibles");
+        System.out.println("   sincronizarcandidatos - Sincronizar con servidor nacional");
+        System.out.println("   validarcandidato <id> - Validar candidato por ID");
+        System.out.println("   estadscandidatos - Estadísticas de candidatos");
         System.out.println("   ejemplos     - Ejecutar ejemplos de prueba");
         System.out.println("   ayuda        - Mostrar esta ayuda");
         System.out.println("   salir        - Terminar el servidor");

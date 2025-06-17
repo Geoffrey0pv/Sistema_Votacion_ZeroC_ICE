@@ -194,4 +194,133 @@ public class ConsultaCandidatosImpl implements IConsultaCandidatos {
         
         return 0;
     }
+    
+    // ========== MÉTODOS ADICIONALES DE LA INTERFAZ ACTUALIZADA ==========
+    
+    @Override
+    public CandidatoElectoral buscarCandidatoPorId(long idCandidato, Current current) {
+        System.out.println("🔍 Buscando candidato ID: " + idCandidato);
+        
+        String sql = "SELECT id, nombre, partido FROM candidato WHERE id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setLong(1, idCandidato);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    CandidatoElectoral candidato = new CandidatoElectoral();
+                    candidato.id = rs.getLong("id");
+                    candidato.nombre = rs.getString("nombre");
+                    candidato.partido = rs.getString("partido");
+                    candidato.fechaCreacion = "N/A";
+                    candidato.activo = true;
+                    
+                    System.out.println("✅ Candidato encontrado: " + candidato.nombre);
+                    return candidato;
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error buscando candidato: " + e.getMessage());
+        }
+        
+        System.out.println("⚠️ Candidato no encontrado");
+        return null;
+    }
+    
+    @Override
+    public CandidatoElectoral[] buscarCandidatosPorNombre(String nombre, Current current) {
+        System.out.println("🔍 Buscando candidatos por nombre: " + nombre);
+        
+        List<CandidatoElectoral> candidatos = new ArrayList<>();
+        String sql = "SELECT id, nombre, partido FROM candidato " +
+                    "WHERE LOWER(nombre) LIKE LOWER(?) ORDER BY nombre";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, "%" + nombre + "%");
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    CandidatoElectoral candidato = new CandidatoElectoral();
+                    candidato.id = rs.getLong("id");
+                    candidato.nombre = rs.getString("nombre");
+                    candidato.partido = rs.getString("partido");
+                    candidato.fechaCreacion = "N/A";
+                    candidato.activo = true;
+                    candidatos.add(candidato);
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error buscando candidatos por nombre: " + e.getMessage());
+        }
+        
+        System.out.println("✅ Encontrados " + candidatos.size() + " candidatos con nombre '" + nombre + "'");
+        return candidatos.toArray(new CandidatoElectoral[0]);
+    }
+    
+    @Override
+    public String[] obtenerPartidosDisponibles(Current current) {
+        System.out.println("🏛️ Consultando partidos disponibles...");
+        
+        List<String> partidos = new ArrayList<>();
+        String sql = "SELECT DISTINCT partido FROM candidato ORDER BY partido";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                String partido = rs.getString("partido");
+                if (partido != null && !partido.trim().isEmpty()) {
+                    partidos.add(partido);
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error consultando partidos: " + e.getMessage());
+        }
+        
+        String[] resultado = partidos.toArray(new String[0]);
+        System.out.println("✅ Encontrados " + resultado.length + " partidos");
+        return resultado;
+    }
+    
+    @Override
+    public boolean sincronizarCandidatos(Current current) {
+        System.out.println("🔄 Sincronización en servidor nacional (no aplicable)");
+        // En el servidor nacional no hay sincronización, ya es la fuente principal
+        return true;
+    }
+    
+    @Override
+    public boolean validarCandidato(long idCandidato, Current current) {
+        CandidatoElectoral candidato = buscarCandidatoPorId(idCandidato, current);
+        boolean valido = candidato != null;
+        
+        System.out.println("🔍 Validación candidato ID " + idCandidato + ": " + 
+            (valido ? "✅ VÁLIDO" : "❌ INVÁLIDO"));
+        
+        return valido;
+    }
+    
+    @Override
+    public CandidatoElectoral[] obtenerCandidatosParaMesa(String mesaId, Current current) {
+        System.out.println("🗳️ Consultando candidatos para mesa: " + mesaId);
+        
+        // Retornar todos los candidatos (en el servidor nacional no hay filtro por mesa)
+        return obtenerTodosCandidatosElectorales(current);
+    }
+    
+    @Override
+    public boolean verificarServicio(Current current) {
+        boolean servicioActivo = verificarConexionBD(current);
+        System.out.println("🔧 Verificación de servicio: " + 
+            (servicioActivo ? "✅ ACTIVO" : "❌ INACTIVO"));
+        return servicioActivo;
+    }
 } 
