@@ -9,8 +9,8 @@ import com.zeroc.Ice.*;
  */
 public class WebServiceMain {
     
-    private static final int PORT = 8080;
-    private static final String HOST = "localhost";
+    private static final int PORT = 9563;
+    private static final String HOST = "10.147.17.110";
     private static ServerSocket serverSocket;
     private static ExecutorService executor;
     private static Communicator communicator;
@@ -170,7 +170,7 @@ public class WebServiceMain {
         private MesaInfo consultarMesaViaICE(String documento) {
             try {
                 // Crear proxy al servicio ConsultaMesa
-                ObjectPrx base = communicator.stringToProxy("ConsultaMesa:tcp -h localhost -p 9090");
+                ObjectPrx base = communicator.stringToProxy("ConsultaMesa:tcp -h 10.147.17.113 -p 9090");
                 Demo.IConsultaMesaPrx consultaMesa = Demo.IConsultaMesaPrx.checkedCast(base);
                 
                 if (consultaMesa == null) {
@@ -593,7 +593,7 @@ public class WebServiceMain {
         private void serveHealthCheck(PrintWriter out) {
             try {
                 // Verificar conexión ICE
-                ObjectPrx base = communicator.stringToProxy("ConsultaMesa:tcp -h localhost -p 9090");
+                ObjectPrx base = communicator.stringToProxy("ConsultaMesa:tcp -h 10.147.17.113 -p 9090");
                 Demo.IConsultaMesaPrx consultaMesa = Demo.IConsultaMesaPrx.checkedCast(base);
                 
                 boolean iceConnected = (consultaMesa != null);
