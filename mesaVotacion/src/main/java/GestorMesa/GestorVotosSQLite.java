@@ -274,6 +274,49 @@ public class GestorVotosSQLite {
     }
     
     /**
+     * Obtiene votos nuevos desde un ID específico (para sincronización)
+     */
+    public List<VotoRegistro> obtenerVotosNuevosDesde(long ultimoIdEnviado) {
+        List<VotoRegistro> votos = new ArrayList<>();
+        
+        if (conexionVotos == null) {
+            System.err.println("❌ No hay conexión a la base de datos de votos");
+            return votos;
+        }
+        
+        String sql = "SELECT id, mesa_id, timestamp, candidato_id, hash_verificacion, municipio, departamento " +
+            "FROM votos_registrados " +
+            "WHERE mesa_id = ? AND id > ? " +
+            "ORDER BY id ASC";
+        
+        try (PreparedStatement pstmt = conexionVotos.prepareStatement(sql)) {
+            pstmt.setString(1, mesaId);
+            pstmt.setLong(2, ultimoIdEnviado);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    VotoRegistro voto = new VotoRegistro(
+                        rs.getLong("id"),
+                        rs.getString("mesa_id"),
+                        rs.getLong("timestamp"),
+                        rs.getLong("candidato_id"),
+                        rs.getString("hash_verificacion"),
+                        rs.getString("municipio"),
+                        rs.getString("departamento")
+                    );
+                    votos.add(voto);
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error obteniendo votos nuevos: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return votos;
+    }
+    
+    /**
      * Obtiene estadísticas de votación
      */
     public void mostrarEstadisticas() {

@@ -5,7 +5,7 @@ import java.util.*;
 public class TestClient {
     private Communicator communicator;
     private Scanner scanner;
-    private String serverEndpoint = "tcp -h 10.147.17.113 -p 9090";
+    private String serverEndpoint = "tcp -h localhost -p 9090";
     
     // Referencias a los proxies de servicios
     private IConsultaMesaPrx consultaMesaProxy;

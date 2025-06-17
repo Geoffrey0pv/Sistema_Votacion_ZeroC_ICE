@@ -114,7 +114,7 @@ public class ServidorRegional {
                 System.out.println("   • ConsultorVotantesRegional: Consulta de votantes del servidor nacional");
                 System.out.println("   • DistribuidorMesas: Distribución de votantes por mesas");
                 System.out.println("   • ConsultaMesaSQLite: Consulta información de mesas desde SQLite");
-                System.out.println("   • GestorCandidatosSQLite: Consulta candidatos desde servidor nacional (10.147.17.113)");
+                System.out.println("   • GestorCandidatosSQLite: Consulta candidatos desde servidor nacional (localhost)");
                 System.out.println("   • ConsultaCandidatosImpl: Servicio especializado de consulta de candidatos");
                 System.out.println("   • ReceptorVotosRegional: Recepción y almacenamiento de votos en SQLite");
                 System.out.println("Servidor Regional iniciado correctamente");

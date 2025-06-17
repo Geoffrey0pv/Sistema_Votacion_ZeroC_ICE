@@ -44,6 +44,26 @@ public class GestorVotantesSQLite {
             throw new RuntimeException(e);
         }
 
+        // Inicializar base de datos al crear la instancia
+        try {
+            System.out.println("🔄 Iniciando creación de base de datos...");
+            inicializarBaseDatosVotantes();
+            
+            // Verificar que el archivo se creó correctamente
+            java.io.File dbFile = new java.io.File(DB_PATH);
+            if (dbFile.exists() && dbFile.length() > 0) {
+                System.out.println("✅ Base de datos de votantes inicializada correctamente");
+                System.out.println("📁 Archivo creado: " + DB_PATH + " (" + dbFile.length() + " bytes)");
+            } else {
+                System.err.println("❌ Error: Base de datos no se creó correctamente");
+                throw new RuntimeException("Base de datos no se creó: " + DB_PATH);
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Error inicializando base de datos de votantes: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Error inicializando base de datos de votantes", e);
+        }
+
         // Verificar si ya existe base de datos local con datos
         if (verificarBaseDatosLocalExiste()) {
             System.out.println("✅ Base de datos local encontrada: " + DB_PATH);
@@ -66,8 +86,6 @@ public class GestorVotantesSQLite {
 
         // Verificar si tiene datos
         try {
-            inicializarBaseDatosVotantes(); // Crear tablas si no existen
-            
             try (Connection conn = DriverManager.getConnection(DB_URL)) {
                 String countSQL = "SELECT COUNT(*) FROM votantes_mesa";
                 try (Statement stmt = conn.createStatement();

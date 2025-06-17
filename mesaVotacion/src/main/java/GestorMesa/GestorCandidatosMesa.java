@@ -43,6 +43,26 @@ public class GestorCandidatosMesa {
             throw new RuntimeException(e);
         }
 
+        // Inicializar base de datos al crear la instancia
+        try {
+            System.out.println("🔄 Iniciando creación de base de datos de candidatos...");
+            inicializarBaseDatosCandidatos();
+            
+            // Verificar que el archivo se creó correctamente
+            java.io.File dbFile = new java.io.File(DB_PATH);
+            if (dbFile.exists() && dbFile.length() > 0) {
+                System.out.println("✅ Base de datos de candidatos inicializada correctamente");
+                System.out.println("📁 Archivo creado: " + DB_PATH + " (" + dbFile.length() + " bytes)");
+            } else {
+                System.err.println("❌ Error: Base de datos de candidatos no se creó correctamente");
+                throw new RuntimeException("Base de datos de candidatos no se creó: " + DB_PATH);
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Error inicializando base de datos de candidatos: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Error inicializando base de datos de candidatos", e);
+        }
+
         // Verificar si ya existe base de datos local con candidatos
         if (verificarCandidatosLocalesExisten()) {
             System.out.println("✅ Candidatos encontrados en base de datos local: " + DB_PATH);
@@ -65,8 +85,6 @@ public class GestorCandidatosMesa {
 
         // Verificar si tiene datos
         try {
-            inicializarBaseDatosCandidatos(); // Crear tablas si no existen
-            
             try (Connection conn = DriverManager.getConnection(DB_URL)) {
                 String countSQL = "SELECT COUNT(*) FROM candidatos_mesa WHERE activo = 1";
                 try (Statement stmt = conn.createStatement();
@@ -218,42 +236,51 @@ public class GestorCandidatosMesa {
             "(id, nombre, partido, fecha_creacion, activo, fecha_sincronizacion) " +
             "VALUES (?, ?, ?, ?, ?, ?)";
         
-        try (Connection conn = DriverManager.getConnection(DB_URL)) {
-            conn.setAutoCommit(false);
+        try {
+            // Asegurar que la base de datos esté inicializada
+            inicializarBaseDatosCandidatos();
             
-            // Limpiar candidatos existentes
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute("DELETE FROM candidatos_mesa");
-            }
-            
-            // Guardar candidatos
-            try (PreparedStatement pstmt = conn.prepareStatement(insertCandidato)) {
-                String fechaActual = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            try (Connection conn = DriverManager.getConnection(DB_URL)) {
+                conn.setAutoCommit(false);
                 
-                for (CandidatoElectoral candidato : candidatos) {
-                    pstmt.setLong(1, candidato.id);
-                    pstmt.setString(2, candidato.nombre);
-                    pstmt.setString(3, candidato.partido);
-                    pstmt.setString(4, candidato.fechaCreacion);
-                    pstmt.setInt(5, candidato.activo ? 1 : 0);
-                    pstmt.setString(6, fechaActual);
-                    pstmt.addBatch();
+                // Limpiar candidatos existentes
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute("DELETE FROM candidatos_mesa");
                 }
                 
-                int[] resultados = pstmt.executeBatch();
-                System.out.println("✅ " + resultados.length + " candidatos guardados en SQLite");
+                // Guardar candidatos
+                try (PreparedStatement pstmt = conn.prepareStatement(insertCandidato)) {
+                    String fechaActual = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                    
+                    for (CandidatoElectoral candidato : candidatos) {
+                        pstmt.setLong(1, candidato.id);
+                        pstmt.setString(2, candidato.nombre);
+                        pstmt.setString(3, candidato.partido);
+                        pstmt.setString(4, candidato.fechaCreacion);
+                        pstmt.setInt(5, candidato.activo ? 1 : 0);
+                        pstmt.setString(6, fechaActual);
+                        pstmt.addBatch();
+                    }
+                    
+                    int[] resultados = pstmt.executeBatch();
+                    System.out.println("✅ " + resultados.length + " candidatos guardados en SQLite");
+                }
+                
+                // Registrar en log
+                registrarEnLog("GUARDAR_CANDIDATOS", "EXITOSO", 
+                    candidatos.length + " candidatos guardados para Mesa " + mesaId);
+                
+                conn.commit();
+                return true;
             }
-            
-            // Registrar en log
-            registrarEnLog("GUARDAR_CANDIDATOS", "EXITOSO", 
-                candidatos.length + " candidatos guardados para Mesa " + mesaId);
-            
-            conn.commit();
-            return true;
             
         } catch (SQLException e) {
             System.err.println("❌ Error guardando candidatos en SQLite: " + e.getMessage());
-            registrarEnLog("GUARDAR_CANDIDATOS", "ERROR", e.getMessage());
+            try {
+                registrarEnLog("GUARDAR_CANDIDATOS", "ERROR", e.getMessage());
+            } catch (java.lang.Exception logError) {
+                System.err.println("⚠️ Error registrando en log candidatos: " + logError.getMessage());
+            }
             return false;
         }
     }

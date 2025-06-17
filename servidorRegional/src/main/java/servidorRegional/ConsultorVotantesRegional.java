@@ -19,7 +19,7 @@ public class ConsultorVotantesRegional {
     public ConsultorVotantesRegional(Communicator communicator) {
         this.communicator = communicator;
         // Endpoint del servidor nacional (configurable)
-        this.endpointNacional = "ConsultaCiudadanos:tcp -h 10.147.17.113 -p 9090";
+        this.endpointNacional = "ConsultaCiudadanos:tcp -h localhost -p 9090";
         this.consultaCiudadanosProxy = null;
         
         // Inicializar base de datos SQLite

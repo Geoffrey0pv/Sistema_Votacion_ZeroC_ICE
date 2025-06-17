@@ -68,5 +68,75 @@
     "intentos": 0,
     "maxIntentos": 5,
     "estado": "PENDIENTE"
+  },
+  {
+    "id": "a0f47c5d-555e-4372-be3e-3b4f0b70b196",
+    "voto": {
+      "idVoto": 1750157490267,
+      "idMesa": "9080",
+      "idElectorHash": "9d42f6e51f558dfe2a63b9201efe0c1f35846edcb8087eea1096163361bd0ffd",
+      "idCandidato": 26,
+      "tsEmitido": 1750157489
+    },
+    "timestamp": "2025-06-17T05:51:29.660934",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "33772885-d618-4118-b5b5-904e0acea907",
+    "voto": {
+      "idVoto": 1750157503725,
+      "idMesa": "9080",
+      "idElectorHash": "f29140184555d89a13ce525df0afa6d549927c78d8b154736bec8c1812acc23d",
+      "idCandidato": 26,
+      "tsEmitido": 1750157503
+    },
+    "timestamp": "2025-06-17T05:51:43.225133",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "8c955766-e136-4c9b-98eb-bcc7f20d79ff",
+    "voto": {
+      "idVoto": 1750157724096,
+      "idMesa": "9080",
+      "idElectorHash": "f29140184555d89a13ce525df0afa6d549927c78d8b154736bec8c1812acc23d",
+      "idCandidato": 1,
+      "tsEmitido": 1750157723
+    },
+    "timestamp": "2025-06-17T05:55:23.73429",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "acf7338a-16dd-495e-b859-4d810f1243ea",
+    "voto": {
+      "idVoto": 1750157755259,
+      "idMesa": "9080",
+      "idElectorHash": "3a2be877d930da657086c7bea151a156a8e05e4a22723d89f366139c78e0a986",
+      "idCandidato": 1,
+      "tsEmitido": 1750157755
+    },
+    "timestamp": "2025-06-17T05:55:55.021842",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "f3a5396f-229b-4f17-bf94-531dadfff52e",
+    "voto": {
+      "idVoto": 1750157764222,
+      "idMesa": "9080",
+      "idElectorHash": "9d42f6e51f558dfe2a63b9201efe0c1f35846edcb8087eea1096163361bd0ffd",
+      "idCandidato": 3,
+      "tsEmitido": 1750157763
+    },
+    "timestamp": "2025-06-17T05:56:03.255989",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
   }
 ]

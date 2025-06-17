@@ -170,7 +170,7 @@ public class WebServiceMain {
         private MesaInfo consultarMesaViaICE(String documento) {
             try {
                 // Crear proxy al servicio ConsultaMesa
-                ObjectPrx base = communicator.stringToProxy("ConsultaMesa:tcp -h 10.147.17.113 -p 9090");
+                ObjectPrx base = communicator.stringToProxy("ConsultaMesa:tcp -h localhost -p 9090");
                 Demo.IConsultaMesaPrx consultaMesa = Demo.IConsultaMesaPrx.checkedCast(base);
                 
                 if (consultaMesa == null) {
@@ -593,7 +593,7 @@ public class WebServiceMain {
         private void serveHealthCheck(PrintWriter out) {
             try {
                 // Verificar conexión ICE
-                ObjectPrx base = communicator.stringToProxy("ConsultaMesa:tcp -h 10.147.17.113 -p 9090");
+                ObjectPrx base = communicator.stringToProxy("ConsultaMesa:tcp -h localhost -p 9090");
                 Demo.IConsultaMesaPrx consultaMesa = Demo.IConsultaMesaPrx.checkedCast(base);
                 
                 boolean iceConnected = (consultaMesa != null);

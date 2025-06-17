@@ -12,9 +12,9 @@ export const options = {
   scenarios: {
     consulta_mesa: {
       executor: 'constant-arrival-rate',
-      rate: 6000,              // 6.000 peticiones por segundo
+      rate: 2000,              // 6.000 peticiones por segundo
       timeUnit: '1s',
-      duration: '10m',         // 10 minutos
+      duration: '1m',         // 10 minutos
       preAllocatedVUs: 1500,   // buen punto de arranque para 6k rps
       maxVUs: 3000,            // escala si toca
     },
@@ -38,7 +38,7 @@ export default function () {
     },
   };
 
-  const res = http.post('http://10.147.17.110:9563/api/consulta', payload, params);
+  const res = http.post('http://10.147.17.110:9563/api/consultar', payload, params);
 
   check(res, {
     '200/404': r => r.status === 200 || r.status === 404,

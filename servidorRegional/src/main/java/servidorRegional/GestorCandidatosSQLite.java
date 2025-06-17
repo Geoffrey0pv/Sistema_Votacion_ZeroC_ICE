@@ -18,13 +18,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Gestor de Candidatos SQLite para Servidor Regional
- * Consulta candidatos del Servidor Nacional (10.147.17.113) y los persiste localmente
+ * Consulta candidatos del Servidor Nacional (localhost) y los persiste localmente
  */
 public class GestorCandidatosSQLite implements IConsultaCandidatos {
     
     private final String DB_PATH = "data/candidatos_regional.sqlite";
     private final String DB_URL = "jdbc:sqlite:" + DB_PATH;
-    private final String endpointServidorNacional = "tcp -h 10.147.17.113 -p 9090";
+    private final String endpointServidorNacional = "tcp -h localhost -p 9090";
     private final Communicator communicator;
     private IConsultaCandidatosPrx consultaCandidatosNacional;
     private final AtomicBoolean sincronizando = new AtomicBoolean(false);

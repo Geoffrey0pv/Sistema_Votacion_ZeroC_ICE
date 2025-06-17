@@ -53,6 +53,9 @@ public class GestorMesa implements IMesaVotacion {
     // ⭐ NUEVO: Gestor de Votos SQLite Local
     private GestorVotosSQLite gestorVotosSQLite;
 
+    // ⭐ NUEVO: Sincronizador Automático de Votos
+    private SincronizadorVotosAutomatico sincronizadorVotos;
+
     public GestorMesa(String idMesa) {
         this.idMesa = idMesa;
         this.candidatosDisponibles = new ArrayList<>();
@@ -169,6 +172,20 @@ public class GestorMesa implements IMesaVotacion {
 
             // CUARTO: Cargar candidatos por defecto
             cargarCandidatos();
+
+            // ⭐ QUINTO: Inicializar sincronizador automático de votos
+            if (gestorVotosSQLite != null) {
+                sincronizadorVotos = new SincronizadorVotosAutomatico(idMesa, gestorVotosSQLite, communicator);
+                boolean sincronizadorIniciado = sincronizadorVotos.iniciar();
+                
+                if (sincronizadorIniciado) {
+                    System.out.println("✅ Sincronización automática de votos activada (cada 10 segundos)");
+                } else {
+                    System.out.println("⚠️ Sincronización automática deshabilitada - funcionará sin servidor regional");
+                }
+            } else {
+                System.out.println("⚠️ No se puede activar sincronización automática - Gestor de Votos SQLite no disponible");
+            }
 
             return true;
 
@@ -676,7 +693,14 @@ public class GestorMesa implements IMesaVotacion {
     }
 
     public void shutdown() {
-        System.out.println("Cerrando gestor de mesa...");
+        System.out.println("🛑 Cerrando gestor de mesa...");
+        
+        // ⭐ NUEVO: Detener sincronizador automático
+        if (sincronizadorVotos != null && sincronizadorVotos.estaActivo()) {
+            System.out.println("🔄 Deteniendo sincronización automática...");
+            sincronizadorVotos.detener();
+        }
+        
         if (messageManager != null) {
             messageManager.shutdown();
         }
@@ -687,6 +711,8 @@ public class GestorMesa implements IMesaVotacion {
         if (gestorVotosSQLite != null) {
             gestorVotosSQLite.cerrarConexiones();
         }
+        
+        System.out.println("✅ Gestor de mesa cerrado correctamente");
     }
 
     /**
@@ -1117,5 +1143,43 @@ public class GestorMesa implements IMesaVotacion {
     @Override
     public String obtenerIdMesa(Current current) {
         return idMesa;
+    }
+
+    // ⭐ NUEVOS MÉTODOS PARA CONTROL DEL SINCRONIZADOR
+    
+    /**
+     * Fuerza una sincronización inmediata de votos
+     */
+    public boolean sincronizarVotosAhora() {
+        if (sincronizadorVotos != null) {
+            return sincronizadorVotos.sincronizarAhora();
+        }
+        System.err.println("❌ Sincronizador no disponible");
+        return false;
+    }
+    
+    /**
+     * Muestra estadísticas del sincronizador automático
+     */
+    public void mostrarEstadisticasSincronizacion() {
+        if (sincronizadorVotos != null) {
+            sincronizadorVotos.mostrarEstadisticas();
+        } else {
+            System.out.println("⚠️ Sincronizador automático no disponible");
+        }
+    }
+    
+    /**
+     * Verifica si el sincronizador está activo
+     */
+    public boolean isSincronizadorActivo() {
+        return sincronizadorVotos != null && sincronizadorVotos.estaActivo();
+    }
+    
+    /**
+     * Obtiene el gestor de votos SQLite
+     */
+    public GestorVotosSQLite getGestorVotosSQLite() {
+        return gestorVotosSQLite;
     }
 }
