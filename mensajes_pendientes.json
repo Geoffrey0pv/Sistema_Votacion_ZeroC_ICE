@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "id": "f8f863b5-8d9b-46c0-8e44-dccd4f97cb66",
+    "voto": {
+      "idVoto": 1750099513374,
+      "idMesa": "1",
+      "idElectorHash": "95653cb4b66ab4cecfb93886d36a3e3dc830c634f613957bec751c36061c243f",
+      "idCandidato": 1,
+      "tsEmitido": 1750099513
+    },
+    "timestamp": "2025-06-16T13:45:13.2146527",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "13a623bf-44f3-49a4-8571-bcb5651ba0f1",
+    "voto": {
+      "idVoto": 1750099771669,
+      "idMesa": "1",
+      "idElectorHash": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+      "idCandidato": 1,
+      "tsEmitido": 1750099770
+    },
+    "timestamp": "2025-06-16T13:49:30.8523413",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  }
+]
