@@ -45,40 +45,39 @@ public class GestorMesa implements IRecibirCandidatos {
     // NUEVO: Sistema de Verificación integrado
     private SistemaVerificacion sistemaVerificacion;
     private boolean verificacionLocalActiva = false;
+    
+    // NUEVO: Gestor de Candidatos SQLite para consumir desde Servidor Regional
+    private GestorCandidatosSQLite gestorCandidatosSQLite;
+    private boolean sincronizacionAutomatica = true;
 
     public GestorMesa(String idMesa) {
         this.idMesa = idMesa;
+        this.messageManager = new ReliableMessageManager();
         this.candidatosDisponibles = new ArrayList<>();
         this.electoresYaVotaron = new ArrayList<>();
-        this.messageManager = new ReliableMessageManager();
-        
-        // NUEVO: Inicializar Sistema de Verificación
+
+        // Inicializar sistema de verificación SQLite si está disponible
         try {
             this.sistemaVerificacion = new SistemaVerificacion(idMesa);
             this.verificacionLocalActiva = true;
-            System.out.println("✅ Sistema de Verificación local activado para Mesa " + idMesa);
+            System.out.println("✅ Sistema de verificación local inicializado para Mesa " + idMesa);
         } catch (Exception e) {
+            System.err.println("⚠️ No se pudo inicializar verificación local: " + e.getMessage());
+            System.out.println("💡 Funcionará en modo básico sin verificación SQLite");
             this.verificacionLocalActiva = false;
-            System.out.println("⚠️ Sistema de Verificación no disponible: " + e.getMessage());
-            System.out.println("💡 Mesa funcionará sin verificación local (solo validación básica)");
         }
         
+        // NUEVO: Inicializar gestor de candidatos SQLite
         try {
-            this.sistemaVerificacion = new SistemaVerificacion(idMesa);
-            this.verificacionLocalActiva = true;
-            System.out.println("✅ Sistema de Verificación local activado para Mesa " + idMesa);
+            this.gestorCandidatosSQLite = new GestorCandidatosSQLite(idMesa, "tcp -h localhost -p 8080");
+            System.out.println("✅ Gestor de Candidatos SQLite inicializado para Mesa " + idMesa);
         } catch (Exception e) {
-            this.verificacionLocalActiva = false;
-            System.out.println("⚠️ Sistema de Verificación no disponible: " + e.getMessage());
-            System.out.println("💡 Mesa funcionará sin verificación local (solo validación básica)");
+            System.err.println("⚠️ No se pudo inicializar Gestor de Candidatos SQLite: " + e.getMessage());
+            System.out.println("💡 Continuará con sistema de candidatos tradicional");
+            this.gestorCandidatosSQLite = null;
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("\n Guardando mensajes pendientes...");
-            if (messageManager != null) {
-                messageManager.shutdown();
-            }
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
 
     public boolean inicializar(Communicator communicator) {
@@ -236,6 +235,18 @@ public class GestorMesa implements IRecibirCandidatos {
 
     public void cargarCandidatos() {
         if (!candidatosCargados) {
+            // NUEVO: Intentar sincronizar candidatos desde Servidor Regional primero
+            if (sincronizacionAutomatica && gestorCandidatosSQLite != null) {
+                System.out.println("🔄 Intentando sincronizar candidatos desde Servidor Regional...");
+                boolean sincronizado = sincronizarCandidatosDesdeServidorRegional();
+                if (sincronizado) {
+                    System.out.println("✅ Candidatos sincronizados desde Servidor Regional");
+                    return;
+                }
+                System.out.println("⚠️ No se pudieron sincronizar desde Servidor Regional, continuando con método tradicional...");
+            }
+            
+            // Método tradicional de solicitar candidatos
             solicitarCandidatos();
 
             // Esperar un momento para que lleguen los candidatos del servidor
@@ -353,6 +364,18 @@ public class GestorMesa implements IRecibirCandidatos {
                 System.err.println(" No se pudo procesar el voto");
             } else {
                 System.out.println(" Voto procesado exitosamente");
+                
+                // NUEVO: Registrar voto en SQLite local si está disponible
+                if (gestorCandidatosSQLite != null) {
+                    try {
+                        boolean registradoLocal = gestorCandidatosSQLite.registrarVotoCandidato(idCandidato);
+                        if (registradoLocal) {
+                            System.out.println("📊 Voto registrado en estadísticas locales");
+                        }
+                    } catch (Exception e) {
+                        System.err.println("⚠️ Error registrando en estadísticas locales: " + e.getMessage());
+                    }
+                }
             }
 
             return enviado;
@@ -622,12 +645,51 @@ public class GestorMesa implements IRecibirCandidatos {
     }
 
     public void mostrarEstadisticas() {
-        System.out.println("\n ESTADÍSTICAS DE LA MESA " + idMesa);
-        System.out.println("    Electores que votaron: " + electoresYaVotaron.size());
-        System.out.println("     Candidatos disponibles: " + candidatosDisponibles.size());
-        System.out.println("   Candidatos cargados desde servidor: " +
-                (candidatosCargados ? "Sí" : "No"));
-        messageManager.mostrarEstadisticas();
+        System.out.println("\n📊 === ESTADÍSTICAS MESA " + idMesa + " ===");
+        System.out.println("🗳️  Candidatos disponibles: " + candidatosDisponibles.size());
+        System.out.println("👥 Electores que han votado: " + electoresYaVotaron.size());
+        System.out.println("📋 Candidatos cargados: " + (candidatosCargados ? "Sí" : "No"));
+        System.out.println("🔍 Verificación local activa: " + (verificacionLocalActiva ? "Sí" : "No"));
+        System.out.println("📁 Mensajes pendientes: " + (messageManager.hayMensajesPendientes() ? "Sí" : "No"));
+        
+        // NUEVO: Mostrar estadísticas del GestorCandidatosSQLite
+        if (gestorCandidatosSQLite != null) {
+            System.out.println("🔄 Sincronización Servidor Regional: Disponible");
+            System.out.println("📊 Base de datos local: " + gestorCandidatosSQLite.getDbPath());
+            System.out.println("🔌 Conectado al Servidor Regional: " + (gestorCandidatosSQLite.isConectado() ? "Sí" : "No"));
+            
+            // Mostrar resumen de candidatos SQLite
+            try {
+                gestorCandidatosSQLite.mostrarResumenCandidatos();
+            } catch (Exception e) {
+                System.err.println("⚠️ Error mostrando estadísticas SQLite: " + e.getMessage());
+            }
+        } else {
+            System.out.println("🔄 Sincronización Servidor Regional: No disponible");
+        }
+        
+        System.out.println("═".repeat(50));
+    }
+
+    /**
+     * NUEVO: Obtiene el gestor de candidatos SQLite
+     */
+    public GestorCandidatosSQLite getGestorCandidatosSQLite() {
+        return gestorCandidatosSQLite;
+    }
+    
+    /**
+     * NUEVO: Verifica si la sincronización con Servidor Regional está disponible
+     */
+    public boolean isSincronizacionDisponible() {
+        return gestorCandidatosSQLite != null;
+    }
+    
+    /**
+     * NUEVO: Obtiene el estado de la sincronización automática
+     */
+    public boolean isSincronizacionAutomatica() {
+        return sincronizacionAutomatica;
     }
 
     public void shutdown() {
@@ -638,5 +700,86 @@ public class GestorMesa implements IRecibirCandidatos {
         if (adapter != null) {
             adapter.destroy();
         }
+    }
+
+    /**
+     * NUEVO: Sincroniza candidatos consumiendo del Servidor Regional via IConsultaMesaSQLite
+     */
+    public boolean sincronizarCandidatosDesdeServidorRegional() {
+        if (gestorCandidatosSQLite == null) {
+            System.err.println("❌ Gestor de Candidatos SQLite no disponible");
+            return false;
+        }
+        
+        try {
+            System.out.println("🔌 Iniciando sincronización con Servidor Regional...");
+            
+            // Conectar al Servidor Regional
+            boolean conectado = gestorCandidatosSQLite.inicializarConexionICE(this.communicator);
+            if (!conectado) {
+                System.err.println("❌ No se pudo conectar al Servidor Regional");
+                return false;
+            }
+            
+            // Sincronizar candidatos
+            boolean sincronizado = gestorCandidatosSQLite.sincronizarCandidatos();
+            if (!sincronizado) {
+                System.err.println("❌ Error en sincronización de candidatos");
+                return false;
+            }
+            
+            // Cargar candidatos sincronizados en la memoria del GestorMesa
+            List<Candidato> candidatosSincronizados = gestorCandidatosSQLite.obtenerCandidatosDisponibles();
+            if (candidatosSincronizados != null && !candidatosSincronizados.isEmpty()) {
+                candidatosDisponibles.clear();
+                candidatosDisponibles.addAll(candidatosSincronizados);
+                candidatosCargados = true;
+                
+                System.out.println("✅ " + candidatosSincronizados.size() + " candidatos cargados desde Servidor Regional");
+                mostrarCandidatosCargados();
+                return true;
+            } else {
+                System.err.println("❌ No se obtuvieron candidatos válidos");
+                return false;
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error sincronizando candidatos: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * NUEVO: Muestra los candidatos que se han cargado exitosamente
+     */
+    private void mostrarCandidatosCargados() {
+        System.out.println("\n📊 === CANDIDATOS CARGADOS EN MESA " + idMesa + " ===");
+        for (int i = 0; i < candidatosDisponibles.size(); i++) {
+            Candidato candidato = candidatosDisponibles.get(i);
+            System.out.printf("   %d. [%d] %s - %s%n", 
+                (i + 1), 
+                candidato.idCandidato, 
+                candidato.nombre, 
+                candidato.partido
+            );
+        }
+        System.out.println("═".repeat(50));
+    }
+    
+    /**
+     * NUEVO: Permite activar/desactivar la sincronización automática
+     */
+    public void configurarSincronizacionAutomatica(boolean activar) {
+        this.sincronizacionAutomatica = activar;
+        System.out.println((activar ? "✅ Activada" : "❌ Desactivada") + " sincronización automática de candidatos");
+    }
+    
+    /**
+     * NUEVO: Fuerza la sincronización de candidatos bajo demanda
+     */
+    public boolean forzarSincronizacionCandidatos() {
+        candidatosCargados = false; // Reset para forzar nueva sincronización
+        return sincronizarCandidatosDesdeServidorRegional();
     }
 }
