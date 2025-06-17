@@ -762,19 +762,25 @@ public class ServidorRegional {
 
     private static void comandoInfoMesa(String mesaId) {
         if (consultaMesaSQLite == null) {
-            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            System.err.println("❌ Servicio de consulta SQLite no disponible");
             return;
         }
         
         System.out.println("🔍 Consultando información completa de la mesa: " + mesaId);
-        Demo.MesaInfo mesaInfo = consultaMesaSQLite.consultarInformacionMesa(mesaId);
+        Demo.InfoCompletaMesa infoCompleta = consultaMesaSQLite.obtenerInfoCompletaMesa(mesaId, null);
         
-        if (mesaInfo != null) {
-            System.out.println("📋 Información de la mesa:");
-            System.out.println("   Mesa ID: " + mesaInfo.mesaId);
-            System.out.println("   Departamento: " + mesaInfo.departamento);
-            System.out.println("   Número de votantes: " + mesaInfo.numeroVotantes);
-            System.out.println("   Fecha de creación: " + mesaInfo.fechaCreacion);
+        if (infoCompleta != null && infoCompleta.archivoExiste) {
+            System.out.println("📋 Información completa de la mesa:");
+            System.out.println("   Mesa ID: " + mesaId);
+            System.out.println("   Archivo existe: " + infoCompleta.archivoExiste);
+            System.out.println("   Ruta archivo: " + infoCompleta.rutaArchivo);
+            
+            if (infoCompleta.estadisticas != null) {
+                System.out.println("   Departamento: " + infoCompleta.estadisticas.departamento);
+                System.out.println("   Municipio: " + infoCompleta.estadisticas.municipio);
+                System.out.println("   Total votantes: " + infoCompleta.estadisticas.totalVotantes);
+                System.out.println("   Fecha creación: " + infoCompleta.estadisticas.fechaCreacion);
+            }
         } else {
             System.out.println("❌ No se encontró información para la mesa: " + mesaId);
         }
@@ -782,21 +788,24 @@ public class ServidorRegional {
 
     private static void comandoEstadisticasMesa(String mesaId) {
         if (consultaMesaSQLite == null) {
-            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            System.err.println("❌ Servicio de consulta SQLite no disponible");
             return;
         }
         
         System.out.println("🔢 Consultando estadísticas de la mesa: " + mesaId);
-        Demo.EstadisticasMesa estadisticas = consultaMesaSQLite.consultarEstadisticasMesa(mesaId);
+        Demo.EstadisticasMesaSQLite estadisticas = consultaMesaSQLite.obtenerEstadisticasMesa(mesaId, null);
         
         if (estadisticas != null) {
             System.out.println("📋 Estadísticas de la mesa:");
             System.out.println("   Mesa ID: " + estadisticas.mesaId);
             System.out.println("   Departamento: " + estadisticas.departamento);
-            System.out.println("   Número de votantes: " + estadisticas.numeroVotantes);
+            System.out.println("   Municipio: " + estadisticas.municipio);
+            System.out.println("   Puesto: " + estadisticas.puesto);
+            System.out.println("   Total votantes: " + estadisticas.totalVotantes);
+            System.out.println("   Votantes verificados: " + estadisticas.votantesVerificados);
+            System.out.println("   Mesa activa: " + (estadisticas.mesaActiva == 1 ? "Sí" : "No"));
             System.out.println("   Fecha de creación: " + estadisticas.fechaCreacion);
-            System.out.println("   Porcentaje de votantes registrados: " + estadisticas.porcentajeRegistrados + "%");
-            System.out.println("   Porcentaje de votantes que votaron: " + estadisticas.porcentajeVotaron + "%");
+            System.out.println("   Última actualización: " + estadisticas.ultimaActualizacion);
         } else {
             System.out.println("❌ No se encontraron estadísticas para la mesa: " + mesaId);
         }
@@ -804,92 +813,129 @@ public class ServidorRegional {
 
     private static void comandoVotantesMesa(String mesaId, int pagina, int tamano) {
         if (consultaMesaSQLite == null) {
-            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            System.err.println("❌ Servicio de consulta SQLite no disponible");
             return;
         }
         
         System.out.println("📄 Consultando votantes de la mesa: " + mesaId + " (página " + pagina + ", tamaño " + tamano + ")");
-        Demo.ResultadoPaginado resultado = consultaMesaSQLite.consultarVotantesPaginado(mesaId, pagina, tamano);
+        Demo.VotanteMesa[] votantes = consultaMesaSQLite.obtenerVotantesPaginados(mesaId, pagina, tamano, null);
         
-        if (resultado != null) {
-            System.out.println("📊 Página " + resultado.paginaActual + "/" + resultado.totalPaginas);
-            System.out.println("   Total registros: " + String.format("%,d", resultado.totalRegistros));
-            System.out.println("   En esta página: " + resultado.ciudadanos.length);
-            
-            for (int i = 0; i < resultado.ciudadanos.length; i++) {
-                Demo.CiudadanoInfo v = resultado.ciudadanos[i];
-                System.out.println(String.format("   %2d. %s %s (Doc: %s)", 
-                    i + 1, v.nombre, v.apellido, v.documento));
+        if (votantes != null && votantes.length > 0) {
+            System.out.println("📊 Se encontraron " + votantes.length + " votantes:");
+            for (int i = 0; i < Math.min(votantes.length, 10); i++) { // Mostrar máximo 10
+                Demo.VotanteMesa v = votantes[i];
+                System.out.println("   " + (i+1) + ". " + v.documento + " - " + v.nombre + " " + v.apellido + 
+                                 " (Verificado: " + (v.verificado == 1 ? "Sí" : "No") + ")");
             }
+            if (votantes.length > 10) {
+                System.out.println("   ... y " + (votantes.length - 10) + " más");
+            }
+        } else {
+            System.out.println("❌ No se encontraron votantes para la mesa: " + mesaId);
         }
     }
 
     private static void comandoBuscarVotante(String mesaId, String documento) {
         if (consultaMesaSQLite == null) {
-            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            System.err.println("❌ Servicio de consulta SQLite no disponible");
             return;
         }
         
         System.out.println("🔍 Buscando votante en la mesa: " + mesaId + " (documento: " + documento + ")");
-        Demo.CiudadanoInfo votante = consultaMesaSQLite.consultarVotantePorDocumento(mesaId, documento);
+        Demo.VotanteMesa votante = consultaMesaSQLite.buscarVotantePorDocumento(mesaId, documento, null);
         
         if (votante != null) {
             System.out.println("📋 Información del votante:");
-            System.out.println("   Nombre: " + votante.nombre);
-            System.out.println("   Apellido: " + votante.apellido);
+            System.out.println("   ID: " + votante.id);
             System.out.println("   Documento: " + votante.documento);
-            System.out.println("   Mesa: " + votante.mesa);
+            System.out.println("   Nombre: " + votante.nombre + " " + votante.apellido);
+            System.out.println("   Mesa: " + votante.mesa + " (ID: " + votante.mesaId + ")");
+            System.out.println("   Puesto: " + votante.puesto);
+            System.out.println("   Municipio: " + votante.municipio);
+            System.out.println("   Departamento: " + votante.departamento);
+            System.out.println("   Verificado: " + (votante.verificado == 1 ? "Sí" : "No"));
+            System.out.println("   Fecha asignación: " + votante.fechaAsignacion);
+            if (votante.verificado == 1) {
+                System.out.println("   Fecha verificación: " + votante.fechaVerificacion);
+            }
         } else {
-            System.out.println("❌ No se encontró información para el votante con documento: " + documento);
+            System.out.println("❌ Votante no encontrado en la mesa: " + mesaId);
         }
     }
 
     private static void comandoContarMesa(String mesaId) {
         if (consultaMesaSQLite == null) {
-            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            System.err.println("❌ Servicio de consulta SQLite no disponible");
             return;
         }
         
         System.out.println("🔢 Contando votantes en la mesa: " + mesaId);
-        long total = consultaMesaSQLite.contarVotantesEnMesa(mesaId);
-        System.out.println("📊 Total de votantes en la mesa: " + String.format("%,d", total));
+        int total = consultaMesaSQLite.contarVotantesMesa(mesaId, null);
+        int verificados = consultaMesaSQLite.contarVotantesVerificados(mesaId, null);
+        
+        System.out.println("📊 Resultados para mesa " + mesaId + ":");
+        System.out.println("   Total de votantes: " + String.format("%,d", total));
+        System.out.println("   Votantes verificados: " + String.format("%,d", verificados));
+        if (total > 0) {
+            double porcentaje = (verificados * 100.0) / total;
+            System.out.println("   Porcentaje verificado: " + String.format("%.2f%%", porcentaje));
+        }
     }
 
     private static void comandoLogsMesa(String mesaId) {
         if (consultaMesaSQLite == null) {
-            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            System.err.println("❌ Servicio de consulta SQLite no disponible");
             return;
         }
         
         System.out.println("📋 Logs de verificación de la mesa: " + mesaId);
-        java.util.List<Demo.LogVerificacion> logs = consultaMesaSQLite.consultarLogsVerificacion(mesaId);
+        Demo.LogVerificacion[] logs = consultaMesaSQLite.obtenerLogsVerificacion(mesaId, null);
         
-        if (logs.isEmpty()) {
+        if (logs == null || logs.length == 0) {
             System.out.println("⚠️ No hay logs de verificación para la mesa: " + mesaId);
         } else {
-            System.out.println("\n🗓️ Logs de verificación:");
-            for (Demo.LogVerificacion log : logs) {
-                System.out.println("   Fecha: " + log.fecha);
-                System.out.println("   Resultado: " + log.resultado);
-                System.out.println("   Detalles: " + log.detalles);
-                System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println("\n🗓️ Logs de verificación (" + logs.length + " registros):");
+            int maxLogs = Math.min(logs.length, 20); // Mostrar máximo 20 logs
+            for (int i = 0; i < maxLogs; i++) {
+                Demo.LogVerificacion log = logs[i];
+                System.out.println("   Log " + (i+1) + ":");
+                System.out.println("     ID: " + log.id);
+                System.out.println("     Documento: " + log.documento);
+                System.out.println("     Acción: " + log.accion);
+                System.out.println("     Resultado: " + log.resultado);
+                System.out.println("     Timestamp: " + log.timestamp);
+                System.out.println("   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            }
+            if (logs.length > maxLogs) {
+                System.out.println("   ... y " + (logs.length - maxLogs) + " logs más");
             }
         }
     }
 
     private static void comandoVerificarServicioMesa() {
         if (consultaMesaSQLite == null) {
-            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            System.err.println("❌ Servicio de consulta SQLite no disponible");
             return;
         }
         
         System.out.println("🔗 Verificando servicio de consulta SQLite...");
-        boolean servicioActivo = consultaMesaSQLite.verificarServicio();
+        boolean servicioActivo = consultaMesaSQLite.verificarServicio(null);
         
         if (servicioActivo) {
             System.out.println("✅ Servicio de consulta SQLite activo");
+            
+            // Obtener estadísticas adicionales
+            String[] mesas = consultaMesaSQLite.listarMesasDisponibles(null);
+            System.out.println("📊 Mesas SQLite disponibles: " + mesas.length);
+            
+            if (mesas.length > 0) {
+                System.out.println("📋 Primeras 5 mesas disponibles:");
+                for (int i = 0; i < Math.min(mesas.length, 5); i++) {
+                    System.out.println("   - Mesa: " + mesas[i]);
+                }
+            }
         } else {
-            System.out.println("❌ Servicio de consulta SQLite inactivo");
+            System.out.println("❌ Servicio de consulta SQLite inactivo o con problemas");
         }
     }
 }

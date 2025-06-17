@@ -8,6 +8,7 @@ import com.zeroc.Ice.Identity;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import Config.HostConfig;
 
 public class GestorReplicas implements IGestorReplicas {
     
@@ -16,11 +17,12 @@ public class GestorReplicas implements IGestorReplicas {
     private final ConcurrentHashMap<String, ReplicaInfo> replicasGestionadas;
     private final AtomicInteger contadorReplicas;
     private final ScheduledExecutorService scheduler;
+    private final HostConfig hostConfig;
     
-    // Configuración
-    private static final int PUERTO_BASE_REPLICAS = 10000;
-    private static final int MAX_REPLICAS = 10;
-    private static final String HOST_REPLICAS = "localhost";
+    // Configuración (ahora desde HostConfig)
+    private final int PUERTO_BASE_REPLICAS;
+    private final int MAX_REPLICAS;
+    private final String HOST_REPLICAS;
     
     // Información interna de réplicas
     private static class ReplicaInfo {
@@ -49,10 +51,19 @@ public class GestorReplicas implements IGestorReplicas {
         this.contadorReplicas = new AtomicInteger(1);
         this.scheduler = Executors.newScheduledThreadPool(3);
         
+        // Inicializar configuración centralizada
+        this.hostConfig = HostConfig.getInstance();
+        this.PUERTO_BASE_REPLICAS = hostConfig.getReplicaBasePort();
+        this.MAX_REPLICAS = hostConfig.getMaxReplicas();
+        this.HOST_REPLICAS = hostConfig.getReplicaHost();
+        
         // Monitoreo periódico de réplicas
         iniciarMonitoreoReplicas();
         
         System.out.println("🏭 Gestor de Réplicas iniciado");
+        System.out.println("   🏠 Host de réplicas: " + HOST_REPLICAS);
+        System.out.println("   🔌 Puerto base: " + PUERTO_BASE_REPLICAS);
+        System.out.println("   📊 Máximo réplicas: " + MAX_REPLICAS);
     }
     
     private void iniciarMonitoreoReplicas() {
@@ -79,7 +90,7 @@ public class GestorReplicas implements IGestorReplicas {
             // Si no se especifica endpoint, generar uno automáticamente
             if (endpoint == null || endpoint.trim().isEmpty()) {
                 int puerto = PUERTO_BASE_REPLICAS + contadorReplicas.getAndIncrement();
-                endpoint = String.format("tcp -h %s -p %d", HOST_REPLICAS, puerto);
+                endpoint = hostConfig.getReplicaEndpoint(puerto);
             }
             
             System.out.printf("🚀 Creando réplica: %s -> %s%n", nodeId, endpoint);

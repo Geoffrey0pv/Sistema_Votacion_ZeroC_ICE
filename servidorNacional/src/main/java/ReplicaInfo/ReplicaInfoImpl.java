@@ -3,6 +3,7 @@ package ReplicaInfo;
 import Demo.*;
 import com.zeroc.Ice.Current;
 import com.zeroc.Ice.Properties;
+import Config.HostConfig;
 
 /**
  * Implementación del servicio de información de réplicas
@@ -17,13 +18,17 @@ public class ReplicaInfoImpl implements IReplicaInfo {
     private final String endpoint;
     private final long tiempoInicio;
     private boolean activa;
+    private final HostConfig hostConfig;
     
     public ReplicaInfoImpl(Properties properties) {
+        // Obtener configuración centralizada de hosts
+        this.hostConfig = HostConfig.getInstance();
+        
         // Obtener información de las propiedades de ICE
         this.replicaId = properties.getProperty("Replica.Id");
         this.nodeId = "nodeNacional" + replicaId;
         this.puerto = Integer.parseInt(properties.getPropertyWithDefault("Replica.Port", "9090"));
-        this.host = "localhost";
+        this.host = hostConfig.getReplicaHost(); // Usar configuración centralizada
         this.endpoint = "tcp -h " + host + " -p " + puerto;
         this.tiempoInicio = System.currentTimeMillis();
         this.activa = true;
@@ -32,6 +37,7 @@ public class ReplicaInfoImpl implements IReplicaInfo {
         System.out.println("   📍 Réplica ID: " + replicaId);
         System.out.println("   🌐 Node ID: " + nodeId);
         System.out.println("   🔌 Puerto: " + puerto);
+        System.out.println("   🏠 Host: " + host + " (desde configuración)");
         System.out.println("   📡 Endpoint: " + endpoint);
     }
     

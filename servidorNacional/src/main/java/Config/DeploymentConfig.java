@@ -13,6 +13,8 @@ public class DeploymentConfig implements IConfig {
     private Properties properties;
     private static final String CONFIG_FILE = "/deployment.cfg";
     private DeploymentMode currentMode;
+    private final Map<String, DeploymentScenario> scenarios = new HashMap<>();
+    private final HostConfig hostConfig;
     
     // Modos de despliegue soportados
     public enum DeploymentMode {
@@ -43,9 +45,8 @@ public class DeploymentConfig implements IConfig {
         }
     }
     
-    private final Map<String, DeploymentScenario> scenarios = new HashMap<>();
-    
     private DeploymentConfig() {
+        this.hostConfig = HostConfig.getInstance(); // Inicializar configuración centralizada
         loadConfiguration();
         initializeScenarios();
     }
@@ -89,10 +90,19 @@ public class DeploymentConfig implements IConfig {
     }
     
     private void loadDefaultProperties() {
-        // Configuración general
+        // Configuración básica usando HostConfig
         properties.setProperty("deployment.mode", "development");
         properties.setProperty("deployment.environment", "local");
         properties.setProperty("deployment.version", "1.0.0");
+        
+        // Hosts por defecto usando configuración centralizada
+        properties.setProperty("nacional.host", hostConfig.getDevNacionalHost());
+        properties.setProperty("nacional.port", String.valueOf(hostConfig.getNacionalPort()));
+        properties.setProperty("regional.host", hostConfig.getDevRegionalHost());
+        properties.setProperty("regional.port", String.valueOf(hostConfig.getRegionalPort()));
+        
+        // Configuración de cluster
+        properties.setProperty("cluster.seeds", hostConfig.getDevClusterSeeds());
         
         // Configuración de desarrollo
         properties.setProperty("development.autoStart", "true");
@@ -113,16 +123,16 @@ public class DeploymentConfig implements IConfig {
     }
     
     private void initializeScenarios() {
-        // Escenario 1: Desarrollo local
+        // Escenario 1: Desarrollo local usando HostConfig
         DeploymentScenario localDev = new DeploymentScenario("local-development", 
             "Desarrollo local en una sola máquina");
-        localDev.configuration.put("nacional.host", "localhost");
-        localDev.configuration.put("nacional.port", "9090");
-        localDev.configuration.put("regional.host", "localhost");
-        localDev.configuration.put("regional.port", "8080");
-        localDev.requiredHosts.add("localhost");
-        localDev.portMappings.put("nacional", 9090);
-        localDev.portMappings.put("regional", 8080);
+        localDev.configuration.put("nacional.host", hostConfig.getDevNacionalHost());
+        localDev.configuration.put("nacional.port", String.valueOf(hostConfig.getNacionalPort()));
+        localDev.configuration.put("regional.host", hostConfig.getDevRegionalHost());
+        localDev.configuration.put("regional.port", String.valueOf(hostConfig.getRegionalPort()));
+        localDev.requiredHosts.add(hostConfig.getNetworkLocalHostname());
+        localDev.portMappings.put("nacional", hostConfig.getNacionalPort());
+        localDev.portMappings.put("regional", hostConfig.getRegionalPort());
         localDev.portMappings.put("cluster", 7947);
         scenarios.put("local-development", localDev);
         
@@ -296,12 +306,12 @@ public class DeploymentConfig implements IConfig {
     // ========== MÉTODOS DE CONFIGURACIÓN DE RED ==========
     
     public List<String> getNacionalHosts() {
-        String hosts = getProperty("nacional.hosts", getProperty("nacional.host", "localhost"));
+        String hosts = getProperty("nacional.hosts", getProperty("nacional.host", hostConfig.getDevNacionalHost()));
         return Arrays.asList(hosts.split(","));
     }
     
     public List<String> getRegionalHosts() {
-        String hosts = getProperty("regional.hosts", getProperty("regional.host", "localhost"));
+        String hosts = getProperty("regional.hosts", getProperty("regional.host", hostConfig.getDevRegionalHost()));
         return Arrays.asList(hosts.split(","));
     }
     
@@ -314,7 +324,7 @@ public class DeploymentConfig implements IConfig {
     }
     
     public List<String> getClusterSeeds() {
-        String seeds = getProperty("cluster.seeds", "localhost:7947");
+        String seeds = getProperty("cluster.seeds", hostConfig.getDevClusterSeeds());
         return Arrays.asList(seeds.split(","));
     }
     

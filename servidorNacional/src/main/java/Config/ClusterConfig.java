@@ -18,6 +18,7 @@ public class ClusterConfig implements IConfig {
     private final Map<String, NodeInfo> knownNodes = new ConcurrentHashMap<>();
     private String localNodeId;
     private String localIpAddress;
+    private final HostConfig hostConfig;
     
     // Información de nodo en el cluster
     public static class NodeInfo {
@@ -47,6 +48,7 @@ public class ClusterConfig implements IConfig {
     }
     
     private ClusterConfig() {
+        this.hostConfig = HostConfig.getInstance(); // Inicializar configuración centralizada
         detectLocalInfo();
         loadConfiguration();
     }
@@ -60,18 +62,13 @@ public class ClusterConfig implements IConfig {
     
     private void detectLocalInfo() {
         try {
-            // Generar ID único para este nodo
             this.localNodeId = generateNodeId();
-            
-            // Detectar IP local
             this.localIpAddress = detectLocalIpAddress();
-            
-            System.out.println("🏷️ Nodo local detectado: " + localNodeId + " @ " + localIpAddress);
             
         } catch (Exception e) {
             System.err.println("❌ Error detectando información local: " + e.getMessage());
             this.localNodeId = "node-" + System.currentTimeMillis();
-            this.localIpAddress = "localhost";
+            this.localIpAddress = hostConfig.getNetworkLocalHostname(); // Usar HostConfig como fallback
         }
     }
     
@@ -108,8 +105,8 @@ public class ClusterConfig implements IConfig {
             }
         }
         
-        // Fallback a localhost si no se encuentra otra IP
-        return "localhost";
+        // Fallback a HostConfig si no se encuentra otra IP
+        return hostConfig.getNetworkLocalHostname();
     }
     
     private void loadConfiguration() {
@@ -170,8 +167,8 @@ public class ClusterConfig implements IConfig {
         properties.setProperty("cluster.security.keystore", "");
         properties.setProperty("cluster.security.password", "");
         
-        // Nodos semilla por defecto (para desarrollo local)
-        properties.setProperty("cluster.seeds", "localhost:7947");
+        // Nodos semilla por defecto usando HostConfig
+        properties.setProperty("cluster.seeds", hostConfig.getClusterSeeds());
     }
     
     private void loadKnownNodesFromConfig() {

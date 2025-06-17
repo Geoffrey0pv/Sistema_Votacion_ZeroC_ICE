@@ -14,6 +14,7 @@ public class BrokerConfig implements IConfig {
     private Properties properties;
     private final String configFile;
     private final String brokerType;
+    private final HostConfig hostConfig;
     
     // Tipos de broker soportados
     public enum BrokerType {
@@ -27,6 +28,7 @@ public class BrokerConfig implements IConfig {
     private BrokerConfig(String brokerType) {
         this.brokerType = brokerType;
         this.configFile = "/broker-" + brokerType + ".cfg";
+        this.hostConfig = HostConfig.getInstance();
         loadConfiguration();
     }
     
@@ -69,16 +71,16 @@ public class BrokerConfig implements IConfig {
     }
     
     private void loadNacionalDefaults() {
-        // Configuración de red
-        properties.setProperty("broker.host", "localhost");
-        properties.setProperty("broker.port", "9090");
-        properties.setProperty("broker.endpoints", "tcp -h localhost -p 9090");
+        // Configuración de red usando HostConfig
+        properties.setProperty("broker.host", hostConfig.getBrokerNacionalHost());
+        properties.setProperty("broker.port", String.valueOf(hostConfig.getBrokerNacionalPort()));
+        properties.setProperty("broker.endpoints", hostConfig.getBrokerNacionalEndpoint());
         
         // Configuración de réplicas
         properties.setProperty("replica.minReplicas", "1");
-        properties.setProperty("replica.maxReplicas", "10");
-        properties.setProperty("replica.basePort", "10000");
-        properties.setProperty("replica.hostPattern", "localhost");
+        properties.setProperty("replica.maxReplicas", String.valueOf(hostConfig.getMaxReplicas()));
+        properties.setProperty("replica.basePort", String.valueOf(hostConfig.getReplicaBasePort()));
+        properties.setProperty("replica.hostPattern", hostConfig.getReplicaHost());
         properties.setProperty("replica.autoScaling", "true");
         
         // Configuración de escalado
@@ -108,16 +110,17 @@ public class BrokerConfig implements IConfig {
     }
     
     private void loadRegionalDefaults() {
-        // Configuración de red
-        properties.setProperty("broker.host", "localhost");
-        properties.setProperty("broker.port", "8080");
-        properties.setProperty("broker.endpoints", "tcp -h localhost -p 8080");
+        // Configuración de red usando HostConfig
+        properties.setProperty("broker.host", hostConfig.getBrokerRegionalHost());
+        properties.setProperty("broker.port", String.valueOf(hostConfig.getBrokerRegionalPort()));
+        properties.setProperty("broker.endpoints", 
+            "tcp -h " + hostConfig.getBrokerRegionalHost() + " -p " + hostConfig.getBrokerRegionalPort());
         
         // Configuración de réplicas
         properties.setProperty("replica.minReplicas", "1");
         properties.setProperty("replica.maxReplicas", "5");
         properties.setProperty("replica.basePort", "11000");
-        properties.setProperty("replica.hostPattern", "localhost");
+        properties.setProperty("replica.hostPattern", hostConfig.getReplicaHost());
         properties.setProperty("replica.autoScaling", "true");
         
         // Configuración de escalado
@@ -146,7 +149,7 @@ public class BrokerConfig implements IConfig {
         properties.setProperty("cluster.heartbeat.interval", "7500");
         
         // Configuración específica regional
-        properties.setProperty("regional.nacionalEndpoint", "tcp -h localhost -p 9090");
+        properties.setProperty("regional.nacionalEndpoint", hostConfig.getBrokerNacionalEndpoint());
         properties.setProperty("regional.mesasPort", "12000");
         properties.setProperty("regional.maxMesas", "50");
     }
@@ -194,7 +197,8 @@ public class BrokerConfig implements IConfig {
     // ========== MÉTODOS ESPECÍFICOS DE BROKER ==========
     
     public String getBrokerHost() {
-        return getProperty("broker.host", "localhost");
+        return getProperty("broker.host", "nacional".equals(brokerType) ? 
+            hostConfig.getBrokerNacionalHost() : hostConfig.getBrokerRegionalHost());
     }
     
     public int getBrokerPort() {
@@ -221,7 +225,7 @@ public class BrokerConfig implements IConfig {
     }
     
     public String getReplicaHostPattern() {
-        return getProperty("replica.hostPattern", "localhost");
+        return getProperty("replica.hostPattern", hostConfig.getReplicaHost());
     }
     
     public boolean isAutoScalingEnabled() {
@@ -229,7 +233,7 @@ public class BrokerConfig implements IConfig {
     }
     
     public List<String> getReplicaHosts() {
-        String hostsStr = getProperty("replica.hosts", "localhost");
+        String hostsStr = getProperty("replica.hosts", hostConfig.getReplicaHost());
         return Arrays.asList(hostsStr.split(","));
     }
     
@@ -321,7 +325,7 @@ public class BrokerConfig implements IConfig {
     // ========== CONFIGURACIÓN ESPECÍFICA REGIONAL ==========
     
     public String getNacionalEndpoint() {
-        return getProperty("regional.nacionalEndpoint", "tcp -h localhost -p 9090");
+        return getProperty("regional.nacionalEndpoint", hostConfig.getBrokerNacionalEndpoint());
     }
     
     public int getMesasPort() {

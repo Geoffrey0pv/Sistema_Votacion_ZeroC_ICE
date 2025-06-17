@@ -11,6 +11,7 @@ import Services.ProcesadorLoteVotosImpl;
 import Services.ElectoralReportService;
 import com.zeroc.Ice.*;
 import com.zeroc.Ice.Util;
+import Config.HostConfig;
 
 import java.lang.Exception;
 import java.util.Properties;
@@ -36,6 +37,7 @@ public class ServidorNacional {
     private static boolean useUI = false;
     private static ExecutorService commandExecutor;
     private static volatile boolean serverRunning = true;
+    private static HostConfig hostConfig;
 
     public static void main(String[] args) {
         int status = 0;
@@ -95,9 +97,18 @@ public class ServidorNacional {
                 }
             }
             
+            // Inicializar configuración de hosts
+            hostConfig = HostConfig.getInstance();
+            hostConfig.printConfiguration();
+            
             // Determinar el puerto del adaptador basado en la configuración
             String adapterPort = properties.getProperty("Replica.Port");
-            String adapterEndpoint = "tcp -h localhost -p " + adapterPort;
+            String adapterEndpoint = hostConfig.getNacionalAdapterEndpoints();
+            
+            // Si se especifica un puerto específico, usarlo
+            if (adapterPort != null && !adapterPort.isEmpty()) {
+                adapterEndpoint = "tcp -h " + hostConfig.getNacionalHost() + " -p " + adapterPort;
+            }
             
             // Crear adaptador
             adapter = communicator.createObjectAdapterWithEndpoints(
@@ -164,7 +175,7 @@ public class ServidorNacional {
             
             System.out.println("🎯 ===== SERVIDOR NACIONAL CON BROKER =====");
             System.out.println("   🚀 Servidor iniciado con patrón Broker");
-            System.out.println("   📡 Endpoint: tcp -h localhost -p 9090");
+            System.out.println("   📡 Endpoint: " + hostConfig.getNacionalEndpoint());
             System.out.println("   🔄 Escalado automático: ACTIVADO (50%)");
             System.out.println("   ⚖️  Balanceador de carga: ACTIVADO");
             System.out.println("   📊 Monitor de recursos: ACTIVADO");
