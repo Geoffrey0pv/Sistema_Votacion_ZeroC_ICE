@@ -16,10 +16,12 @@ public class ReceptorVotosImpl implements IReceptorVotosRegional {
     private final String nombreServidor;
     private long votosRecibidos = 0;
     private long tiempoInicioServicio;
+    private final DatabaseManager databaseManager;
     
     public ReceptorVotosImpl(String nombreServidor) {
         this.nombreServidor = nombreServidor != null ? nombreServidor : "ServidorRegional";
         this.gestorVotos = new GestorVotosRegionalSQLite();
+        this.databaseManager = new DatabaseManager();
         this.tiempoInicioServicio = System.currentTimeMillis();
         
         System.out.println("🏛️ Receptor de Votos Regional inicializado: " + this.nombreServidor);
@@ -34,12 +36,17 @@ public class ReceptorVotosImpl implements IReceptorVotosRegional {
                 return false;
             }
             
+            // Completar información geográfica si está vacía
+            completarInformacionGeografica(voto);
+            
             // Log del voto recibido
             System.out.println("📥 Voto recibido:");
             System.out.println("   ID: " + voto.idVoto);
             System.out.println("   Mesa: " + voto.mesaId);
             System.out.println("   Candidato: " + voto.candidatoId);
             System.out.println("   Hash Elector: " + voto.hashElector);
+            System.out.println("   Municipio: " + (voto.municipio != null ? voto.municipio : "N/A"));
+            System.out.println("   Departamento: " + (voto.departamento != null ? voto.departamento : "N/A"));
             System.out.println("   Timestamp: " + voto.timestamp);
             
             // Verificar si el voto ya existe
@@ -99,6 +106,13 @@ public class ReceptorVotosImpl implements IReceptorVotosRegional {
             System.out.println("📦 Lote de votos recibido:");
             System.out.println("   Total votos: " + votos.length);
             System.out.println("   Procesando...");
+            
+            // Completar información geográfica para todos los votos del lote
+            for (VotoRegional voto : votos) {
+                if (voto != null) {
+                    completarInformacionGeografica(voto);
+                }
+            }
             
             // Procesar el lote usando el gestor
             ResultadoRecepcionVotos resultado = gestorVotos.guardarVotosLote(votos);
@@ -401,5 +415,74 @@ public class ReceptorVotosImpl implements IReceptorVotosRegional {
     
     public long getTiempoFuncionamiento() {
         return System.currentTimeMillis() - tiempoInicioServicio;
+    }
+    
+    /**
+     * Obtiene el gestor de votos SQLite (para sincronización)
+     */
+    public GestorVotosRegionalSQLite getGestorVotos() {
+        return gestorVotos;
+    }
+    
+    private void completarInformacionGeografica(VotoRegional voto) {
+        // Si ya tiene municipio y departamento, no hacer nada
+        if (voto.municipio != null && !voto.municipio.trim().isEmpty() && 
+            voto.departamento != null && !voto.departamento.trim().isEmpty()) {
+            return;
+        }
+        
+        try {
+            // Buscar información del votante por hash en la base de datos
+            // El hash del elector debería corresponder al documento del votante
+            String documento = voto.hashElector;
+            
+            // Intentar buscar en diferentes departamentos conocidos
+            String[] departamentosComunes = {"CUNDINAMARCA", "ANTIOQUIA", "VALLE", "ATLANTICO", "BOLIVAR"};
+            
+            for (String departamento : departamentosComunes) {
+                List<CiudadanoInfo> votantes = databaseManager.consultarVotantesLocales(departamento);
+                
+                // Buscar por documento (hash) en este departamento
+                for (CiudadanoInfo votante : votantes) {
+                    if (votante.documento != null && votante.documento.equals(documento)) {
+                        // Encontrado! Completar información
+                        if (voto.municipio == null || voto.municipio.trim().isEmpty()) {
+                            voto.municipio = votante.municipio != null ? votante.municipio : "DESCONOCIDO";
+                        }
+                        if (voto.departamento == null || voto.departamento.trim().isEmpty()) {
+                            voto.departamento = votante.departamento != null ? votante.departamento : departamento;
+                        }
+                        
+                        System.out.println("✅ Información geográfica completada desde BD:");
+                        System.out.println("   Municipio: " + voto.municipio);
+                        System.out.println("   Departamento: " + voto.departamento);
+                        return;
+                    }
+                }
+            }
+            
+            // Si no se encontró información específica, usar valores por defecto
+            if (voto.municipio == null || voto.municipio.trim().isEmpty()) {
+                voto.municipio = "REGIONAL_" + voto.mesaId.substring(0, Math.min(3, voto.mesaId.length()));
+            }
+            if (voto.departamento == null || voto.departamento.trim().isEmpty()) {
+                voto.departamento = "CUNDINAMARCA"; // Departamento por defecto
+            }
+            
+            System.out.println("⚠️ Información geográfica completada con valores por defecto:");
+            System.out.println("   Municipio: " + voto.municipio);
+            System.out.println("   Departamento: " + voto.departamento);
+            
+        } catch (Exception e) {
+            System.err.println("⚠️ Error completando información geográfica: " + e.getMessage());
+            
+            // Valores de emergencia
+            if (voto.municipio == null || voto.municipio.trim().isEmpty()) {
+                voto.municipio = "DESCONOCIDO";
+            }
+            if (voto.departamento == null || voto.departamento.trim().isEmpty()) {
+                voto.departamento = "CUNDINAMARCA";
+            }
+        }
     }
 } 

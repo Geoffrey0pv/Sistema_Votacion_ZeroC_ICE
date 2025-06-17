@@ -61,22 +61,38 @@ public class GestorVotosRegionalSQLite {
             "estado_registro TEXT DEFAULT 'NUEVO'," +
             "fecha_recepcion TEXT NOT NULL," +
             "fecha_procesamiento TEXT," +
+            "sincronizado BOOLEAN DEFAULT FALSE," +
+            "fecha_sincronizacion TEXT," +
+            "intentos_sincronizacion INTEGER DEFAULT 0," +
             "UNIQUE(hash_elector, mesa_id)" +
             ")";
+        
+        // Añadir columnas de sincronización si no existen (para compatibilidad con DBs existentes)
+        String addSincronizadoSQL = "ALTER TABLE votos_regionales ADD COLUMN sincronizado BOOLEAN DEFAULT FALSE";
+        String addFechaSincronizacionSQL = "ALTER TABLE votos_regionales ADD COLUMN fecha_sincronizacion TEXT";
+        String addIntentosSincronizacionSQL = "ALTER TABLE votos_regionales ADD COLUMN intentos_sincronizacion INTEGER DEFAULT 0";
         
         String createIndexSQL1 = "CREATE INDEX IF NOT EXISTS idx_votos_mesa ON votos_regionales(mesa_id)";
         String createIndexSQL2 = "CREATE INDEX IF NOT EXISTS idx_votos_candidato ON votos_regionales(candidato_id)";
         String createIndexSQL3 = "CREATE INDEX IF NOT EXISTS idx_votos_hash ON votos_regionales(hash_elector)";
         String createIndexSQL4 = "CREATE INDEX IF NOT EXISTS idx_votos_timestamp ON votos_regionales(timestamp)";
+        String createIndexSQL5 = "CREATE INDEX IF NOT EXISTS idx_votos_sincronizado ON votos_regionales(sincronizado)";
         
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement()) {
             
             stmt.execute(createTableSQL);
+            
+            // Intentar añadir columnas de sincronización (ignorar errores si ya existen)
+            try { stmt.execute(addSincronizadoSQL); } catch (SQLException e) { /* Columna ya existe */ }
+            try { stmt.execute(addFechaSincronizacionSQL); } catch (SQLException e) { /* Columna ya existe */ }
+            try { stmt.execute(addIntentosSincronizacionSQL); } catch (SQLException e) { /* Columna ya existe */ }
+            
             stmt.execute(createIndexSQL1);
             stmt.execute(createIndexSQL2);
             stmt.execute(createIndexSQL3);
             stmt.execute(createIndexSQL4);
+            stmt.execute(createIndexSQL5);
             
             System.out.println("✅ Base de datos de votos regionales inicializada: " + DB_PATH);
             
@@ -546,5 +562,179 @@ public class GestorVotosRegionalSQLite {
      */
     public String getDbPath() {
         return DB_PATH;
+    }
+    
+    // ========== MÉTODOS DE SINCRONIZACIÓN ==========
+    
+    /**
+     * Obtiene los votos que no han sido sincronizados con el servidor nacional
+     */
+    public List<VotoRegional> obtenerVotosNoSincronizados(int limite) {
+        List<VotoRegional> votos = new ArrayList<>();
+        String selectSQL = "SELECT id_voto, mesa_id, timestamp, candidato_id, hash_elector, municipio, departamento, estado_registro " +
+            "FROM votos_regionales " +
+            "WHERE (sincronizado = FALSE OR sincronizado IS NULL) " +
+            "AND intentos_sincronizacion < 3 " +
+            "ORDER BY timestamp ASC " +
+            "LIMIT ?";
+        
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(selectSQL)) {
+            
+            pstmt.setInt(1, limite);
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                VotoRegional voto = new VotoRegional();
+                voto.idVoto = rs.getLong("id_voto");
+                voto.mesaId = rs.getString("mesa_id");
+                voto.timestamp = rs.getLong("timestamp");
+                voto.candidatoId = rs.getLong("candidato_id");
+                voto.hashElector = rs.getString("hash_elector");
+                voto.municipio = rs.getString("municipio");
+                voto.departamento = rs.getString("departamento");
+                voto.estadoRegistro = rs.getString("estado_registro");
+                
+                votos.add(voto);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error obteniendo votos no sincronizados: " + e.getMessage());
+        }
+        
+        return votos;
+    }
+    
+    /**
+     * Marca votos como sincronizados exitosamente
+     */
+    public boolean marcarVotosSincronizados(List<Long> idsVotos) {
+        if (idsVotos.isEmpty()) {
+            return true;
+        }
+        
+        String updateSQL = "UPDATE votos_regionales SET sincronizado = TRUE, fecha_sincronizacion = ? WHERE id_voto = ?";
+        String fechaSincronizacion = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(updateSQL)) {
+            
+            conn.setAutoCommit(false);
+            
+            for (Long idVoto : idsVotos) {
+                pstmt.setString(1, fechaSincronizacion);
+                pstmt.setLong(2, idVoto);
+                pstmt.addBatch();
+            }
+            
+            pstmt.executeBatch();
+            conn.commit();
+            
+            System.out.println("✅ Marcados " + idsVotos.size() + " votos como sincronizados");
+            return true;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error marcando votos como sincronizados: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Incrementa el contador de intentos de sincronización para votos fallidos
+     */
+    public boolean incrementarIntentosSincronizacion(List<Long> idsVotos) {
+        if (idsVotos.isEmpty()) {
+            return true;
+        }
+        
+        String updateSQL = "UPDATE votos_regionales SET intentos_sincronizacion = intentos_sincronizacion + 1 WHERE id_voto = ?";
+        
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(updateSQL)) {
+            
+            conn.setAutoCommit(false);
+            
+            for (Long idVoto : idsVotos) {
+                pstmt.setLong(1, idVoto);
+                pstmt.addBatch();
+            }
+            
+            pstmt.executeBatch();
+            conn.commit();
+            
+            System.out.println("⚠️ Incrementados intentos de sincronización para " + idsVotos.size() + " votos");
+            return true;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error incrementando intentos de sincronización: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Obtiene estadísticas de sincronización
+     */
+    public String obtenerEstadisticasSincronizacion() {
+        StringBuilder stats = new StringBuilder();
+        
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+            
+            // Estadísticas de sincronización
+            String sincronizacionSQL = "SELECT " +
+                "COUNT(*) as total_votos," +
+                "SUM(CASE WHEN sincronizado = TRUE THEN 1 ELSE 0 END) as votos_sincronizados," +
+                "SUM(CASE WHEN (sincronizado = FALSE OR sincronizado IS NULL) THEN 1 ELSE 0 END) as votos_pendientes," +
+                "SUM(CASE WHEN intentos_sincronizacion >= 3 THEN 1 ELSE 0 END) as votos_fallidos " +
+                "FROM votos_regionales";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(sincronizacionSQL)) {
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    stats.append("🔄 ESTADÍSTICAS DE SINCRONIZACIÓN:\n");
+                    stats.append("   Total votos: ").append(rs.getLong("total_votos")).append("\n");
+                    stats.append("   Votos sincronizados: ").append(rs.getInt("votos_sincronizados")).append("\n");
+                    stats.append("   Votos pendientes: ").append(rs.getInt("votos_pendientes")).append("\n");
+                    stats.append("   Votos fallidos: ").append(rs.getInt("votos_fallidos")).append("\n");
+                }
+            }
+            
+        } catch (SQLException e) {
+            stats.append("❌ Error obteniendo estadísticas de sincronización: ").append(e.getMessage());
+        }
+        
+        return stats.toString();
+    }
+    
+    /**
+     * Actualiza los votos que tienen municipio y departamento vacíos
+     * con información por defecto basada en el servidor regional
+     */
+    public int actualizarInformacionGeograficaVotos() {
+        String updateSQL = "UPDATE votos_regionales " +
+            "SET municipio = CASE " +
+            "    WHEN municipio IS NULL OR municipio = '' THEN 'REGIONAL_' || SUBSTR(mesa_id, 1, 3) " +
+            "    ELSE municipio " +
+            "END, " +
+            "departamento = CASE " +
+            "    WHEN departamento IS NULL OR departamento = '' THEN 'CUNDINAMARCA' " +
+            "    ELSE departamento " +
+            "END " +
+            "WHERE (municipio IS NULL OR municipio = '') OR (departamento IS NULL OR departamento = '')";
+        
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(updateSQL)) {
+            
+            int filasActualizadas = pstmt.executeUpdate();
+            
+            if (filasActualizadas > 0) {
+                System.out.println("✅ Actualizada información geográfica de " + filasActualizadas + " votos");
+            }
+            
+            return filasActualizadas;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Error actualizando información geográfica: " + e.getMessage());
+            return 0;
+        }
     }
 } 

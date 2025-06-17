@@ -121,7 +121,7 @@ public class NetworkConfig {
         } catch (Exception e) {
             System.err.println("❌ Error inicializando información de red: " + e.getMessage());
             // Valores por defecto
-            localHostname = "localhost";
+            localHostname = "10.147.17.113";
             localIP = "127.0.0.1";
             availableIPs = Arrays.asList("127.0.0.1");
             topology = NetworkTopology.SINGLE_HOST;
@@ -215,7 +215,7 @@ public class NetworkConfig {
         // Hosts nacionales
         List<String> nacionalHosts = deployConfig.getNacionalHosts();
         for (String host : nacionalHosts) {
-            if (!host.equals("localhost") && !host.equals(localIP)) {
+            if (!host.equals("10.147.17.113") && !host.equals(localIP)) {
                 addDiscoveredHost(host, deployConfig.getNacionalPort(), "nacional");
             }
         }
@@ -223,7 +223,7 @@ public class NetworkConfig {
         // Hosts regionales
         List<String> regionalHosts = deployConfig.getRegionalHosts();
         for (String host : regionalHosts) {
-            if (!host.equals("localhost") && !host.equals(localIP)) {
+            if (!host.equals("10.147.17.113") && !host.equals(localIP)) {
                 addDiscoveredHost(host, deployConfig.getRegionalPort(), "regional");
             }
         }
@@ -232,7 +232,7 @@ public class NetworkConfig {
         List<String> clusterSeeds = deployConfig.getClusterSeeds();
         for (String seed : clusterSeeds) {
             String[] parts = seed.split(":");
-            if (parts.length == 2 && !parts[0].equals("localhost") && !parts[0].equals(localIP)) {
+            if (parts.length == 2 && !parts[0].equals("10.147.17.113") && !parts[0].equals(localIP)) {
                 try {
                     int port = Integer.parseInt(parts[1]);
                     addDiscoveredHost(parts[0], port, "cluster");
@@ -336,7 +336,7 @@ public class NetworkConfig {
     }
     
     public String getBindAddress() {
-        // Para desarrollo local, usar localhost
+        // Para desarrollo local, usar 10.147.17.113
         if (topology == NetworkTopology.SINGLE_HOST) {
             return "127.0.0.1";
         }

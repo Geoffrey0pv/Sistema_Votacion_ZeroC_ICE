@@ -17,6 +17,7 @@ public class ServidorRegional {
     private static ConsultorVotantesRegional consultorVotantes;
     private static DistribuidorMesas distribuidorMesas;
     private static ConsultaMesaSQLiteImpl consultaMesaSQLite;
+    private static SincronizadorVotosNacional sincronizadorVotos;
     private static Scanner scanner;
     private static boolean servidorActivo = true;
 
@@ -44,6 +45,12 @@ public class ServidorRegional {
 
                 // NUEVO: Receptor de Votos Regional con SQLite
                 receptorVotosRegional = new ReceptorVotosImpl("ServidorRegional");
+
+                // NUEVO: Sincronizador de Votos al Servidor Nacional
+                sincronizadorVotos = new SincronizadorVotosNacional(
+                    receptorVotosRegional.getGestorVotos(), 
+                    communicator
+                );
 
                 // NUEVO: Gestor de Candidatos SQLite
                 gestorCandidatosSQLite = new GestorCandidatosSQLite(communicator);
@@ -125,6 +132,19 @@ public class ServidorRegional {
                 System.out.println("- ConsultaCandidatos disponible en: " + idCandidatosSQLite.name);
                 System.out.println("- ConsultaCandidatosEspecializado disponible en: " + idConsultaCandidatos.name);
 
+                // INICIALIZACIÓN AUTOMÁTICA DEL SINCRONIZADOR
+                System.out.println("\n🔄 Iniciando sincronización automática con servidor nacional...");
+                try {
+                    if (sincronizadorVotos != null) {
+                        sincronizadorVotos.iniciarSincronizacionAutomatica();
+                        System.out.println("✅ Sincronización automática iniciada (cada 10 segundos)");
+                        System.out.println("💡 Use 'estadosync' para ver el estado y 'detenersync' para detenerla");
+                    } else {
+                        System.out.println("⚠️  No se pudo inicializar el sincronizador");
+                    }
+                } catch (Exception e) {
+                    System.out.println("❌ Error al iniciar sincronización automática: " + e.getMessage());
+                }
                 
                 try {
                     com.zeroc.IceGrid.RegistryPrx registry = com.zeroc.IceGrid.RegistryPrx.checkedCast(
@@ -150,6 +170,9 @@ public class ServidorRegional {
                     servidorActivo = false;
                     if (consultorVotantes != null) {
                         consultorVotantes.cerrarConexion();
+                    }
+                    if (sincronizadorVotos != null) {
+                        sincronizadorVotos.cerrar();
                     }
                     communicator.destroy();
                 }));
@@ -242,6 +265,12 @@ public class ServidorRegional {
         System.out.println("   limpiarvotos - Limpiar todos los votos (CUIDADO)");
         System.out.println("   limpiarvotosmesa <mesaId> - Limpiar votos de una mesa");
         System.out.println("   verificarvotos - Verificar servicio de votos");
+        System.out.println("   ━━━ SINCRONIZACIÓN CON SERVIDOR NACIONAL ━━━");
+        System.out.println("   iniciarsync  - Iniciar sincronización automática cada 10 segundos");
+        System.out.println("   detenersync  - Detener sincronización automática");
+        System.out.println("   sincronizar  - Sincronizar votos ahora (manual)");
+        System.out.println("   estadosync   - Ver estado y estadísticas de sincronización");
+        System.out.println("   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         System.out.println("   ejemplos     - Ejecutar ejemplos de prueba");
         System.out.println("   ayuda        - Mostrar esta ayuda");
         System.out.println("   salir        - Terminar el servidor");
@@ -432,6 +461,19 @@ public class ServidorRegional {
 
                     case "ejemplos":
                         comandoEjemplos();
+                        break;
+                    // Comandos de sincronización
+                    case "iniciarsync":
+                        comandoIniciarSincronizacion();
+                        break;
+                    case "detenersync":
+                        comandoDetenerSincronizacion();
+                        break;
+                    case "sincronizar":
+                        comandoSincronizarAhora();
+                        break;
+                    case "estadosync":
+                        comandoEstadoSincronizacion();
                         break;
                     case "ayuda":
                         mostrarComandosDisponibles();
@@ -962,29 +1004,70 @@ public class ServidorRegional {
     }
 
     private static void comandoVerificarServicioMesa() {
-        if (consultaMesaSQLite == null) {
-            System.err.println("❌ Servicio de consulta SQLite no disponible");
+        try {
+            boolean servicio = consultaMesaSQLite.verificarServicio(null);
+            System.out.println("🔍 Servicio SQLite: " + (servicio ? "✅ DISPONIBLE" : "❌ NO DISPONIBLE"));
+        } catch (Exception e) {
+            System.out.println("❌ Error verificando servicio: " + e.getMessage());
+        }
+    }
+    
+    // ========== COMANDOS DE SINCRONIZACIÓN ==========
+    
+    private static void comandoIniciarSincronizacion() {
+        if (sincronizadorVotos == null) {
+            System.out.println("❌ Sincronizador no inicializado");
             return;
         }
         
-        System.out.println("🔗 Verificando servicio de consulta SQLite...");
-        boolean servicioActivo = consultaMesaSQLite.verificarServicio(null);
+        try {
+            sincronizadorVotos.iniciarSincronizacionAutomatica();
+            System.out.println("✅ Sincronización automática iniciada");
+            System.out.println("📡 Los votos se enviarán al servidor nacional cada 10 segundos");
+        } catch (Exception e) {
+            System.err.println("❌ Error iniciando sincronización: " + e.getMessage());
+        }
+    }
+    
+    private static void comandoDetenerSincronizacion() {
+        if (sincronizadorVotos == null) {
+            System.out.println("❌ Sincronizador no inicializado");
+            return;
+        }
         
-        if (servicioActivo) {
-            System.out.println("✅ Servicio de consulta SQLite activo");
-            
-            // Obtener estadísticas adicionales
-            String[] mesas = consultaMesaSQLite.listarMesasDisponibles(null);
-            System.out.println("📊 Mesas SQLite disponibles: " + mesas.length);
-            
-            if (mesas.length > 0) {
-                System.out.println("📋 Primeras 5 mesas disponibles:");
-                for (int i = 0; i < Math.min(mesas.length, 5); i++) {
-                    System.out.println("   - Mesa: " + mesas[i]);
-                }
-            }
-        } else {
-            System.out.println("❌ Servicio de consulta SQLite inactivo o con problemas");
+        try {
+            sincronizadorVotos.detenerSincronizacionAutomatica();
+            System.out.println("✅ Sincronización automática detenida");
+        } catch (Exception e) {
+            System.err.println("❌ Error deteniendo sincronización: " + e.getMessage());
+        }
+    }
+    
+    private static void comandoSincronizarAhora() {
+        if (sincronizadorVotos == null) {
+            System.out.println("❌ Sincronizador no inicializado");
+            return;
+        }
+        
+        try {
+            sincronizadorVotos.sincronizarAhora();
+            System.out.println("✅ Sincronización manual completada");
+        } catch (Exception e) {
+            System.err.println("❌ Error en sincronización manual: " + e.getMessage());
+        }
+    }
+    
+    private static void comandoEstadoSincronizacion() {
+        if (sincronizadorVotos == null) {
+            System.out.println("❌ Sincronizador no inicializado");
+            return;
+        }
+        
+        try {
+            String estado = sincronizadorVotos.obtenerEstado();
+            System.out.println(estado);
+        } catch (Exception e) {
+            System.err.println("❌ Error obteniendo estado de sincronización: " + e.getMessage());
         }
     }
 }

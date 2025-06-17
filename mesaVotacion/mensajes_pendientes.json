@@ -138,5 +138,33 @@
     "intentos": 0,
     "maxIntentos": 5,
     "estado": "PENDIENTE"
+  },
+  {
+    "id": "a09c3a52-efca-47d3-9bf3-c4fa9290fd5a",
+    "voto": {
+      "idVoto": 1750160581548,
+      "idMesa": "9080",
+      "idElectorHash": "9d42f6e51f558dfe2a63b9201efe0c1f35846edcb8087eea1096163361bd0ffd",
+      "idCandidato": 4,
+      "tsEmitido": 1750160581
+    },
+    "timestamp": "2025-06-17T06:43:01.251657",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
+  },
+  {
+    "id": "03fd62c1-481a-4a2d-ac9b-f0a732ef0dde",
+    "voto": {
+      "idVoto": 1750167015858,
+      "idMesa": "9081",
+      "idElectorHash": "df2d3c73c4aadbba959a90a6287d8d2ad7a7dea87a6ef02ac41a594f0fb5c746",
+      "idCandidato": 7,
+      "tsEmitido": 1750167014
+    },
+    "timestamp": "2025-06-17T08:30:14.873989",
+    "intentos": 0,
+    "maxIntentos": 5,
+    "estado": "PENDIENTE"
   }
 ]

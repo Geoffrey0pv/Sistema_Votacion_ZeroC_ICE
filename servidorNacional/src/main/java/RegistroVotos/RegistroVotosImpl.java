@@ -50,8 +50,8 @@ public class RegistroVotosImpl implements IRegistroVotos {
             return false;
         }
         
-        String sql = "INSERT INTO voto (id, mesa_id, timestamp, candidato_id, hash_verificacion, municipio, departamento) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO votos (mesa_id, timestamp, candidato_id, hash_verificacion, municipio, departamento) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)";
         
         long startTime = System.currentTimeMillis();
         
@@ -62,13 +62,12 @@ public class RegistroVotosImpl implements IRegistroVotos {
             }
             
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setLong(1, voto.id);
-                stmt.setString(2, voto.mesaId);
-                stmt.setTimestamp(3, new Timestamp(voto.timestamp));
-                stmt.setLong(4, voto.candidatoId);
-                stmt.setString(5, voto.hashVerificacion);
-                stmt.setString(6, voto.municipio);
-                stmt.setString(7, voto.departamento);
+                stmt.setString(1, voto.mesaId);
+                stmt.setTimestamp(2, new Timestamp(voto.timestamp));
+                stmt.setLong(3, voto.candidatoId);
+                stmt.setString(4, voto.hashVerificacion);
+                stmt.setString(5, voto.municipio);
+                stmt.setString(6, voto.departamento);
                 
                 int filasAfectadas = stmt.executeUpdate();
                 
@@ -104,8 +103,8 @@ public class RegistroVotosImpl implements IRegistroVotos {
         
         long startTime = System.currentTimeMillis();
         
-        String sql = "INSERT INTO voto (id, mesa_id, timestamp, candidato_id, hash_verificacion, municipio, departamento) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO votos (mesa_id, timestamp, candidato_id, hash_verificacion, municipio, departamento) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = dbConnection.getConnection()) {
             if (conn == null) {
@@ -135,13 +134,12 @@ public class RegistroVotosImpl implements IRegistroVotos {
                         }
                         
                         // Preparar statement
-                        stmt.setLong(1, voto.id);
-                        stmt.setString(2, voto.mesaId);
-                        stmt.setTimestamp(3, new Timestamp(voto.timestamp));
-                        stmt.setLong(4, voto.candidatoId);
-                        stmt.setString(5, voto.hashVerificacion);
-                        stmt.setString(6, voto.municipio);
-                        stmt.setString(7, voto.departamento);
+                        stmt.setString(1, voto.mesaId);
+                        stmt.setTimestamp(2, new Timestamp(voto.timestamp));
+                        stmt.setLong(3, voto.candidatoId);
+                        stmt.setString(4, voto.hashVerificacion);
+                        stmt.setString(5, voto.municipio);
+                        stmt.setString(6, voto.departamento);
                         
                         stmt.addBatch();
                         resultado.votosRegistrados++;
@@ -194,7 +192,7 @@ public class RegistroVotosImpl implements IRegistroVotos {
             return false;
         }
         
-        String sql = "SELECT COUNT(*) FROM voto WHERE hash_verificacion = ?";
+        String sql = "SELECT COUNT(*) FROM votos WHERE hash_verificacion = ?";
         
         try (Connection conn = dbConnection.getConnection()) {
             if (conn == null) {
@@ -224,7 +222,7 @@ public class RegistroVotosImpl implements IRegistroVotos {
             return 0;
         }
         
-        String sql = "SELECT COUNT(*) FROM voto WHERE mesa_id = ?";
+        String sql = "SELECT COUNT(*) FROM votos WHERE mesa_id = ?";
         
         try (Connection conn = dbConnection.getConnection()) {
             if (conn == null) {
@@ -252,7 +250,7 @@ public class RegistroVotosImpl implements IRegistroVotos {
     
     @Override
     public long contarVotosPorCandidato(long candidatoId, Current current) {
-        String sql = "SELECT COUNT(*) FROM voto WHERE candidato_id = ?";
+        String sql = "SELECT COUNT(*) FROM votos WHERE candidato_id = ?";
         
         try (Connection conn = dbConnection.getConnection()) {
             if (conn == null) {
@@ -284,7 +282,7 @@ public class RegistroVotosImpl implements IRegistroVotos {
             return 0;
         }
         
-        String sql = "SELECT COUNT(*) FROM voto WHERE LOWER(municipio) = LOWER(?)";
+        String sql = "SELECT COUNT(*) FROM votos WHERE LOWER(municipio) = LOWER(?)";
         
         try (Connection conn = dbConnection.getConnection()) {
             if (conn == null) {
@@ -317,7 +315,7 @@ public class RegistroVotosImpl implements IRegistroVotos {
                 return false;
             }
             
-            // Verificar que la tabla voto existe
+            // Verificar que la tabla votos existe
             String sql = "SELECT COUNT(*) FROM votos LIMIT 1";
             try (PreparedStatement stmt = conn.prepareStatement(sql);
                  ResultSet rs = stmt.executeQuery()) {
@@ -338,11 +336,7 @@ public class RegistroVotosImpl implements IRegistroVotos {
             return false;
         }
         
-        // Validar campos obligatorios
-        if (voto.id <= 0) {
-            System.err.println("⚠️  ID de voto inválido: " + voto.id);
-            return false;
-        }
+        // Nota: No validamos voto.id porque será generado automáticamente por PostgreSQL BIGSERIAL
         
         if (voto.mesaId == null || voto.mesaId.trim().isEmpty()) {
             System.err.println("⚠️  Mesa ID vacío");

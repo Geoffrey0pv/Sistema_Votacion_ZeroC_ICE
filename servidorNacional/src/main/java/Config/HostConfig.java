@@ -5,7 +5,7 @@ import java.util.Properties;
 
 /**
  * Configuración centralizada de hosts y networking
- * Reemplaza todas las referencias hardcodeadas a "localhost"
+ * Reemplaza todas las referencias hardcodeadas a "10.147.17.113"
  */
 public class HostConfig {
     private static HostConfig instance;
@@ -42,24 +42,24 @@ public class HostConfig {
     
     private void loadDefaultProperties() {
         // Valores por defecto en caso de que no se encuentre el archivo
-        properties.setProperty("nacional.host", "localhost");
+        properties.setProperty("nacional.host", "10.147.17.113");
         properties.setProperty("nacional.port", "9090");
-        properties.setProperty("regional.host", "localhost");
+        properties.setProperty("regional.host", "10.147.17.113");
         properties.setProperty("regional.port", "8080");
-        properties.setProperty("replica.host", "localhost");
+        properties.setProperty("replica.host", "10.147.17.113");
         properties.setProperty("replica.base_port", "10000");
-        properties.setProperty("ice.locator.host", "localhost");
+        properties.setProperty("ice.locator.host", "10.147.17.113");
         properties.setProperty("ice.locator.port", "4061");
-        properties.setProperty("cluster.seeds", "localhost:7947");
-        properties.setProperty("network.local.hostname", "localhost");
-        properties.setProperty("broker.nacional.host", "localhost");
+        properties.setProperty("cluster.seeds", "10.147.17.113:7947");
+        properties.setProperty("network.local.hostname", "10.147.17.113");
+        properties.setProperty("broker.nacional.host", "10.147.17.113");
         properties.setProperty("broker.nacional.port", "9090");
-        properties.setProperty("broker.nacional.endpoint", "tcp -h localhost -p 9090");
+        properties.setProperty("broker.nacional.endpoint", "tcp -h 10.147.17.113 -p 9090");
     }
     
     // ===== MÉTODOS PARA CONFIGURACIÓN NACIONAL =====
     public String getNacionalHost() {
-        return properties.getProperty("nacional.host", "localhost");
+        return properties.getProperty("nacional.host", "10.147.17.113");
     }
     
     public int getNacionalPort() {
@@ -72,7 +72,7 @@ public class HostConfig {
     
     // ===== MÉTODOS PARA CONFIGURACIÓN REGIONAL =====
     public String getRegionalHost() {
-        return properties.getProperty("regional.host", "localhost");
+        return properties.getProperty("regional.host", "10.147.17.113");
     }
     
     public int getRegionalPort() {
@@ -85,7 +85,7 @@ public class HostConfig {
     
     // ===== MÉTODOS PARA CONFIGURACIÓN DE RÉPLICAS =====
     public String getReplicaHost() {
-        return properties.getProperty("replica.host", "localhost");
+        return properties.getProperty("replica.host", "10.147.17.113");
     }
     
     public int getReplicaBasePort() {
@@ -102,7 +102,7 @@ public class HostConfig {
     
     // ===== MÉTODOS PARA CONFIGURACIÓN DE ICE GRID =====
     public String getIceLocatorHost() {
-        return properties.getProperty("ice.locator.host", "localhost");
+        return properties.getProperty("ice.locator.host", "10.147.17.113");
     }
     
     public int getIceLocatorPort() {
@@ -116,12 +116,12 @@ public class HostConfig {
     
     // ===== MÉTODOS PARA CONFIGURACIÓN DE CLUSTER =====
     public String getClusterSeeds() {
-        return properties.getProperty("cluster.seeds", "localhost:7947");
+        return properties.getProperty("cluster.seeds", "10.147.17.113:7947");
     }
     
     // ===== MÉTODOS PARA CONFIGURACIÓN DE RED =====
     public String getNetworkLocalHostname() {
-        return properties.getProperty("network.local.hostname", "localhost");
+        return properties.getProperty("network.local.hostname", "10.147.17.113");
     }
     
     public String getNetworkLocalIP() {
@@ -130,7 +130,7 @@ public class HostConfig {
     
     // ===== MÉTODOS PARA CONFIGURACIÓN DE BROKER =====
     public String getBrokerNacionalHost() {
-        return properties.getProperty("broker.nacional.host", "localhost");
+        return properties.getProperty("broker.nacional.host", "10.147.17.113");
     }
     
     public int getBrokerNacionalPort() {
@@ -143,7 +143,7 @@ public class HostConfig {
     }
     
     public String getBrokerRegionalHost() {
-        return properties.getProperty("broker.regional.host", "localhost");
+        return properties.getProperty("broker.regional.host", "10.147.17.113");
     }
     
     public int getBrokerRegionalPort() {
@@ -152,15 +152,15 @@ public class HostConfig {
     
     // ===== MÉTODOS PARA CONFIGURACIÓN DE DESARROLLO =====
     public String getDevNacionalHost() {
-        return properties.getProperty("dev.nacional.host", "localhost");
+        return properties.getProperty("dev.nacional.host", "10.147.17.113");
     }
     
     public String getDevRegionalHost() {
-        return properties.getProperty("dev.regional.host", "localhost");
+        return properties.getProperty("dev.regional.host", "10.147.17.113");
     }
     
     public String getDevClusterSeeds() {
-        return properties.getProperty("dev.cluster.seeds", "localhost:7947");
+        return properties.getProperty("dev.cluster.seeds", "10.147.17.113:7947");
     }
     
     // ===== MÉTODOS PARA CONFIGURACIÓN DE ADAPTADORES =====
@@ -176,7 +176,7 @@ public class HostConfig {
     
     // ===== MÉTODOS PARA CONFIGURACIÓN DE BASE DE DATOS =====
     public String getDatabaseHost() {
-        return properties.getProperty("database.host", "localhost");
+        return properties.getProperty("database.host", "10.147.17.113");
     }
     
     public int getDatabasePort() {
@@ -185,7 +185,7 @@ public class HostConfig {
     
     // ===== MÉTODOS PARA CONFIGURACIÓN DE MONITOREO =====
     public String getMonitoringHost() {
-        return properties.getProperty("monitoring.host", "localhost");
+        return properties.getProperty("monitoring.host", "10.147.17.113");
     }
     
     public int getMonitoringPort() {
