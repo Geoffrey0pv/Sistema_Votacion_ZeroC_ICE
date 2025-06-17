@@ -687,7 +687,7 @@ public class ServidorRegional {
         if (!consultorVotantes.verificarConexion()) {
             System.out.println("❌ No hay conexión con el servidor nacional.");
             System.out.println("💡 La conexión automática falló al iniciar. Use 'conectar' para reintentar.");
-            System.out.println("   Verifique que el servidor nacional esté ejecutándose en tcp -h localhost -p 9090");
+            System.out.println("   Verifique que el servidor nacional esté ejecutándose en tcp -h 10.147.17.113 -p 9090");
             return false;
         }
         return true;

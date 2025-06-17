@@ -53,7 +53,7 @@ public class GestionCandidatos implements ICargarCandidatos {
             System.out.println("🔄 Intentando conectar GestionCandidatos con Servidor Nacional...");
 
             // Proxy para IConsultaCandidatos
-            ObjectPrx consultaBase = communicator.stringToProxy("ConsultaCandidatos@ServidorNacionalAdapter");
+            ObjectPrx consultaBase = communicator.stringToProxy("ConsultaCandidatos:tcp -h 10.147.17.113 -p 9090");
             consultaCandidatosNacional = IConsultaCandidatosPrx.checkedCast(consultaBase);
             if (consultaCandidatosNacional == null) {
                 System.err.println("⚠️ No se pudo conectar al servicio de Consulta de Candidatos");
