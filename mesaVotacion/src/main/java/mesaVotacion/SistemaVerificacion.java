@@ -86,7 +86,7 @@ public class SistemaVerificacion {
      * @return Información del votante o null si no existe
      */
     public CiudadanoInfo obtenerInformacionVotante(String documento) {
-        String selectSQL = "SELECT ciudadano_id, documento, nombre, apellido, mesa, puesto, municipio, departamento " +
+        String selectSQL = "SELECT ciudadano_id, documento, nombre, apellido, mesa, mesa_id, puesto, municipio, departamento " +
             "FROM votantes_mesa WHERE documento = ?";
         
         try (Connection conn = DriverManager.getConnection(DB_URL);
@@ -102,6 +102,7 @@ public class SistemaVerificacion {
                 votante.nombre = rs.getString("nombre");
                 votante.apellido = rs.getString("apellido");
                 votante.mesa = rs.getString("mesa");
+                votante.mesaId = rs.getString("mesa_id");
                 votante.puesto = rs.getString("puesto");
                 votante.municipio = rs.getString("municipio");
                 votante.departamento = rs.getString("departamento");

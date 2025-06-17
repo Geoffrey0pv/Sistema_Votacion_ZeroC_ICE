@@ -204,6 +204,7 @@ module Demo
         string nombre;
         string apellido;
         string mesa;
+        string mesaId;
         string puesto;
         string municipio;
         string departamento;
@@ -513,5 +514,95 @@ module Demo
         SeqEstadisticasMesas obtenerTodasLasMesas();
         
         bool verificarConexion();
+    };
+
+    // ========== INTERFAZ CONSULTA INFORMACIÓN DE MESAS SQLite ==========
+    
+    struct VotanteMesa
+    {
+        int id;
+        long ciudadanoId;
+        string documento;
+        string nombre;
+        string apellido;
+        string mesa;
+        string mesaId;
+        string puesto;
+        string municipio;
+        string departamento;
+        string fechaAsignacion;
+        int verificado;
+        string fechaVerificacion;
+    };
+
+    sequence<VotanteMesa> SeqVotantesMesa;
+
+    struct EstadisticasMesaSQLite
+    {
+        string mesaId;
+        string departamento;
+        string municipio;
+        string puesto;
+        int totalVotantes;
+        int votantesVerificados;
+        int mesaActiva;
+        string fechaCreacion;
+        long ultimaActualizacion;
+    };
+
+    struct LogVerificacion
+    {
+        int id;
+        string documento;
+        string accion;
+        string resultado;
+        string timestamp;
+    };
+
+    sequence<LogVerificacion> SeqLogsVerificacion;
+
+    struct InfoCompletaMesa
+    {
+        EstadisticasMesaSQLite estadisticas;
+        SeqVotantesMesa votantes;
+        SeqLogsVerificacion logs;
+        bool archivoExiste;
+        string rutaArchivo;
+    };
+
+    interface IConsultaMesaSQLite
+    {
+        // Verificar si existe la base de datos de una mesa
+        bool existeMesaSQLite(string mesaId);
+        
+        // Obtener información estadística de una mesa
+        EstadisticasMesaSQLite obtenerEstadisticasMesa(string mesaId);
+        
+        // Obtener todos los votantes de una mesa
+        SeqVotantesMesa obtenerVotantesDeMesa(string mesaId);
+        
+        // Obtener votantes con paginación
+        SeqVotantesMesa obtenerVotantesPaginados(string mesaId, int pagina, int tamanoPagina);
+        
+        // Buscar votante por documento en una mesa
+        VotanteMesa buscarVotantePorDocumento(string mesaId, string documento);
+        
+        // Obtener logs de verificación de una mesa
+        SeqLogsVerificacion obtenerLogsVerificacion(string mesaId);
+        
+        // Obtener información completa de una mesa (estadísticas + votantes + logs)
+        InfoCompletaMesa obtenerInfoCompletaMesa(string mesaId);
+        
+        // Contar votantes de una mesa
+        int contarVotantesMesa(string mesaId);
+        
+        // Contar votantes verificados de una mesa
+        int contarVotantesVerificados(string mesaId);
+        
+        // Listar todas las mesas SQLite disponibles
+        SeqMesas listarMesasDisponibles();
+        
+        // Verificar conectividad del servicio
+        bool verificarServicio();
     };
 }

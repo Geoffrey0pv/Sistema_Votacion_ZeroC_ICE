@@ -72,7 +72,7 @@ public class MesaVotacion {
         Communicator communicator = null;
         try {
             // Cargar configuración desde mesa.cfg
-            String[] iceArgs = {"--Ice.Config=mesaVotacion/src/main/resources/mesa.cfg"};
+            String[] iceArgs = {"--Ice.Config=src/main/resources/mesa.cfg"};
             communicator = Util.initialize(iceArgs);
             
             // Crear GestorMesa (ya incluye Sistema de Verificación integrado)

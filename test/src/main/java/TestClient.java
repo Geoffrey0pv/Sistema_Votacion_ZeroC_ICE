@@ -407,7 +407,7 @@ public class TestClient {
         for (int i = 0; i < limite && i < votantes.length; i++) {
             CiudadanoInfo v = votantes[i];
             System.out.println("🆔 ID: " + v.id + " | 📄 Doc: " + v.documento + " | 👤 " + v.nombre + " " + v.apellido);
-            System.out.println("   📍 " + v.departamento + " > " + v.municipio + " > " + v.puesto + " > Mesa " + v.mesa);
+            System.out.println("   📍 " + v.departamento + " > " + v.municipio + " > " + v.puesto + " > Mesa " + v.mesa + " > " + v.mesaId);
             if (i < limite - 1) System.out.println();
         }
         

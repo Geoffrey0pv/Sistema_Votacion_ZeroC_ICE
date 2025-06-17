@@ -6,6 +6,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.concurrent.*;
 
 /**
  * Componente del Servidor Regional que distribuye votantes por mesas
@@ -29,11 +30,12 @@ public class DistribuidorMesas {
     
     /**
      * MÉTODO EXISTENTE: Distribución local (crear archivos SQLite localmente)
+     * AHORA CON CONCURRENCIA MEJORADA
      * @param departamento Nombre del departamento
      * @return Resultado de la distribución local
      */
     public boolean distribuirVotantesPorDepartamento(String departamento) {
-        System.out.println("🗳️ Iniciando distribución LOCAL de votantes para: " + departamento);
+        System.out.println("🗳️ Iniciando distribución LOCAL CONCURRENTE de votantes para: " + departamento);
         
         List<CiudadanoInfo> votantesDepartamento = databaseManager.consultarVotantesLocales(departamento);
         
@@ -47,32 +49,106 @@ public class DistribuidorMesas {
         Map<String, List<CiudadanoInfo>> votantesPorMesa = agruparVotantesPorMesa(votantesDepartamento);
         System.out.println("🗳️ Mesas identificadas: " + votantesPorMesa.size());
         
-        int mesasExitosas = 0;
-        int totalVotantesDistribuidos = 0;
+        // Crear ExecutorService para procesamiento concurrente
+        int numThreads = Math.min(votantesPorMesa.size(), Runtime.getRuntime().availableProcessors());
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        System.out.println("⚡ Usando " + numThreads + " hilos para procesamiento concurrente");
         
-        for (Map.Entry<String, List<CiudadanoInfo>> entry : votantesPorMesa.entrySet()) {
-            String mesaId = entry.getKey();
-            List<CiudadanoInfo> votantesMesa = entry.getValue();
+        try {
+            // Crear lista de tareas concurrentes
+            List<CompletableFuture<ResultadoMesa>> tareas = new ArrayList<>();
             
-            System.out.println("📤 Creando archivo LOCAL para mesa " + mesaId + " con " + votantesMesa.size() + " votantes");
+            for (Map.Entry<String, List<CiudadanoInfo>> entry : votantesPorMesa.entrySet()) {
+                String mesaId = entry.getKey();
+                List<CiudadanoInfo> votantesMesa = entry.getValue();
+                
+                System.out.println("🗳️ Mesa: " + mesaId + " - Votantes: " + votantesMesa.size());
+                
+                // Crear tarea asíncrona para cada mesa
+                CompletableFuture<ResultadoMesa> tarea = CompletableFuture.supplyAsync(() -> {
+                    long startTime = System.currentTimeMillis();
+                    System.out.println("📤 [" + Thread.currentThread().getName() + "] Procesando mesa " + mesaId + " con " + votantesMesa.size() + " votantes");
+                    
+                    boolean exito = crearArchivoMesa(mesaId, votantesMesa, departamento);
+                    long endTime = System.currentTimeMillis();
+                    
+                    ResultadoMesa resultado = new ResultadoMesa(mesaId, exito, votantesMesa.size(), endTime - startTime);
+                    
+                    if (exito) {
+                        System.out.println("✅ [" + Thread.currentThread().getName() + "] Mesa " + mesaId + " completada en " + (endTime - startTime) + "ms");
+                    } else {
+                        System.out.println("❌ [" + Thread.currentThread().getName() + "] Error en mesa " + mesaId);
+                    }
+                    
+                    return resultado;
+                }, executor);
+                
+                tareas.add(tarea);
+            }
             
-            if (crearArchivoMesa(mesaId, votantesMesa, departamento)) {
-                mesasExitosas++;
-                totalVotantesDistribuidos += votantesMesa.size();
-                System.out.println("✅ Mesa " + mesaId + " creada exitosamente");
-            } else {
-                System.out.println("❌ Error creando archivo para mesa: " + mesaId);
+            // Esperar a que todas las tareas terminen
+            System.out.println("⏳ Esperando finalización de " + tareas.size() + " tareas concurrentes...");
+            long startTimeTotal = System.currentTimeMillis();
+            
+            CompletableFuture<Void> todasLasTareas = CompletableFuture.allOf(
+                tareas.toArray(new CompletableFuture[0])
+            );
+            
+            // Esperar con timeout de 5 minutos
+            todasLasTareas.get(5, TimeUnit.MINUTES);
+            
+            long endTimeTotal = System.currentTimeMillis();
+            
+            // Recopilar resultados
+            int mesasExitosas = 0;
+            int totalVotantesDistribuidos = 0;
+            long tiempoMaximo = 0;
+            
+            for (CompletableFuture<ResultadoMesa> tarea : tareas) {
+                try {
+                    ResultadoMesa resultado = tarea.get();
+                    if (resultado.exito) {
+                        mesasExitosas++;
+                        totalVotantesDistribuidos += resultado.votantesGuardados;
+                    }
+                    tiempoMaximo = Math.max(tiempoMaximo, resultado.tiempoProcesamiento);
+                } catch (java.util.concurrent.ExecutionException | InterruptedException e) {
+                    System.err.println("❌ Error obteniendo resultado de tarea: " + e.getMessage());
+                }
+            }
+            
+            System.out.println("📈 === RESUMEN DISTRIBUCIÓN LOCAL CONCURRENTE ===");
+            System.out.println("   Departamento: " + departamento);
+            System.out.println("   Mesas creadas: " + mesasExitosas + "/" + votantesPorMesa.size());
+            System.out.println("   Votantes distribuidos: " + totalVotantesDistribuidos + "/" + votantesDepartamento.size());
+            System.out.println("   Tiempo total: " + (endTimeTotal - startTimeTotal) + "ms");
+            System.out.println("   Tiempo mesa más lenta: " + tiempoMaximo + "ms");
+            System.out.println("   Hilos utilizados: " + numThreads);
+            System.out.println("   Archivos creados en: data/mesa_*.db");
+            System.out.println("   Ganancia de velocidad: ~" + String.format("%.1fx", (double) tiempoMaximo * votantesPorMesa.size() / (endTimeTotal - startTimeTotal)));
+            System.out.println("===============================================");
+            
+            return mesasExitosas > 0;
+            
+        } catch (java.util.concurrent.TimeoutException e) {
+            System.err.println("❌ Timeout: Algunas tareas tardaron más de 5 minutos");
+            return false;
+        } catch (java.util.concurrent.ExecutionException | InterruptedException e) {
+            System.err.println("❌ Error en procesamiento concurrente: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            // Cerrar ExecutorService
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
             }
         }
-        
-        System.out.println("📈 === RESUMEN DISTRIBUCIÓN LOCAL ===");
-        System.out.println("   Departamento: " + departamento);
-        System.out.println("   Mesas creadas: " + mesasExitosas + "/" + votantesPorMesa.size());
-        System.out.println("   Votantes distribuidos: " + totalVotantesDistribuidos + "/" + votantesDepartamento.size());
-        System.out.println("   Archivos creados en: data/mesa_*.db");
-        System.out.println("===============================");
-        
-        return mesasExitosas > 0;
     }
     
     /**
@@ -248,6 +324,7 @@ public class DistribuidorMesas {
     
     /**
      * Crea un archivo SQLite específico para una mesa
+     * OPTIMIZADO PARA CONCURRENCIA
      */
     private boolean crearArchivoMesa(String mesaId, List<CiudadanoInfo> votantes, String departamento) {
         try {
@@ -255,11 +332,11 @@ public class DistribuidorMesas {
             DatabaseManagerMesa dbMesa = new DatabaseManagerMesa(mesaId);
             int guardados = dbMesa.guardarVotantesMesa(votantes, departamento);
             
-            System.out.println("💾 Archivo SQLite creado: " + dbMesa.getDbPath() + " (" + guardados + " votantes)");
+            System.out.println("💾 [" + Thread.currentThread().getName() + "] Archivo SQLite creado: " + dbMesa.getDbPath() + " (" + guardados + " votantes)");
             return guardados > 0;
             
         } catch (java.lang.Exception e) {
-            System.err.println("❌ Error creando archivo para mesa " + mesaId + ": " + e.getMessage());
+            System.err.println("❌ [" + Thread.currentThread().getName() + "] Error creando archivo para mesa " + mesaId + ": " + e.getMessage());
             return false;
         }
     }
@@ -273,7 +350,7 @@ public class DistribuidorMesas {
         Map<String, List<CiudadanoInfo>> grupos = new HashMap<>();
         
         for (CiudadanoInfo votante : votantes) {
-            String mesaId = votante.mesa;
+            String mesaId = votante.mesaId;
             
             if (mesaId == null || mesaId.trim().isEmpty()) {
                 System.err.println("⚠️ Votante sin mesa asignada: " + votante.documento + " - " + votante.nombre);
@@ -373,5 +450,22 @@ public class DistribuidorMesas {
         
         System.out.println("✅ Eliminados " + archivosEliminados + "/" + mesas.size() + " archivos de " + departamento);
         return archivosEliminados;
+    }
+    
+    /**
+     * Clase interna para almacenar resultados de procesamiento de mesa
+     */
+    private static class ResultadoMesa {
+        final String mesaId;
+        final boolean exito;
+        final int votantesGuardados;
+        final long tiempoProcesamiento;
+        
+        ResultadoMesa(String mesaId, boolean exito, int votantesGuardados, long tiempoProcesamiento) {
+            this.mesaId = mesaId;
+            this.exito = exito;
+            this.votantesGuardados = votantesGuardados;
+            this.tiempoProcesamiento = tiempoProcesamiento;
+        }
     }
 } 

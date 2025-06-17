@@ -13,6 +13,7 @@ public class ServidorRegional {
     private static GestionCandidatos gestionCandidatos;
     private static ConsultorVotantesRegional consultorVotantes;
     private static DistribuidorMesas distribuidorMesas;
+    private static ConsultaMesaSQLiteImpl consultaMesaSQLite;
     private static Scanner scanner;
     private static boolean servidorActivo = true;
 
@@ -41,8 +42,21 @@ public class ServidorRegional {
                 // Nuevo componente: Consultor de Votantes
                 consultorVotantes = new ConsultorVotantesRegional(communicator);
                 
+                // CONEXIÓN AUTOMÁTICA al servidor nacional
+                System.out.println("🔗 Conectando automáticamente al servidor nacional...");
+                boolean conexionExitosa = consultorVotantes.conectarConServidorNacional();
+                if (conexionExitosa) {
+                    System.out.println("✅ ¡Conexión automática exitosa!");
+                } else {
+                    System.out.println("❌ No se pudo conectar automáticamente. Use 'conectar' manualmente.");
+                    System.out.println("💡 Verifique que el servidor nacional esté ejecutándose.");
+                }
+                
                 // Nuevo componente: Distribuidor de Mesas
                 distribuidorMesas = new DistribuidorMesas(communicator, consultorVotantes.getDatabaseManager());
+
+                // Nuevo componente: Consultor de Mesas SQLite
+                consultaMesaSQLite = new ConsultaMesaSQLiteImpl();
 
                 // Crear adaptador con configuración
                 com.zeroc.Ice.ObjectAdapter adapter;
@@ -66,15 +80,20 @@ public class ServidorRegional {
                 com.zeroc.Ice.Identity idGestion = com.zeroc.Ice.Util.stringToIdentity("gestionCandidatos");
                 adapter.add(gestionCandidatos, idGestion);
 
+                com.zeroc.Ice.Identity idConsultaMesa = com.zeroc.Ice.Util.stringToIdentity("consultaMesaSQLite");
+                adapter.add(consultaMesaSQLite, idConsultaMesa);
+
                 adapter.activate();
                 
                 System.out.println("✅ Servidor Regional iniciado correctamente");
                 System.out.println("📊 Componentes disponibles:");
                 System.out.println("   • ConsultorVotantesRegional: Consulta de votantes del servidor nacional");
                 System.out.println("   • DistribuidorMesas: Distribución de votantes por mesas");
+                System.out.println("   • ConsultaMesaSQLite: Consulta información de mesas desde SQLite");
                 System.out.println("Servidor Regional iniciado correctamente");
                 System.out.println("- ReceptorVotos disponible en: " + idReceptor.name);
                 System.out.println("- GestionCandidatos disponible en: " + idGestion.name);
+                System.out.println("- ConsultaMesaSQLite disponible en: " + idConsultaMesa.name);
 
                 
                 try {
@@ -164,6 +183,16 @@ public class ServidorRegional {
         System.out.println("   multiple <dep1,dep2,...> - Múltiples departamentos");
         System.out.println("   estadisticas - Ver estadísticas de base de datos local");
         System.out.println("   limpiar <dep>- Limpiar datos de departamento en SQLite");
+        // Nuevos comandos para consulta de mesas SQLite
+        System.out.println("   ━━━ CONSULTA MESAS SQLite ━━━");
+        System.out.println("   listarmesas  - Listar todas las mesas SQLite disponibles");
+        System.out.println("   infomesa <mesaId> - Obtener información completa de una mesa");
+        System.out.println("   estadsmesa <mesaId> - Obtener estadísticas de una mesa");
+        System.out.println("   votantesmesa <mesaId> [pag] [tam] - Obtener votantes de una mesa (paginado)");
+        System.out.println("   buscarvotante <mesaId> <documento> - Buscar votante en una mesa");
+        System.out.println("   contarmesa <mesaId> - Contar votantes en una mesa");
+        System.out.println("   logsmesa <mesaId> - Obtener logs de verificación de una mesa");
+        System.out.println("   verificarservicio - Verificar servicio de consulta SQLite");
         System.out.println("   ejemplos     - Ejecutar ejemplos de prueba");
         System.out.println("   ayuda        - Mostrar esta ayuda");
         System.out.println("   salir        - Terminar el servidor");
@@ -298,6 +327,58 @@ public class ServidorRegional {
                         break;
                     case "verificarmesas":
                         comandoVerificarMesas();
+                        break;
+
+                    // Nuevos comandos para consulta de mesas SQLite
+                    case "listarmesas":
+                        comandoListarMesas();
+                        break;
+                    case "infomesa":
+                        if (partes.length > 1) {
+                            comandoInfoMesa(partes[1]);
+                        } else {
+                            System.out.println("❌ Uso: infomesa <mesaId>");
+                        }
+                        break;
+                    case "estadsmesa":
+                        if (partes.length > 1) {
+                            comandoEstadisticasMesa(partes[1]);
+                        } else {
+                            System.out.println("❌ Uso: estadsmesa <mesaId>");
+                        }
+                        break;
+                    case "votantesmesa":
+                        if (partes.length > 1) {
+                            int pagina = partes.length > 2 ? Integer.parseInt(partes[2]) : 1;
+                            int tamano = partes.length > 3 ? Integer.parseInt(partes[3]) : 10;
+                            comandoVotantesMesa(partes[1], pagina, tamano);
+                        } else {
+                            System.out.println("❌ Uso: votantesmesa <mesaId> [pagina] [tamaño]");
+                        }
+                        break;
+                    case "buscarvotante":
+                        if (partes.length > 2) {
+                            comandoBuscarVotante(partes[1], partes[2]);
+                        } else {
+                            System.out.println("❌ Uso: buscarvotante <mesaId> <documento>");
+                        }
+                        break;
+                    case "contarmesa":
+                        if (partes.length > 1) {
+                            comandoContarMesa(partes[1]);
+                        } else {
+                            System.out.println("❌ Uso: contarmesa <mesaId>");
+                        }
+                        break;
+                    case "logsmesa":
+                        if (partes.length > 1) {
+                            comandoLogsMesa(partes[1]);
+                        } else {
+                            System.out.println("❌ Uso: logsmesa <mesaId>");
+                        }
+                        break;
+                    case "verificarservicio":
+                        comandoVerificarServicioMesa();
                         break;
 
                     case "ejemplos":
@@ -556,7 +637,8 @@ public class ServidorRegional {
     private static boolean verificarConexion() {
         if (!consultorVotantes.verificarConexion()) {
             System.out.println("❌ No hay conexión con el servidor nacional.");
-            System.out.println("💡 Use el comando 'conectar' primero.");
+            System.out.println("💡 La conexión automática falló al iniciar. Use 'conectar' para reintentar.");
+            System.out.println("   Verifique que el servidor nacional esté ejecutándose en tcp -h localhost -p 9090");
             return false;
         }
         return true;
@@ -653,5 +735,161 @@ public class ServidorRegional {
         // Verificar conectividad
         int conectadas = distribuidorMesas.verificarConectividadMesas();
         System.out.println("📊 Resultado: " + conectadas + "/" + mesasRegistradas.size() + " mesas conectadas");
+    }
+
+    // Nuevos comandos para consulta de mesas SQLite
+    private static void comandoListarMesas() {
+        if (consultaMesaSQLite == null) {
+            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            return;
+        }
+        
+        System.out.println("🔍 Consultando todas las mesas SQLite disponibles...");
+        String[] mesas = consultaMesaSQLite.listarMesasDisponibles(null);
+        
+        System.out.println("📊 Total encontradas: " + String.format("%,d", mesas.length));
+        
+        if (mesas.length == 0) {
+            System.out.println("⚠️ No hay mesas SQLite disponibles");
+            return;
+        }
+        
+        System.out.println("\n🗳️ Mesas SQLite:");
+        for (int i = 0; i < mesas.length; i++) {
+            System.out.println(String.format("   %2d. Mesa %s", i + 1, mesas[i]));
+        }
+    }
+
+    private static void comandoInfoMesa(String mesaId) {
+        if (consultaMesaSQLite == null) {
+            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            return;
+        }
+        
+        System.out.println("🔍 Consultando información completa de la mesa: " + mesaId);
+        Demo.MesaInfo mesaInfo = consultaMesaSQLite.consultarInformacionMesa(mesaId);
+        
+        if (mesaInfo != null) {
+            System.out.println("📋 Información de la mesa:");
+            System.out.println("   Mesa ID: " + mesaInfo.mesaId);
+            System.out.println("   Departamento: " + mesaInfo.departamento);
+            System.out.println("   Número de votantes: " + mesaInfo.numeroVotantes);
+            System.out.println("   Fecha de creación: " + mesaInfo.fechaCreacion);
+        } else {
+            System.out.println("❌ No se encontró información para la mesa: " + mesaId);
+        }
+    }
+
+    private static void comandoEstadisticasMesa(String mesaId) {
+        if (consultaMesaSQLite == null) {
+            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            return;
+        }
+        
+        System.out.println("🔢 Consultando estadísticas de la mesa: " + mesaId);
+        Demo.EstadisticasMesa estadisticas = consultaMesaSQLite.consultarEstadisticasMesa(mesaId);
+        
+        if (estadisticas != null) {
+            System.out.println("📋 Estadísticas de la mesa:");
+            System.out.println("   Mesa ID: " + estadisticas.mesaId);
+            System.out.println("   Departamento: " + estadisticas.departamento);
+            System.out.println("   Número de votantes: " + estadisticas.numeroVotantes);
+            System.out.println("   Fecha de creación: " + estadisticas.fechaCreacion);
+            System.out.println("   Porcentaje de votantes registrados: " + estadisticas.porcentajeRegistrados + "%");
+            System.out.println("   Porcentaje de votantes que votaron: " + estadisticas.porcentajeVotaron + "%");
+        } else {
+            System.out.println("❌ No se encontraron estadísticas para la mesa: " + mesaId);
+        }
+    }
+
+    private static void comandoVotantesMesa(String mesaId, int pagina, int tamano) {
+        if (consultaMesaSQLite == null) {
+            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            return;
+        }
+        
+        System.out.println("📄 Consultando votantes de la mesa: " + mesaId + " (página " + pagina + ", tamaño " + tamano + ")");
+        Demo.ResultadoPaginado resultado = consultaMesaSQLite.consultarVotantesPaginado(mesaId, pagina, tamano);
+        
+        if (resultado != null) {
+            System.out.println("📊 Página " + resultado.paginaActual + "/" + resultado.totalPaginas);
+            System.out.println("   Total registros: " + String.format("%,d", resultado.totalRegistros));
+            System.out.println("   En esta página: " + resultado.ciudadanos.length);
+            
+            for (int i = 0; i < resultado.ciudadanos.length; i++) {
+                Demo.CiudadanoInfo v = resultado.ciudadanos[i];
+                System.out.println(String.format("   %2d. %s %s (Doc: %s)", 
+                    i + 1, v.nombre, v.apellido, v.documento));
+            }
+        }
+    }
+
+    private static void comandoBuscarVotante(String mesaId, String documento) {
+        if (consultaMesaSQLite == null) {
+            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            return;
+        }
+        
+        System.out.println("🔍 Buscando votante en la mesa: " + mesaId + " (documento: " + documento + ")");
+        Demo.CiudadanoInfo votante = consultaMesaSQLite.consultarVotantePorDocumento(mesaId, documento);
+        
+        if (votante != null) {
+            System.out.println("📋 Información del votante:");
+            System.out.println("   Nombre: " + votante.nombre);
+            System.out.println("   Apellido: " + votante.apellido);
+            System.out.println("   Documento: " + votante.documento);
+            System.out.println("   Mesa: " + votante.mesa);
+        } else {
+            System.out.println("❌ No se encontró información para el votante con documento: " + documento);
+        }
+    }
+
+    private static void comandoContarMesa(String mesaId) {
+        if (consultaMesaSQLite == null) {
+            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            return;
+        }
+        
+        System.out.println("🔢 Contando votantes en la mesa: " + mesaId);
+        long total = consultaMesaSQLite.contarVotantesEnMesa(mesaId);
+        System.out.println("📊 Total de votantes en la mesa: " + String.format("%,d", total));
+    }
+
+    private static void comandoLogsMesa(String mesaId) {
+        if (consultaMesaSQLite == null) {
+            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            return;
+        }
+        
+        System.out.println("📋 Logs de verificación de la mesa: " + mesaId);
+        java.util.List<Demo.LogVerificacion> logs = consultaMesaSQLite.consultarLogsVerificacion(mesaId);
+        
+        if (logs.isEmpty()) {
+            System.out.println("⚠️ No hay logs de verificación para la mesa: " + mesaId);
+        } else {
+            System.out.println("\n🗓️ Logs de verificación:");
+            for (Demo.LogVerificacion log : logs) {
+                System.out.println("   Fecha: " + log.fecha);
+                System.out.println("   Resultado: " + log.resultado);
+                System.out.println("   Detalles: " + log.detalles);
+                System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            }
+        }
+    }
+
+    private static void comandoVerificarServicioMesa() {
+        if (consultaMesaSQLite == null) {
+            System.out.println("❌ Consultor de Mesas SQLite no inicializado");
+            return;
+        }
+        
+        System.out.println("🔗 Verificando servicio de consulta SQLite...");
+        boolean servicioActivo = consultaMesaSQLite.verificarServicio();
+        
+        if (servicioActivo) {
+            System.out.println("✅ Servicio de consulta SQLite activo");
+        } else {
+            System.out.println("❌ Servicio de consulta SQLite inactivo");
+        }
     }
 }

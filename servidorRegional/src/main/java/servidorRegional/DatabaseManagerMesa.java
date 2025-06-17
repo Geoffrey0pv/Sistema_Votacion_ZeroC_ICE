@@ -54,6 +54,7 @@ public class DatabaseManagerMesa {
                 "nombre TEXT NOT NULL," +
                 "apellido TEXT NOT NULL," +
                 "mesa TEXT NOT NULL," +
+                "mesa_id TEXT," +
                 "puesto TEXT," +
                 "municipio TEXT," +
                 "departamento TEXT NOT NULL," +
@@ -98,6 +99,17 @@ public class DatabaseManagerMesa {
             stmt.execute(createIndex2);
             stmt.execute(createIndex3);
             
+            // Migración: Agregar campo mesa_id si no existe
+            try {
+                stmt.execute("ALTER TABLE votantes_mesa ADD COLUMN mesa_id TEXT");
+                System.out.println("🔄 Migración aplicada: campo mesa_id agregado a votantes_mesa");
+            } catch (SQLException e) {
+                // El campo ya existe, no es un error
+                if (!e.getMessage().contains("duplicate column name")) {
+                    System.err.println("⚠️ Error en migración mesa: " + e.getMessage());
+                }
+            }
+            
             System.out.println("✅ Base de datos SQLite de mesa inicializada: " + DB_PATH);
             
             // Inicializar estadísticas de la mesa si no existen
@@ -138,12 +150,16 @@ public class DatabaseManagerMesa {
         }
         
         String insertSQL = "INSERT OR REPLACE INTO votantes_mesa " +
-            "(ciudadano_id, documento, nombre, apellido, mesa, puesto, municipio, departamento, fecha_asignacion) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "(ciudadano_id, documento, nombre, apellido, mesa, mesa_id, puesto, municipio, departamento, fecha_asignacion) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         int guardados = 0;
         String fechaActual = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         
+        System.out.println("🗳️ Guardando votantes en mesa: " + mesaId);
+
+        System.out.println("🗳️ Votantes: " + votantes.size());
+
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
             
@@ -151,16 +167,17 @@ public class DatabaseManagerMesa {
             
             for (CiudadanoInfo votante : votantes) {
                 // Solo guardar si el votante pertenece a esta mesa
-                if (mesaId.equals(votante.mesa)) {
+                if (mesaId.equals(votante.mesaId)) {
                     pstmt.setLong(1, votante.id);
                     pstmt.setString(2, votante.documento);
                     pstmt.setString(3, votante.nombre);
                     pstmt.setString(4, votante.apellido);
                     pstmt.setString(5, votante.mesa);
-                    pstmt.setString(6, votante.puesto);
-                    pstmt.setString(7, votante.municipio);
-                    pstmt.setString(8, departamento);
-                    pstmt.setString(9, fechaActual);
+                    pstmt.setString(6, votante.mesaId);
+                    pstmt.setString(7, votante.puesto);
+                    pstmt.setString(8, votante.municipio);
+                    pstmt.setString(9, votante.departamento);
+                    pstmt.setString(10, fechaActual);
                     
                     pstmt.addBatch();
                     guardados++;
@@ -214,7 +231,7 @@ public class DatabaseManagerMesa {
      * Obtiene información de un votante de la mesa
      */
     public CiudadanoInfo obtenerVotanteDeMesa(String documento) {
-        String selectSQL = "SELECT ciudadano_id, documento, nombre, apellido, mesa, puesto, municipio, departamento " +
+        String selectSQL = "SELECT ciudadano_id, documento, nombre, apellido, mesa, mesa_id, puesto, municipio, departamento " +
             "FROM votantes_mesa WHERE documento = ?";
         
         try (Connection conn = DriverManager.getConnection(DB_URL);
@@ -230,6 +247,7 @@ public class DatabaseManagerMesa {
                 votante.nombre = rs.getString("nombre");
                 votante.apellido = rs.getString("apellido");
                 votante.mesa = rs.getString("mesa");
+                votante.mesaId = rs.getString("mesa_id");
                 votante.puesto = rs.getString("puesto");
                 votante.municipio = rs.getString("municipio");
                 votante.departamento = rs.getString("departamento");

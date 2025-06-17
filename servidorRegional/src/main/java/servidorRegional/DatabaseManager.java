@@ -49,6 +49,7 @@ public class DatabaseManager {
                 "nombre TEXT NOT NULL," +
                 "apellido TEXT NOT NULL," +
                 "mesa TEXT," +
+                "mesa_id TEXT," +
                 "puesto TEXT," +
                 "municipio TEXT," +
                 "departamento TEXT NOT NULL," +
@@ -77,6 +78,17 @@ public class DatabaseManager {
             stmt.execute(createIndex2);
             stmt.execute(createIndex3);
             
+            // Migración: Agregar campo mesa_id si no existe
+            try {
+                stmt.execute("ALTER TABLE votantes ADD COLUMN mesa_id TEXT");
+                System.out.println("🔄 Migración aplicada: campo mesa_id agregado");
+            } catch (SQLException e) {
+                // El campo ya existe, no es un error
+                if (!e.getMessage().contains("duplicate column name")) {
+                    System.err.println("⚠️ Error en migración: " + e.getMessage());
+                }
+            }
+            
             System.out.println("✅ Base de datos SQLite inicializada: " + DB_PATH);
         }
     }
@@ -90,8 +102,8 @@ public class DatabaseManager {
         }
         
         String insertSQL = "INSERT OR REPLACE INTO votantes " +
-            "(ciudadano_id, documento, nombre, apellido, mesa, puesto, municipio, departamento, fecha_consulta) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "(ciudadano_id, documento, nombre, apellido, mesa, mesa_id, puesto, municipio, departamento, fecha_consulta) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         int guardados = 0;
         String fechaActual = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
@@ -107,10 +119,11 @@ public class DatabaseManager {
                 pstmt.setString(3, votante.nombre);
                 pstmt.setString(4, votante.apellido);
                 pstmt.setString(5, votante.mesa);
-                pstmt.setString(6, votante.puesto);
-                pstmt.setString(7, votante.municipio);
-                pstmt.setString(8, departamento);
-                pstmt.setString(9, fechaActual);
+                pstmt.setString(6, votante.mesaId);
+                pstmt.setString(7, votante.puesto);
+                pstmt.setString(8, votante.municipio);
+                pstmt.setString(9, votante.departamento);
+                pstmt.setString(10, fechaActual);
                 
                 pstmt.addBatch();
                 guardados++;
@@ -134,10 +147,11 @@ public class DatabaseManager {
     /**
      * Consulta votantes por departamento desde la base de datos local
      */
-    public List<CiudadanoInfo> consultarVotantesLocales(String departamento) {
+    public List<CiudadanoInfo> consultarVotantesLocales(String departamentoNoNormalizado) {
+        String departamento = departamentoNoNormalizado.trim().toUpperCase();
         List<CiudadanoInfo> votantes = new ArrayList<>();
         
-        String selectSQL = "SELECT ciudadano_id, documento, nombre, apellido, mesa, puesto, municipio, departamento " +
+        String selectSQL = "SELECT ciudadano_id, documento, nombre, apellido, mesa, mesa_id, puesto, municipio, departamento " +
             "FROM votantes " +
             "WHERE departamento = ? " +
             "ORDER BY apellido, nombre";
@@ -155,6 +169,7 @@ public class DatabaseManager {
                 votante.nombre = rs.getString("nombre");
                 votante.apellido = rs.getString("apellido");
                 votante.mesa = rs.getString("mesa");
+                votante.mesaId = rs.getString("mesa_id");
                 votante.puesto = rs.getString("puesto");
                 votante.municipio = rs.getString("municipio");
                 votante.departamento = rs.getString("departamento");

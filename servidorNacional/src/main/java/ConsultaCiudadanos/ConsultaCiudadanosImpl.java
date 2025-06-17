@@ -76,6 +76,7 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
             "c.nombre AS nombre_ciudadano, " +
             "c.apellido, " +
             "mv.consecutive AS mesa_consecutiva, " +
+            "mv.id AS mesa_id, " +
             "pv.nombre AS nombre_puesto, " +
             "m.nombre AS nombre_municipio, " +
             "d.nombre AS nombre_departamento " +
@@ -100,6 +101,7 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
             "c.nombre AS nombre_ciudadano, " +
             "c.apellido, " +
             "mv.consecutive AS mesa_consecutiva, " +
+            "mv.id AS mesa_id, " +
             "pv.nombre AS nombre_puesto, " +
             "m.nombre AS nombre_municipio, " +
             "d.nombre AS nombre_departamento " +
@@ -214,9 +216,10 @@ public class ConsultaCiudadanosImpl implements IConsultaCiudadanos {
                         ciudadano.nombre = rs.getString(3);
                         ciudadano.apellido = rs.getString(4);
                         ciudadano.mesa = rs.getString(5);
-                        ciudadano.puesto = rs.getString(6);
-                        ciudadano.municipio = rs.getString(7);
-                        ciudadano.departamento = rs.getString(8);
+                        ciudadano.mesaId = rs.getString(6);
+                        ciudadano.puesto = rs.getString(7);
+                        ciudadano.municipio = rs.getString(8);
+                        ciudadano.departamento = rs.getString(9);
                         
                         ciudadanos.add(ciudadano);
                         count++;
